@@ -7,7 +7,9 @@ Frank behind every part of it. Frank sees all his clients at a glance and spends
 time coaching, not chasing.
 
 Frank trains in The Hague. He meets clients in person, starting with an assessment of
-about 40 minutes, and the app carries the work between sessions.
+about 40 minutes, and the app carries the work between sessions. He coaches at several
+gyms and trains each client at the one they go to, so every in-person session in the app
+names its gym.
 
 ## What a client gets
 
@@ -32,7 +34,7 @@ referred to a dietitian or doctor, as in the membership app.
 |---|---|
 | **Today** | Who he sees today, where, what they're doing, his prep notes |
 | **Clients** | One card each: program week, sessions done this week, last check-in and whether one is overdue, flags (pain, missed sessions) |
-| **Client page** | Assessment, goals, history, notes, program, food plan, check-ins, progress |
+| **Client page** | Their gym, assessment, goals, history, notes, program, food plan, check-ins, progress |
 | **Program builder** | Weeks built from the 80 moves (and his own videos): copy last week, raise the dose, schedule the in-person sessions |
 | **Assessment form** | The same tests every time, so re-tests compare cleanly |
 | **Food builder** | Meal plan templates, his guides and videos, assigned per client |
@@ -71,9 +73,7 @@ in. Option A keeps data on the phones, but WhatsApp still carries it.
 2. Who pays for and owns the server account and the client data.
 3. The Personal price, and whether in-person sessions are booked in the app or by
    message.
-4. Where in-person sessions happen, since some gyms don't allow outside trainers. The
-   app should name the place for each session.
-5. Frank's video list for Personal: his explanations, his cooking videos.
+4. Frank's video list for Personal: his explanations, his cooking videos.
 
 ## Build order
 
