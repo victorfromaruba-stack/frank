@@ -68,6 +68,7 @@ module.exports = {
     await t.flow('pregnancy', async () => {
       const p = await t.page({ state: L.member({ sex: 'f', goal: 'fat', days: 5, kit: ['chair', 'table', 'db', 'rings', 'pad'], health: { pregnant: true } }) });
       const a = await planAudit(p);
+      t.equal(a.days, 20, 'plan days in pregnancy');
       t.equal(a.unsafe, [], 'moves pregnancy rules out');
       t.equal(a.jumps, [], 'jumps in pregnancy');
       t.equal(a.supine, [], 'lying on the back or front in pregnancy');
@@ -89,6 +90,8 @@ module.exports = {
       a = await planAudit(p);
       t.equal(a.level, 'a', 'plan level once cleared');
       t.check(a.cardioDays > 0, 'once cleared, the fat-loss plan should get its cardio days back');
+      // control: the audit does see jumps when nothing rules them out, so the empty lists above mean something
+      t.check(a.jumps.length > 0 && a.days === 20, 'control: an advanced fat-loss plan should have 20 days and some jumps (' + a.days + ' days, ' + a.jumps.length + ' jumps)');
     });
 
     await t.flow('60 and over', async () => {

@@ -282,10 +282,11 @@ class Test {
   // A fresh phone-sized browser context with one page. Records page errors, console errors, 404s and anything
   // the app tries to load from another site. Options: state (seeded once), url (path under the server, default
   // index.html), width, height, scale, now (false: real clock), speed, prefix ('/frank/'), sw (allow the
-  // service worker; then other sites are watched, not blocked), go (false: don't open the page yet).
+  // service worker; then other sites are watched, not blocked), server (one from serve(), e.g. with Pages' caching),
+  // href (open this URL), go (false: don't open the page yet).
   async page(o = {}) {
     const env = this.env;
-    const srv = await env.server(o.prefix || '');
+    const srv = o.server || await env.server(o.prefix || '');
     const browser = await env.browser();
     const ctx = await browser.newContext({ viewport: { width: o.width || 390, height: o.height || 844 }, deviceScaleFactor: o.scale || this.opts.scale || 1,
       serviceWorkers: o.sw ? 'allow' : 'block', locale: 'en-GB', timezoneId: TZ, colorScheme: 'dark' });
@@ -419,7 +420,8 @@ function parseArgs(argv) {
       if (eq !== -1) o[k] = a.slice(eq + 1);
       else if (argv[i + 1] != null && !argv[i + 1].startsWith('--') && ['out', 'scale', 'timeout'].includes(k)) o[k] = argv[++i];
       else o[k] = true;
-    } else o._.push(a);
+    } else if (/^-[a-z]$/i.test(a)) o[a.slice(1)] = true;
+    else o._.push(a);
   }
   return o;
 }
