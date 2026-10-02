@@ -120,6 +120,20 @@ function textBlock(s, u, width, left) {
   return { t, title, note };
 }
 
+// where a transparent render actually has something (alpha above ~10%), in its own pixels
+function inkBox(img) {
+  const W0 = img.naturalWidth, H0 = img.naturalHeight, k = Math.min(1, 600 / Math.max(W0, H0));
+  const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(W0 * k)); c.height = Math.max(1, Math.round(H0 * k));
+  const x = c.getContext('2d'); x.drawImage(img, 0, 0, c.width, c.height);
+  const d = x.getImageData(0, 0, c.width, c.height).data;
+  let x0 = c.width, y0 = c.height, x1 = -1, y1 = -1;
+  for (let y = 0; y < c.height; y++) for (let i = 0; i < c.width; i++) {
+    if (d[(y * c.width + i) * 4 + 3] > 26) { if (i < x0) x0 = i; if (i > x1) x1 = i; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  }
+  if (x1 < 0) return { x: 0, y: 0, w: W0, h: H0 };
+  return { x: x0 / k, y: y0 / k, w: (x1 - x0 + 1) / k, h: (y1 - y0 + 1) / k };
+}
+
 function glow(x, y, d) {
   const g = $('<div class="glow"></div>');
   g.style.left = (x - d / 2) + 'px'; g.style.top = (y - d / 2) + 'px'; g.style.width = d + 'px'; g.style.height = d + 'px';
@@ -153,17 +167,23 @@ window.build = async function (s) {
     L.appendChild(t);
     if (title) fit(title, s.lines || 3);
     if (note) fit(note, 2);
-    const textBottom = t.offsetTop + t.offsetHeight;
     const gap = (s.gap != null ? s.gap : 6) * u;
-    let sw = (s.phoneWidth || 70) * u, room = 0;
-    if (!s.bleed) {                                 // whole phone visible, centred in the room left
-      room = H - textBottom - gap - 5 * u;
-      sw = Math.min(sw, room / (ratio + 0.07));
+    // every image of a set puts its phone at the same height (phoneTop) and centres the caption in the space
+    // above it; only a caption too long for that space pushes the phone down
+    if (s.phoneTop != null && s.top == null) {
+      const room = s.phoneTop * u - gap - 3 * u;
+      t.style.top = Math.max(3 * u, 3 * u + (room - t.offsetHeight) / 2) + 'px';
     }
+    const textBottom = t.offsetTop + t.offsetHeight;
+    const top = Math.max(textBottom + gap, (s.phoneTop != null ? s.phoneTop : 0) * u);
+    const hide = s.bleed === true ? 0.1 : +s.bleed || 0;  // bleed: how much of the phone runs off the bottom (true = a tenth)
+    const sw = hide
+      ? Math.min(W * 0.86, (H - top) / (1 - hide) / (ratio + 0.07))
+      : Math.min((s.phoneWidth || 70) * u, (H - top - 5 * u) / (ratio + 0.07)); // whole phone visible
     const p = phone(s.shots[0], sw, ratio, kind);
     p.el.style.left = (W - p.w) / 2 + 'px';
-    p.el.style.top = textBottom + gap + (s.bleed ? 0 : Math.max(0, (room - p.h) / 2)) + 'px';
-    glow(W / 2, textBottom + gap + p.h * 0.35, W * 1.1);
+    p.el.style.top = top + 'px';
+    glow(W / 2, top + p.h * 0.35, W * 1.1);
     L.appendChild(p.el);
   } else if (s.layout === 'band') {
     // Google Play: the caption stays inside the top 20% of the image, the screen fills the rest, no device
@@ -203,7 +223,9 @@ window.build = async function (s) {
       if (s.labels && s.labels[i]) {
         const lab = $('<div class="label">' + esc(s.labels[i]) + '</div>');
         lab.style.position = 'absolute'; lab.style.left = x + 'px'; lab.style.width = p.w + 'px'; lab.style.top = (top + p.h + 2.2 * u) + 'px';
+        lab.style.whiteSpace = 'nowrap'; lab.style.overflow = 'hidden';
         L.appendChild(lab);
+        fit(lab, 1);                                 // a long label shrinks to one line
       }
     });
   } else if (s.layout === 'hero') {
@@ -238,10 +260,13 @@ window.build = async function (s) {
     const img = pic(s.coach, 'coach');
     await img.decode().catch(() => null);
     if (!img.naturalWidth) throw new Error('the coach render did not load');
-    const k = Math.min((W * (s.coachScale || 0.94)) / img.naturalWidth, (bottom - top) / img.naturalHeight);
+    // fit and centre the figure and its shadow, not the render's empty margins; never scale up
+    const box = inkBox(img);
+    const k = Math.min(1, (W * (s.coachScale || 0.9)) / box.w, (bottom - top) / box.h);
     const w = img.naturalWidth * k, h = img.naturalHeight * k;
     img.style.width = w + 'px'; img.style.height = h + 'px';
-    img.style.left = (W - w) / 2 + 'px'; img.style.top = top + (bottom - top - h) / 2 + 'px';
+    img.style.left = (W / 2 - (box.x + box.w / 2) * k) + 'px';
+    img.style.top = (top + (bottom - top) / 2 - (box.y + box.h / 2) * k) + 'px';
     glow(W / 2, top + (bottom - top) * 0.55, W * 0.95);
     L.appendChild(img);
     const foot = $('<div class="text" style="flex-direction:row;justify-content:space-between;align-items:baseline"></div>');

@@ -839,17 +839,18 @@
     var ex = to[0] - ux * stop, ey = to[1] - uy * stop;
     var bow = (f.bow == null ? 0.22 : f.bow) * dist * (right ? 1 : -1);
     var cx = (from[0] + ex) / 2 - uy * bow, cy = (from[1] + ey) / 2 + ux * bow;
-    var tx = ex - cx, ty = ey - cy, tl = Math.hypot(tx, ty) || 1;
+    // the arrow runs from the body part toward its label, the way Frank draws them on his own graphics
+    var hx = from[0], hy = from[1], tx = hx - cx, ty = hy - cy, tl = Math.hypot(tx, ty) || 1;
     tx /= tl; ty /= tl;
     var a = 7 * d * big;
     (halo ? [[halo, 4.6 * d * big], [ink, 1.4 * d * big]] : [[ink, 1.6 * d * big]]).forEach(function (st) {
       ctx.strokeStyle = st[0];
       ctx.lineWidth = st[1];
-      ctx.beginPath(); ctx.moveTo(from[0], from[1]); ctx.quadraticCurveTo(cx, cy, ex, ey); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(ex, ey); ctx.quadraticCurveTo(cx, cy, hx, hy); ctx.stroke();
       ctx.beginPath();
-      ctx.moveTo(ex - tx * a - ty * a * 0.6, ey - ty * a + tx * a * 0.6);
-      ctx.lineTo(ex, ey);
-      ctx.lineTo(ex - tx * a + ty * a * 0.6, ey - ty * a - tx * a * 0.6);
+      ctx.moveTo(hx - tx * a - ty * a * 0.6, hy - ty * a + tx * a * 0.6);
+      ctx.lineTo(hx, hy);
+      ctx.lineTo(hx - tx * a + ty * a * 0.6, hy - ty * a - tx * a * 0.6);
       ctx.stroke();
     });
   };

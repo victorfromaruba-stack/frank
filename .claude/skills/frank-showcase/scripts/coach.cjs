@@ -25,15 +25,17 @@ async function main() {
   if (!hd) console.log('note: using the app\'s standard coach model (build the HD one: see SKILL.md)');
   const srv = await L.serve();
   const browser = await L.launch();
+  const half = W % 2 === 0 && H % 2 === 0;       // odd sizes render at 1x so the file is exactly W x H
   const ctx = await L.context(browser, srv.url, {
-    width: Math.round(W / 2), height: Math.round(H / 2), scale: 2,
+    width: half ? W / 2 : W, height: half ? H / 2 : H, scale: half ? 2 : 1,
     init: [[shotInit, { shot: { dpr: 2, ss: +(a.ss || 2), shadow: 4096, still: true },
                         coachUrls: hd ? { m: '/assets/hd/coach-m.glb', f: '/assets/hd/coach-f.glb' } : null }]]
   });
   const page = await ctx.newPage();
   const keys = a.key === 'all' ? null : (a.key != null ? [+a.key] : [undefined]);
+  const noteSize = a['note-size'] || (a['note-light'] ? Math.round((half ? W / 2 : W) / 11) : null);   // post labels: about a ninth of the width
   const q = (k) => '?' + new URLSearchParams(Object.entries({ ex: a.ex, coach, key: k, mode: a.mode, yaw: a.yaw, pitch: a.pitch, note: a.note ? 1 : 0, fit: a.fit, mat: a.mat === 'off' ? 0 : null,
-                                                              t: a.t, zoom: a.zoom, fade: a.fade, noteSize: a['note-size'],
+                                                              t: a.t, zoom: a.zoom, fade: a.fade, noteSize: noteSize,
                                                               noteInk: a['note-light'] ? '#A9DCF8' : null, noteHalo: a['note-light'] ? 0 : null })
     .filter(([, v]) => v != null && v !== '')).toString();
   let list = keys;

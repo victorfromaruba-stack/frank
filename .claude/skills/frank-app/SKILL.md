@@ -39,7 +39,9 @@ Read `README.md` first. Everything a person enters is stored in their browser
 | `tools/check-plans.cjs` | counts what every plan type trains per week; must pass |
 | `tools/sheet3d.html` | contact sheet of 3D key poses: `?ids=a,b`, `from`, `to`, `keys`, `mode=muscle|map`, `coach=f`, `yaw`, `pitch` |
 | `tools/media/process.sh`, `docs/FILMING-GUIDE.md` | Frank's clips: how to film them, and how to turn one into app files |
-| `.claude/skills/frank-showcase/` | store screenshots, Instagram posts, previews and portfolio images of the app. It sets `window.WBF_SHOT` (screenshot mode in `js/figure3d.js`) and uses `WBF.app.sheet()`; keep both working |
+| `.claude/skills/frank-showcase/` | store screenshots, Instagram posts, previews and portfolio images of the app. It sets `window.WBF_SHOT` (screenshot mode in `js/figure3d.js`) and uses `WBF.app.sheet()`, `nextDay()`, `session()` and `kcal()`; keep them working |
+| `img/brand/`, `tools/brand/` | the "W by Frank" marks as SVG shapes and the app icons; rebuild with `tools/brand/build_marks.py`, then `render.cjs` |
+| `personal/` | the Personal prototype (client app and Coach mode) on example data, `docs/PERSONAL.md`; `tools/build-personal.mjs` packs it into one file |
 
 ## Adding or changing an exercise
 

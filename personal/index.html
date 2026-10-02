@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Personal · W by Frank</title>
+<meta name="description" content="Prototype of Personal: the app for Frank's own clients, and his Coach mode. Example data only.">
+<meta name="theme-color" content="#012D12">
+<meta name="color-scheme" content="dark">
+<meta name="robots" content="noindex">
+<link rel="icon" href="../img/icon-192.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gilda+Display&family=Nunito:wght@400;600;700;800;900&display=swap">
+<link rel="stylesheet" href="personal.css">
+</head>
+<body>
+<!-- Prototype of Personal (docs/PERSONAL.md): the client's app and Frank's Coach mode on made-up data.
+     Switch views at the top. State stays in this browser; "Start over" clears it. -->
+<div class="proto" role="banner">
+  <small>Prototype · example data</small>
+  <div class="row" style="gap:8px">
+    <div class="seg" role="group" aria-label="View as">
+      <button id="seg-client" aria-pressed="true">Client</button>
+      <button id="seg-coach" aria-pressed="false">Frank</button>
+    </div>
+    <button id="reset" class="icon-btn" style="width:34px;height:34px" aria-label="Start over"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12a7.5 7.5 0 1 0 2.3-5.4"/><path d="M4.5 4.5v4h4"/></svg></button>
+  </div>
+</div>
+<div class="shell"><main id="view"></main></div>
+<nav class="tabbar" id="tabbar" aria-label="Sections"></nav>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script src="../js/figure.js"></script>
+<script src="../js/exercises.js"></script>
+<script src="data.js"></script>
+<script src="personal.js"></script>
+</body>
+</html>

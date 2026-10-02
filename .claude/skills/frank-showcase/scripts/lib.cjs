@@ -8,9 +8,12 @@ const SKILL = path.resolve(__dirname, '..');
 const REPO = path.resolve(SKILL, '..', '..', '..');          // .claude/skills/frank-showcase -> repo root
 
 function playwright() {
-  const tries = ['playwright', path.join(REPO, 'node_modules', 'playwright'), '/opt/node22/lib/node_modules/playwright'];
-  try { tries.push(path.join(require('child_process').execSync('npm root -g', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim(), 'playwright')); } catch (e) { /* no npm */ }
+  const tries = ['playwright', path.join(REPO, 'node_modules', 'playwright'), '/opt/node22/lib/node_modules/playwright', '/usr/local/lib/node_modules/playwright', '/usr/lib/node_modules/playwright'];
   for (const t of tries) { try { return require(t); } catch (e) { /* next */ } }
+  try {                                          // last resort: ask npm (quietly: no log files)
+    const g = require('child_process').execSync('npm root -g', { stdio: ['ignore', 'pipe', 'ignore'], env: Object.assign({}, process.env, { npm_config_logs_max: '0', npm_config_loglevel: 'silent' }) }).toString().trim();
+    return require(path.join(g, 'playwright'));
+  } catch (e) { /* no npm */ }
   throw new Error('Playwright is not installed. Run: npm i -D playwright && npx playwright install chromium');
 }
 

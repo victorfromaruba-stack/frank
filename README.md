@@ -15,7 +15,8 @@ Two kinds of users:
   `docs/ACCOUNTS-AND-PAYMENTS.md`).
 - **Frank's clients** follow sessions Frank writes for them in Coach tools and
   sends as a link. They pay Frank, not the app. A fuller premium version for
-  them, **Personal**, is planned: `docs/PERSONAL.md`.
+  them, **Personal**, is planned (`docs/PERSONAL.md`), with a clickable
+  prototype in `personal/`.
 
 ## What it does
 
@@ -97,6 +98,7 @@ offline mode need HTTPS.
 python3 -m http.server 8000      # then open http://localhost:8000
 node tools/check-plans.cjs       # every plan trains each body region twice a week
 node tools/build.mjs             # dist/wellness-by-frank.html: the whole app in one file (about 3 MB)
+node tools/build-personal.mjs    # dist/personal.html: the Personal prototype in one file
 ```
 
 When you change a file, bump `VERSION` in `sw.js` so installed phones pick up
@@ -118,6 +120,8 @@ the update.
 | `js/app.js` | screens, onboarding, the player, access (trial, member, client), coach tools, Today, Me |
 | `js/sound.js` | beeps, voice, vibration, keeping the screen on |
 | `img/` | Frank's four graphics and the app icons |
+| `img/brand/`, `tools/brand/` | the "W by Frank" marks (SVG) and the scripts that draw them and the app icons |
+| `personal/`, `tools/build-personal.mjs` | the Personal prototype: the client's app and Frank's Coach mode on example data |
 | `manifest.webmanifest`, `sw.js` | home-screen install and offline cache |
 | `tools/build.mjs` | packs everything into one HTML file |
 | `tools/check-plans.cjs` | checks every plan type against the twice-a-week rule |

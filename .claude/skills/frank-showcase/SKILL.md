@@ -30,6 +30,7 @@ node .claude/skills/frank-showcase/scripts/make.cjs appstore --coach f
 | `play` | 6 screenshots at 1080 x 1920 (caption in the top fifth, no device), plus the 1024 x 500 feature graphic |
 | `instagram` | 3 feed posts at 1080 x 1440 (two big 3D coach renders, one phone) and a 1080 x 1920 story |
 | `preview` | 4 images at 3000 x 2500, three labelled screens each: sign-up, plan, moves, daily use. Tall enough that the phones stay readable after WhatsApp shrinks them; tell people to send with HD on |
+| `workout` | the workout part as one session in 3 images at 3000 x 2500: find a workout, every move (its three tabs), press play (player, rest, finish) |
 | `portfolio` | a 3200 x 1800 hero and a 2400 x 2400 square for the studio's site |
 
 - **Options:**
@@ -38,6 +39,8 @@ node .claude/skills/frank-showcase/scripts/make.cjs appstore --coach f
     so a set doesn't show the same move three times; `--ex` overrides them all.
   - `--only <name>` remakes one item.
   - `--fresh` captures everything again.
+  - `--out <folder>` writes there instead of the repo's `showcase/`. Use it whenever you work for someone else
+    or in a shared checkout, so nothing lands in the repo.
   - `all` makes every set.
 - **Output:** everything goes under `showcase/`, which git ignores:
   - `showcase/<set>/NN-<name>.png`, the finished images;
@@ -46,7 +49,10 @@ node .claude/skills/frank-showcase/scripts/make.cjs appstore --coach f
 - **Delivering:** send `_sheet.png` first, then the full-size files they choose.
 
 Captions live in `assets/presets.json`. Change them there, or pass your own file
-with `--presets`.
+with `--presets` (copy the set you need and edit it). In captions, `{cues}`, `{name}` and `{muscles}` become
+the exercise's cues, its name, and its main muscles as the app names them. A coach item can set its own `size`
+(a push-up reads better in a wide render), `t` (a moment between key poses), `zoom` and `note: true` (Frank's
+label and arrow, big and light, for posts).
 
 ## The four tools, for anything the presets don't cover
 
@@ -77,7 +83,8 @@ with `--presets`.
 3. **`scripts/compose.cjs spec.json`** lays images out. A spec is a list of
    `{ out, size, layout, theme, kicker, title, note, shots | coach, ... }`.
    - Layouts:
-     - `phone`: caption plus one phone, optionally running off the bottom (`bleed`);
+     - `phone`: caption plus one phone. `phoneTop` puts every phone of a set at the same height (the caption
+       centres above it); `bleed` lets it run off the bottom (`true` a tenth, or a fraction such as `0.3`);
      - `band`: Google Play, no device;
      - `phones`: two or three labelled phones;
      - `hero`: words left, three phones right;
@@ -101,9 +108,11 @@ as Frank's own graphics and the app:
 - **Colours:** Frank's forest green (`#012D12` and the `forest` theme's deeper greens) with sky blue (`#7CC4EE`) as the
   one accent. The `paper` theme is for previews and sheets, never a new palette.
 - **Type:** heavy rounded capitals (Nunito Black) for the headline, thin serif (Gilda Display) for the note and labels.
-  One highlighted word per title (`*word*`), the way the app does it.
-- **His marks:** serif labels with a curved hand-drawn arrow pointing *at* the body part (the arrowhead touches the
-  joint, never the label). `coach.cjs --note` draws them exactly as the app does.
+  One highlighted word or short phrase per title (`*built for you*`), the way the app does it.
+- **His marks:** serif labels with a thin, curved hand-drawn arrow that starts at the body part (or object) and points
+  toward its label, as on his own graphics (`img/wellness-*.jpg`). `coach.cjs --note` draws them the way the app
+  does; add `--note-light` for a post on his green.
+- **His mark:** "W by Frank", the big W (`img/brand/`). Use the SVGs as they are; don't redraw or recolour them.
 - **The coach is the hero:** big, sharp, in a pose that shows the move's point (bottom of the squat, push-up halfway
   down), lit by the app's own lights. No extra filters, glows on the figure, or stock backgrounds.
 - **Brand on everything that leaves the app:** "Wellness by Frank" and @wellnessbyfrank on social posts.

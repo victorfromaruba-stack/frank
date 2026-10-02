@@ -423,11 +423,12 @@
     var nrm = [-u[1], u[0]];
     var bow = (this.an.focus.bow == null ? 0.22 : this.an.focus.bow) * d;
     var c = add(lerp2(from, end, 0.5), nrm, bow);
-    this.noteArrow.setAttribute('d', 'M' + pt(from) + 'Q' + pt(c) + ' ' + pt(end));
-    var tan = unit(sub(end, c));
-    var l = add(end, [(-tan[0] * 3 - tan[1] * 2) * nu * 0.7, (-tan[1] * 3 + tan[0] * 2) * nu * 0.7]);
-    var r = add(end, [(-tan[0] * 3 + tan[1] * 2) * nu * 0.7, (-tan[1] * 3 - tan[0] * 2) * nu * 0.7]);
-    this.noteHead.setAttribute('d', poly([l, end, r]));
+    this.noteArrow.setAttribute('d', 'M' + pt(end) + 'Q' + pt(c) + ' ' + pt(from));
+    // the head sits at the label: Frank's arrows run from the body part toward its name
+    var tan = unit(sub(from, c));
+    var l = add(from, [(-tan[0] * 3 - tan[1] * 2) * nu * 0.7, (-tan[1] * 3 + tan[0] * 2) * nu * 0.7]);
+    var r = add(from, [(-tan[0] * 3 + tan[1] * 2) * nu * 0.7, (-tan[1] * 3 - tan[0] * 2) * nu * 0.7]);
+    this.noteHead.setAttribute('d', poly([l, from, r]));
   };
 
   Figure.prototype.frame = function (now) {

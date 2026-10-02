@@ -12,7 +12,8 @@
    "layout": "phone",
    "theme": "forest",
    "frame": "phone",
-   "bleed": true
+   "bleed": true,
+   "phoneTop": 44
   },
   "items": [
    {
@@ -42,9 +43,7 @@
    {
     "screen": "coaches",
     "title": "Pick your *coach*",
-    "note": "A woman or a man shows every move",
-    "theme": "paper",
-    "bleed": false
+    "note": "A woman or a man demonstrates in 3D"
    },
    {
     "screen": "today",
@@ -52,7 +51,7 @@
     "note": "Workouts, walks and water in one place"
    },
    {
-    "screen": "tools",
+    "screen": "client",
     "title": "Train with *Frank*",
     "note": "His clients get sessions he writes for them"
    }
@@ -95,7 +94,7 @@
     "title": "Every minute *counts*"
    },
    {
-    "screen": "tools",
+    "screen": "client",
     "title": "Train with *Frank*"
    },
    {
@@ -133,7 +132,7 @@
      "ex": "squat",
      "note": 100
     },
-    "kicker": "Wellness by Frank",
+    "kicker": "{muscles}",
     "title": "The squat, *done right*",
     "note": "{cues}"
    },
@@ -145,7 +144,7 @@
      "mode": "muscle",
      "key": 2
     },
-    "kicker": "Wellness by Frank",
+    "kicker": "{muscles}",
     "title": "See what it *works*",
     "note": "Reverse lunge: {cues}"
    },
@@ -155,8 +154,7 @@
     "kicker": "Wellness by Frank",
     "title": "Your plan, *built for you*",
     "note": "28 days around your goal and your time",
-    "phoneWidth": 64,
-    "bleed": true
+    "bleed": 0.32
    },
    {
     "name": "story-player",
@@ -168,8 +166,7 @@
     ],
     "top": 26,
     "title": "Press play, *follow along*",
-    "phoneWidth": 70,
-    "bleed": true
+    "bleed": 0.2
    }
   ]
  },
@@ -242,6 +239,67 @@
      "Frank"
     ],
     "title": "Every *day*"
+   }
+  ]
+ },
+ "workout": {
+  "about": "The workout part of the app, for showing Frank or a client: three images following one session (find it, every move, press play), three labelled screens each, 3000 x 2500 (send with HD on).",
+  "device": "iphone-6.9",
+  "rules": "any",
+  "defaults": {
+   "size": [
+    3000,
+    2500
+   ],
+   "layout": "phones",
+   "theme": "paper",
+   "kicker": "Wellness by Frank"
+  },
+  "items": [
+   {
+    "name": "find-a-workout",
+    "screens": [
+     "workouts",
+     "workout",
+     "library"
+    ],
+    "labels": [
+     "Workouts",
+     "Your workout",
+     "Library"
+    ],
+    "title": "Find a *workout*",
+    "ex": "mountain-climber"
+   },
+   {
+    "name": "every-move",
+    "screens": [
+     "sheet",
+     "muscle",
+     "howto"
+    ],
+    "labels": [
+     "Video",
+     "Muscles",
+     "How-to"
+    ],
+    "title": "Every *move*",
+    "ex": "mountain-climber"
+   },
+   {
+    "name": "press-play",
+    "screens": [
+     "player",
+     "rest",
+     "done"
+    ],
+    "labels": [
+     "Player",
+     "Rest",
+     "Finished"
+    ],
+    "title": "Press *play*",
+    "ex": "squat"
    }
   ]
  },

@@ -78,6 +78,10 @@ in. Option A keeps data on the phones, but WhatsApp still carries it.
 ## Build order
 
 1. A clickable prototype of Personal and Coach mode on example data, to agree on how it
-   looks and works.
+   looks and works. **Done:** `personal/` (serve the repo and open `personal/index.html`),
+   or one file to send: `node tools/build-personal.mjs` writes `dist/personal.html`.
+   Switch between the client and Frank at the top. A check-in sent as the client shows up
+   in Coach mode, Frank's reply and his plan for next week show up for the client. The
+   clients, gyms and numbers in it are made up.
 2. The data model and screens on the chosen option, A or B.
 3. Frank's videos as they're filmed (`docs/FILMING-GUIDE.md`).

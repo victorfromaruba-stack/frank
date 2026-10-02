@@ -4,8 +4,8 @@
 //   node shoot.cjs --screens plan,sheet,player --device iphone-6.9 --coach f --ex squat --out showcase/shots
 //   node shoot.cjs --list                      (screens and devices)
 //
-// --rest-clock 80   the rest screen waits until the session clock passes this many seconds, so next to a
-//                   player capture (about 1:00) time moves forward; 0 skips the wait
+// --rest-clock 80   the rest screen waits until the session clock passes this many seconds, so shown next
+//                   to a player capture the clock moves forward; 0 skips the wait
 //
 // Writes <out>/<device>/<screen>.png and <out>/<device>/manifest.json. Exit code 1 if any screen failed.
 const fs = require('fs');
@@ -29,6 +29,8 @@ function shotInit(o) {
     const css = document.createElement('style');
     css.textContent = ':root{--safe-t:' + o.top + 'px!important;--safe-b:' + o.bottom + 'px!important}' +
       '#toast{display:none!important}*{caret-color:transparent!important}:focus,:focus-visible{outline:none!important}' +
+      // emoji in colour, as on a phone (a test browser may fall back to a black-and-white emoji font)
+      ':root{--f-body:Nunito,"Apple Color Emoji","Noto Color Emoji",ui-rounded,system-ui,sans-serif!important;--f-display:Nunito,"Apple Color Emoji","Noto Color Emoji",ui-rounded,system-ui,sans-serif!important}' +
       '#__sb{position:fixed;left:0;right:0;top:0;height:' + o.top + 'px;z-index:2147483647;pointer-events:none;color:#fff;' +
       'font:800 ' + (o.os === 'ios' ? 17 : 14) + 'px/1 Nunito,system-ui,sans-serif;letter-spacing:.01em}' +
       'body.light #__sb{color:#0E2A1A}#__sb svg{fill:currentColor;display:block}' +

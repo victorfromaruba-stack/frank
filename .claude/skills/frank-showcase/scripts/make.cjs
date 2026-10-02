@@ -18,6 +18,17 @@ const node = (script, argv) => {
   return r.status === 0;
 };
 
+// the app's names for muscles (js/app.js MUS_NAME)
+const MUS_NAME = { chest: 'chest', abs: 'abs', obliques: 'obliques', 'front-deltoids': 'front shoulders', 'back-deltoids': 'rear shoulders', biceps: 'biceps',
+  triceps: 'triceps', forearm: 'forearms', trapezius: 'traps', 'upper-back': 'upper back', 'lower-back': 'lower back', gluteal: 'glutes', abductors: 'outer hips',
+  adductor: 'inner thighs', quadriceps: 'quads', hamstring: 'hamstrings', calves: 'calves' };
+function musclesOf(ex) {
+  const p = ((exOf(ex).mus || {}).p || []).map((m) => MUS_NAME[m] || m).slice(0, 2);
+  const s = p.join(' and ');
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+function exOf(ex) { cuesOf(ex); return global.WBF.EX[ex]; }
+
 function cuesOf(ex) {
   global.window = global;
   global.document = global.document || { addEventListener() {}, hidden: false };
@@ -73,14 +84,15 @@ async function main() {
       const c = it.coach, file = path.join(coachDir, [c.ex, c.coach || coach, c.mode === 'muscle' ? 'muscle' : '', c.key != null ? 'k' + c.key : '',
                                                      c.t != null ? 't' + c.t : '', c.note ? 'note' : ''].filter(Boolean).join('-') + '.png');
       if (a.fresh || !fs.existsSync(file)) {
-        const argv = ['--ex', c.ex, '--coach', c.coach || coach, '--size', '2160x2700', '--mat', 'off', '--out', file];
+        const argv = ['--ex', c.ex, '--coach', c.coach || coach, '--size', c.size || '2160x2700', '--mat', 'off', '--out', file];
         if (c.mode) argv.push('--mode', c.mode);
         if (c.key != null) argv.push('--key', String(c.key));
         if (c.yaw != null) argv.push('--yaw', String(c.yaw));
         if (c.pitch != null) argv.push('--pitch', String(c.pitch));
         if (c.t != null) argv.push('--t', String(c.t));
         if (c.zoom != null) argv.push('--zoom', String(c.zoom));
-        if (c.note) argv.push('--note', '--note-size', String(c.note === true ? 40 : c.note), '--note-light');
+        if (c.note) argv.push('--note', '--note-light');
+        if (typeof c.note === 'number') argv.push('--note-size', String(c.note));
         if (!node('coach.cjs', argv)) ok = false;
       }
       it._coach = c;
@@ -94,7 +106,13 @@ async function main() {
       s.out = String(it._n).padStart(2, '0') + '-' + label + '.png';
       if (it.screen) s.shots = [path.relative(dir, shotFile(dev, it.screen, itemEx(it)))];
       if (it.screens) s.shots = it.screens.map((x) => path.relative(dir, shotFile(dev, x, itemEx(it))));
-      for (const k of ['title', 'note']) if (s[k] && s[k].includes('{cues}')) s[k] = s[k].replace('{cues}', cuesOf((it._coach || {}).ex || itemEx(it) || ex));
+      const e0 = (it._coach || {}).ex || itemEx(it) || ex;
+      for (const k of ['kicker', 'title', 'note']) {
+        if (!s[k]) continue;
+        if (s[k].includes('{cues}')) s[k] = s[k].replace('{cues}', cuesOf(e0));
+        if (s[k].includes('{name}')) s[k] = s[k].replace('{name}', exOf(e0).name);
+        if (s[k].includes('{muscles}')) s[k] = s[k].replace('{muscles}', musclesOf(e0));
+      }
       s.rules = P.rules || 'any';
       delete s.screen; delete s.screens; delete s.device; delete s._n; delete s._coach; delete s.name; delete s.ex;
       return s;
