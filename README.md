@@ -96,8 +96,19 @@ When Frank films a move, his clip replaces the coach for that move:
 
 ## Run it, host it
 
+The preview runs on GitHub Pages from the `app` branch:
+https://victorfromaruba-stack.github.io/frank/. A push to `app` is live a
+minute or two later (`.nojekyll` makes Pages serve the files as they are).
+
 Any static host works. Serve the folder as it is; the phone install and
-offline mode need HTTPS.
+offline mode need HTTPS. The app loads nothing from other sites: its fonts
+are in `fonts/` and three.js is in `vendor/`.
+
+Before members pay:
+- **Frank's own domain first.** The app keeps each person's data per web
+  address, so moving it to a new address later leaves their progress behind.
+- **A host that allows paid apps.** GitHub Pages isn't for running a paid
+  service; Cloudflare Pages and Netlify are, with the same files.
 
 ```bash
 python3 -m http.server 8000      # then open http://localhost:8000
@@ -114,6 +125,7 @@ the update.
 | File | What |
 |---|---|
 | `index.html`, `app.css` | the page and its look |
+| `fonts/` | Nunito and Gilda Display, served with the app (SIL Open Font License) |
 | `js/figure.js` | the 2D pose engine: poses, joints, the annotation arrows |
 | `js/figure3d.js` | the 3D coach: poses the rigged models on the 2D joints, muscle view, muscle maps |
 | `assets/coach-m.glb`, `assets/coach-f.glb`, `assets/CREDITS.txt` | the two coaches and their licence |

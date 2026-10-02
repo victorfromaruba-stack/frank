@@ -114,8 +114,10 @@ node tools/build.mjs
   launch with `--use-angle=swiftshader --enable-unsafe-swiftshader`.
 - Block service workers in tests that route requests (`serviceWorkers: 'block'`).
 - Bump `VERSION` in `sw.js` whenever a cached file changes.
-- In this sandbox Chromium doesn't trust the proxy CA: route Google Fonts and
-  jsDelivr through Node's `fetch` in the test harness. Never turn off TLS checks.
+- The app loads nothing from other sites (fonts in `fonts/`, three.js in `vendor/`).
+  Only the single-file builds fetch three.js from jsDelivr; in this sandbox Chromium
+  doesn't trust the proxy CA, so route jsDelivr through Node's `fetch` in a test
+  harness. Never turn off TLS checks.
 
 ## Never
 

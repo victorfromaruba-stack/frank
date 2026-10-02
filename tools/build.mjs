@@ -17,7 +17,8 @@ if (/<\/script/i.test(scripts)) throw new Error('a script contains </script>');
 const css = read('app.css');
 const html = read('index.html');
 const body = html.slice(html.indexOf('<body>') + '<body>'.length, html.indexOf('<script')).trim();
-const fonts = html.match(/<link rel="stylesheet" href="https:\/\/fonts\.googleapis\.com[^>]+>/)[0];
+// Frank's two fonts go inside the file (fonts/, SIL Open Font License)
+const fonts = '<style>\n' + read('fonts/fonts.css').replace(/url\(([\w.-]+\.woff2)\)/g, (m, f) => `url(${dataUri('fonts/' + f, 'font/woff2')})`) + '</style>';
 const imgScript = `<script>window.WBF_IMG = ${JSON.stringify(imgMap)};</script>`;
 const icon = dataUri('img/icon-192.png', 'image/png');
 // both 3D coaches go inside the file

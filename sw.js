@@ -1,9 +1,10 @@
 /* Wellness by Frank: offline cache for the app's own files. Bump VERSION when you change any file.
-   Google Fonts are left to the browser's normal cache, and so are Frank's videos (media/): phones
-   ask for videos in pieces, which a cache can't answer. */
-const VERSION = 'wbf-7';
+   Frank's videos (media/) are left to the browser's normal cache: phones ask for videos in pieces,
+   which a cache can't answer. */
+const VERSION = 'wbf-8';
 const SHELL = [
   './', 'index.html', 'app.css', 'manifest.webmanifest',
+  'fonts/fonts.css', 'fonts/Nunito-latin.woff2', 'fonts/GildaDisplay-latin.woff2',
   'js/figure.js', 'js/exercises.js', 'js/programs.js', 'js/science.js', 'js/sound.js', 'js/figure3d.js', 'js/media.js', 'js/app.js',
   'vendor/three.module.min.js', 'vendor/jsm/GLTFLoader.js', 'vendor/jsm/BufferGeometryUtils.js', 'vendor/jsm/RoomEnvironment.js',
   'assets/coach-m.glb', 'assets/coach-f.glb',
