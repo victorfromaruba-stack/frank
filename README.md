@@ -74,19 +74,24 @@ look from the models' own muscle detail (`--hd` makes the sharper set in
 When Frank films a move, his clip replaces the coach for that move:
 `docs/FILMING-GUIDE.md` has the shot list and how to add a clip.
 
+## Decided
+
+- **The membership price:** €15 a month (`BILLING` in `js/programs.js`).
+- **The words:** Frank approved his bio (only what his certificate covers: fitness
+  trainer, NHA level 3, with sports nutrition and biomechanics) and the app's texts:
+  the exercise texts (`js/exercises.js`), the daily lessons and the method lines
+  (`js/programs.js`, `js/app.js`). New or changed text goes to him before it ships.
+
 ## Frank needs to check or supply
 
-1. **The words.** The exercise texts (`js/exercises.js`), the daily lessons and
-   the method lines (`js/programs.js`, `js/app.js`) are drafts written from his
-   graphics. He should read them and put them in his own words.
-2. **His videos**, when he's ready: `docs/FILMING-GUIDE.md`.
-3. **Prices and the trial** (now placeholders: €14.99 a month, €119.99 a year,
-   7 days free) and a payment provider: `docs/ACCOUNTS-AND-PAYMENTS.md`.
-4. **His bio.** The app now says only what his certificate covers: fitness trainer,
-   NHA level 3, with sports nutrition and biomechanics. He should approve the wording.
-5. **His WhatsApp number**, if he wants a WhatsApp button: `whatsapp` in
-   `js/programs.js`, digits only with the country code (Aruba is 297).
-6. **Programs and doses.** The workouts and reps in `js/programs.js` and
+1. **His logo:** the original file of the logo on his Instagram profile. The big W
+   app icon in `img/` stands in for it until then.
+2. **His videos and photos:** the list in `docs/FILMING-GUIDE.md`.
+3. **The yearly price, the trial and a payment provider** (now placeholders: €119.99
+   a year, 7 days free): `docs/ACCOUNTS-AND-PAYMENTS.md`.
+4. **His WhatsApp number**, if he wants a WhatsApp button: `whatsapp` in
+   `js/programs.js`, digits only with the country code (the Netherlands is 31).
+5. **Programs and doses.** The workouts and reps in `js/programs.js` and
    `js/exercises.js` are sensible defaults. He may want his own.
 
 ## Run it, host it

@@ -1,10 +1,14 @@
-# Filming Frank's exercise videos
+# Filming Frank's videos and photos
 
 Every exercise in the app is shown by the 3D coach until Frank films his own
 clip. A clip of Frank doing the move replaces the coach in the exercise's
 Video tab, in the workout player and in the lists. The coach stays for the
 Muscle tab and for every move without a clip, so the app works the whole
 time, with 1 video or 80.
+
+Below the moves are the other videos and photos the apps need: Personal, food,
+portraits and brand files. Frank works from the same list as a checklist that
+Victor shares with him; the numbers and file names match.
 
 ## Set up once
 
@@ -29,10 +33,11 @@ time, with 1 video or 80.
    no talking. Start and finish in the same position so the clip loops
    smoothly. For holds (plank, wall sit, stretches): 8 to 10 seconds of the
    hold. Leave 2 seconds before and after, we cut those off.
-2. **The how-to (optional):** 30 to 60 seconds explaining the move the way
-   you would to a client: the set-up, the one cue that matters, the usual
-   mistake. Talk to the camera. Sound matters here: stand closer, or use a
-   clip-on microphone. This one appears in the How-to tab.
+2. **The how-to:** 30 to 60 seconds explaining the move the way you would
+   to a client: the set-up, the cues, the usual mistake. Talk to the camera.
+   Sound matters here: stand closer, or use a clip-on microphone. This one
+   appears in the How-to tab; until it's filmed, the tab shows the 3D coach
+   in slow motion, with the written steps.
 
 - **Camera angle:** as in the list below. **45°** means the phone stands
   between your front and your side, the angle that shows depth and knees at
@@ -44,108 +49,187 @@ time, with 1 video or 80.
   AirDrop, Google Drive or WeTransfer, and name each file after the move
   (`squat.mp4`, `squat-howto.mp4`).
 
+## The plan
+
+| When | What | Count |
+|---|---|---|
+| Sunday 1 | Moves 1 to 20, loop and how-to; the Personal welcome; portraits | 41 videos, 3 photos |
+| Sunday 2 | Moves 21 to 45, loop and how-to | 50 videos |
+| Sunday 3 | Moves 46 to 80, loop and how-to; the assessment tests | 76 videos |
+| A kitchen session | Cooking videos, meal photos, hand portions | 6 videos, 12 photos |
+| Any time | The check-in and progress-photo guides, coaching photos | 2 videos, 4 photos |
+
 ## The shot list
 
-Ordered by how often a move turns up in the generated plans. Filming the first
-20 covers most of what members see every day.
+Three batches, by how often a move turns up in the generated plans: the first
+20 cover most of what members see every day. Within a batch the moves are
+grouped by set-up, so each piece of kit comes out once.
 
 ### First 20
 
-| # | Exercise | Name in the app files | Camera | Clip |
-|---|---|---|---|---|
-| 1 | March in place | `march` | 45° | 8–10 s |
-| 2 | Child's pose | `childs-pose` | Side | hold 8–10 s |
-| 3 | Arm circles | `arm-circles` | 45° | 8–10 s |
-| 4 | Cat and cow | `cat-cow` | Side | 3–4 reps |
-| 5 | Table row | `table-row` | Side | 3–4 reps · table |
-| 6 | Leg swings | `leg-swings` | 45° | right side only · 8–10 s |
-| 7 | Standing forward fold | `forward-fold` | 45° | hold 8–10 s |
-| 8 | Mountain climbers | `mountain-climber` | Side | 8–10 s |
-| 9 | Cobra | `cobra` | Side | 3–4 reps |
-| 10 | Knees to chest | `knee-to-chest` | Side | 8–10 s |
-| 11 | Push-up | `push-up` | Side | 3–4 reps |
-| 12 | Half-kneeling hip stretch | `hip-flexor-stretch` | Side | right side only · hold 8–10 s |
-| 13 | Squat to a target | `box-squat` | 45° | 3–4 reps · chair or step |
-| 14 | Hip hinge | `hip-hinge` | 45° | 3–4 reps |
-| 15 | Single-leg hinge | `single-leg-rdl` | 45° | right side only · 3–4 reps |
-| 16 | Squat | `squat` | 45° | 3–4 reps |
-| 17 | Forearm plank | `plank` | Side | hold 8–10 s |
-| 18 | Jumping jacks | `jumping-jacks` | Front | 8–10 s |
-| 19 | Split squat | `split-squat` | 45° | right side only · 3–4 reps |
-| 20 | Jump squat | `jump-squat` | 45° | 3–4 reps |
+The moves members see most. Filming these covers most of every workout.
+
+| # | Exercise | Name in the app files | Set-up | Camera | Clip |
+|---|---|---|---|---|---|
+| 1 | March in place | `march` | Standing | 45° | 8–10 s |
+| 2 | Arm circles | `arm-circles` | Standing | 45° | 8–10 s |
+| 3 | Leg swings | `leg-swings` | Standing | 45° | right side only · 8–10 s |
+| 4 | Standing forward fold | `forward-fold` | Standing | 45° | hold 8–10 s |
+| 5 | Hip hinge | `hip-hinge` | Standing | 45° | 3–4 reps |
+| 6 | Single-leg hinge | `single-leg-rdl` | Standing | 45° | right side only · 3–4 reps |
+| 7 | Squat | `squat` | Standing | 45° | 3–4 reps |
+| 8 | Jumping jacks | `jumping-jacks` | Standing | Front | 8–10 s |
+| 9 | Split squat | `split-squat` | Standing | 45° | right side only · 3–4 reps |
+| 10 | Jump squat | `jump-squat` | Standing | 45° | 3–4 reps |
+| 11 | Child's pose | `childs-pose` | On the floor | Side | hold 8–10 s |
+| 12 | Cat and cow | `cat-cow` | On the floor | Side | 3–4 reps |
+| 13 | Mountain climbers | `mountain-climber` | On the floor | Side | 8–10 s |
+| 14 | Cobra | `cobra` | On the floor | Side | 3–4 reps |
+| 15 | Knees to chest | `knee-to-chest` | On the floor | Side | 8–10 s |
+| 16 | Push-up | `push-up` | On the floor | Side | 3–4 reps |
+| 17 | Half-kneeling hip stretch | `hip-flexor-stretch` | On the floor | Side | right side only · hold 8–10 s |
+| 18 | Forearm plank | `plank` | On the floor | Side | hold 8–10 s |
+| 19 | Squat to a target | `box-squat` | Chair or step | 45° | 3–4 reps |
+| 20 | Table row | `table-row` | Table | Side | 3–4 reps |
 
 ### Next 25
 
-| # | Exercise | Name in the app files | Camera | Clip |
-|---|---|---|---|---|
-| 21 | Standing quad stretch | `quad-stretch` | 45° | right side only · hold 8–10 s |
-| 22 | Wall calf stretch | `calf-stretch` | 45° | right side only · hold 8–10 s |
-| 23 | Calf raise | `calf-raise` | 45° | 3–4 reps |
-| 24 | Burpee | `burpee` | Side | 3–4 reps |
-| 25 | Wall slide | `wall-slide` | Front | 3–4 reps |
-| 26 | Side plank | `side-plank` | Front | right side only · hold 8–10 s |
-| 27 | High knees | `high-knees` | 45° | 8–10 s |
-| 28 | Glute bridge | `glute-bridge` | Side | 3–4 reps |
-| 29 | Rear-foot-up split squat | `bulgarian-split-squat` | 45° | right side only · 3–4 reps · chair or step |
-| 30 | Reverse lunge | `reverse-lunge` | 45° | right side only · 3–4 reps |
-| 31 | Incline push-up | `incline-push-up` | Side | 3–4 reps · chair or step |
-| 32 | Hollow hold | `hollow-hold` | Side | hold 8–10 s |
-| 33 | Single-leg bridge | `single-leg-bridge` | Side | right side only · 3–4 reps |
-| 34 | Wall sit | `wall-sit` | Side | hold 8–10 s |
-| 35 | Step-up | `step-up` | 45° | right side only · 3–4 reps · chair or step |
-| 36 | Chair dip | `chair-dip` | Side | 3–4 reps · chair or step |
-| 37 | Pike push-up | `pike-push-up` | Side | 3–4 reps |
-| 38 | Scapular push-up | `scap-push-up` | Side | 3–4 reps |
-| 39 | Farmer carry | `farmer-carry` | 45° | hold 8–10 s · bags or jugs |
-| 40 | Bicycle crunch | `bicycle-crunch` | Side | right side only · 3–4 reps |
-| 41 | Crunch | `crunch` | Side | 3–4 reps |
-| 42 | Flutter kicks | `flutter-kicks` | Side | 8–10 s |
-| 43 | Leg raise | `leg-raise` | Side | 3–4 reps |
-| 44 | Brace and breathe | `brace-breathe` | Side | hold 8–10 s |
-| 45 | Deep squat hold | `deep-squat-hold` | Side | hold 8–10 s |
+The rest of the generated plans.
 
-### The rest
+| # | Exercise | Name in the app files | Set-up | Camera | Clip |
+|---|---|---|---|---|---|
+| 21 | Standing quad stretch | `quad-stretch` | Standing | 45° | right side only · hold 8–10 s |
+| 22 | Calf raise | `calf-raise` | Standing | 45° | 3–4 reps |
+| 23 | High knees | `high-knees` | Standing | 45° | 8–10 s |
+| 24 | Reverse lunge | `reverse-lunge` | Standing | 45° | right side only · 3–4 reps |
+| 25 | Deep squat hold | `deep-squat-hold` | Standing | Side | hold 8–10 s |
+| 26 | Burpee | `burpee` | On the floor | Side | 3–4 reps |
+| 27 | Side plank | `side-plank` | On the floor | Front | right side only · hold 8–10 s |
+| 28 | Glute bridge | `glute-bridge` | On the floor | Side | 3–4 reps |
+| 29 | Hollow hold | `hollow-hold` | On the floor | Side | hold 8–10 s |
+| 30 | Single-leg bridge | `single-leg-bridge` | On the floor | Side | right side only · 3–4 reps |
+| 31 | Pike push-up | `pike-push-up` | On the floor | Side | 3–4 reps |
+| 32 | Scapular push-up | `scap-push-up` | On the floor | Side | 3–4 reps |
+| 33 | Bicycle crunch | `bicycle-crunch` | On the floor | Side | right side only · 3–4 reps |
+| 34 | Crunch | `crunch` | On the floor | Side | 3–4 reps |
+| 35 | Flutter kicks | `flutter-kicks` | On the floor | Side | 8–10 s |
+| 36 | Leg raise | `leg-raise` | On the floor | Side | 3–4 reps |
+| 37 | Brace and breathe | `brace-breathe` | On the floor | Side | hold 8–10 s |
+| 38 | Wall calf stretch | `calf-stretch` | At a wall | 45° | right side only · hold 8–10 s |
+| 39 | Wall slide | `wall-slide` | At a wall | Front | 3–4 reps |
+| 40 | Wall sit | `wall-sit` | At a wall | Side | hold 8–10 s |
+| 41 | Rear-foot-up split squat | `bulgarian-split-squat` | Chair or step | 45° | right side only · 3–4 reps |
+| 42 | Incline push-up | `incline-push-up` | Chair or step | Side | 3–4 reps |
+| 43 | Step-up | `step-up` | Chair or step | 45° | right side only · 3–4 reps |
+| 44 | Chair dip | `chair-dip` | Chair or step | Side | 3–4 reps |
+| 45 | Farmer carry | `farmer-carry` | Other kit | 45° | 8–10 s walking · bags or jugs |
 
-These appear in Frank's programs, the workout catalogue, swaps and his own
-sessions for clients.
+### The other 35
 
-| # | Exercise | Name in the app files | Camera | Clip |
-|---|---|---|---|---|
-| 46 | Downward dog | `down-dog` | Side | hold 8–10 s |
-| 47 | Bird dog | `bird-dog` | Side | right side only · 3–4 reps |
-| 48 | Side lunge | `lateral-lunge` | Front | right side only · 3–4 reps |
-| 49 | Feet-up push-up | `decline-push-up` | Side | 3–4 reps · chair or step |
-| 50 | Plank shoulder taps | `shoulder-taps` | Side | right side only · 3–4 reps |
-| 51 | Prone Y raise | `prone-y-raise` | Side | 3–4 reps |
-| 52 | Single-leg balance | `balance` | 45° | right side only · hold 8–10 s |
-| 53 | Superman | `superman` | Side | 3–4 reps |
-| 54 | Butt kicks | `butt-kicks` | 45° | 8–10 s |
-| 55 | Dead bug | `dead-bug` | Side | right side only · 3–4 reps |
-| 56 | Inchworm | `inchworm` | Side | 3–4 reps |
-| 57 | Plank up-down | `plank-up-down` | Side | right side only · 3–4 reps |
-| 58 | Punches | `punches` | 45° | 8–10 s |
-| 59 | Reverse crunch | `reverse-crunch` | Side | 3–4 reps |
-| 60 | Skipping, no rope | `skipping` | 45° | 8–10 s |
-| 61 | V-up | `v-up` | Side | 3–4 reps |
-| 62 | Dumbbell overhead press | `db-press` | 45° | 3–4 reps · dumbbells |
-| 63 | Dumbbell Romanian deadlift | `db-rdl` | 45° | 3–4 reps · dumbbells |
-| 64 | Goblet squat | `goblet-squat` | 45° | 3–4 reps · dumbbells |
-| 65 | One-arm dumbbell row | `db-row` | 45° | right side only · 3–4 reps · dumbbells, chair or step |
-| 66 | Balance pad stand | `pad-balance` | 45° | right side only · hold 8–10 s · balance pad |
-| 67 | Bear hold | `bear-hold` | Side | hold 8–10 s |
-| 68 | Diamond push-up | `diamond-push-up` | Side | 3–4 reps |
-| 69 | Donkey kick | `donkey-kick` | Side | right side only · 3–4 reps |
-| 70 | Dumbbell curl | `db-curl` | 45° | 3–4 reps · dumbbells |
-| 71 | Heels-up squat | `heel-squat` | 45° | 3–4 reps · heel wedge |
-| 72 | Knee push-up | `knee-push-up` | Side | 3–4 reps |
-| 73 | Overhead triceps extension | `db-triceps` | 45° | 3–4 reps · dumbbells |
-| 74 | Ring row | `ring-row` | 45° | 3–4 reps · rings |
-| 75 | Side arm raise | `arm-raise` | Front | 3–4 reps |
-| 76 | Side-lying leg raise | `side-leg-raise` | Front | right side only · 3–4 reps |
-| 77 | Suitcase carry | `suitcase-carry` | 45° | right side only · hold 8–10 s · bags or jugs |
-| 78 | Sumo squat | `sumo-squat` | Front | 3–4 reps |
-| 79 | Wall push-up | `wall-push-up` | 45° | 3–4 reps |
-| 80 | Wide push-up | `wide-push-up` | Side | 3–4 reps |
+Frank's programs, the workout catalogue, swaps and his own sessions for clients.
+
+| # | Exercise | Name in the app files | Set-up | Camera | Clip |
+|---|---|---|---|---|---|
+| 46 | Side lunge | `lateral-lunge` | Standing | Front | right side only · 3–4 reps |
+| 47 | Single-leg balance | `balance` | Standing | 45° | right side only · hold 8–10 s |
+| 48 | Butt kicks | `butt-kicks` | Standing | 45° | 8–10 s |
+| 49 | Punches | `punches` | Standing | 45° | 8–10 s |
+| 50 | Skipping, no rope | `skipping` | Standing | 45° | 8–10 s |
+| 51 | Side arm raise | `arm-raise` | Standing | Front | 3–4 reps |
+| 52 | Sumo squat | `sumo-squat` | Standing | Front | 3–4 reps |
+| 53 | Downward dog | `down-dog` | On the floor | Side | hold 8–10 s |
+| 54 | Bird dog | `bird-dog` | On the floor | Side | right side only · 3–4 reps |
+| 55 | Plank shoulder taps | `shoulder-taps` | On the floor | Side | right side only · 3–4 reps |
+| 56 | Prone Y raise | `prone-y-raise` | On the floor | Side | 3–4 reps |
+| 57 | Superman | `superman` | On the floor | Side | 3–4 reps |
+| 58 | Dead bug | `dead-bug` | On the floor | Side | right side only · 3–4 reps |
+| 59 | Inchworm | `inchworm` | On the floor | Side | 3–4 reps |
+| 60 | Plank up-down | `plank-up-down` | On the floor | Side | right side only · 3–4 reps |
+| 61 | Reverse crunch | `reverse-crunch` | On the floor | Side | 3–4 reps |
+| 62 | V-up | `v-up` | On the floor | Side | 3–4 reps |
+| 63 | Bear hold | `bear-hold` | On the floor | Side | hold 8–10 s |
+| 64 | Diamond push-up | `diamond-push-up` | On the floor | Side | 3–4 reps |
+| 65 | Donkey kick | `donkey-kick` | On the floor | Side | right side only · 3–4 reps |
+| 66 | Knee push-up | `knee-push-up` | On the floor | Side | 3–4 reps |
+| 67 | Side-lying leg raise | `side-leg-raise` | On the floor | Front | right side only · 3–4 reps |
+| 68 | Wide push-up | `wide-push-up` | On the floor | Side | 3–4 reps |
+| 69 | Wall push-up | `wall-push-up` | At a wall | 45° | 3–4 reps |
+| 70 | Feet-up push-up | `decline-push-up` | Chair or step | Side | 3–4 reps |
+| 71 | Dumbbell overhead press | `db-press` | Dumbbells | 45° | 3–4 reps |
+| 72 | Dumbbell Romanian deadlift | `db-rdl` | Dumbbells | 45° | 3–4 reps |
+| 73 | Goblet squat | `goblet-squat` | Dumbbells | 45° | 3–4 reps |
+| 74 | One-arm dumbbell row | `db-row` | Dumbbells | 45° | right side only · 3–4 reps · chair or step |
+| 75 | Dumbbell curl | `db-curl` | Dumbbells | 45° | 3–4 reps |
+| 76 | Overhead triceps extension | `db-triceps` | Dumbbells | 45° | 3–4 reps |
+| 77 | Balance pad stand | `pad-balance` | Other kit | 45° | right side only · hold 8–10 s · balance pad |
+| 78 | Heels-up squat | `heel-squat` | Other kit | 45° | 3–4 reps · heel wedge |
+| 79 | Ring row | `ring-row` | Other kit | 45° | 3–4 reps · rings |
+| 80 | Suitcase carry | `suitcase-carry` | Other kit | 45° | right side only · 8–10 s walking · bags or jugs |
+
+## Personal: 9 videos
+
+For the app Frank's own clients get (`docs/PERSONAL.md`). The welcome and the
+two guides are Frank talking to the camera: phone upright, about 1.5 metres
+away at chest height, Frank from the waist up. The tests show the whole body
+and use the same set-up as the moves. The prototype doesn't play these yet;
+keep the originals until the real Personal app is built.
+
+| File | What | Camera | Length |
+|---|---|---|---|
+| `personal-welcome.mp4` | Who Frank is, how Personal works, what to do first | Upright | 60–90 s |
+| `test-squat.mp4` | Assessment: goblet squat, 10 reps, scored in kg | 45° | 20–40 s |
+| `test-pushup.mp4` | Assessment: push-ups on the knees, scored in reps | Side | 20–40 s |
+| `test-plank.mp4` | Assessment: forearm plank, scored in seconds | Side | 20–40 s |
+| `test-ankle.mp4` | Assessment: knee to wall, cm for each ankle | Side, low | 20–40 s |
+| `test-waist.mp4` | Assessment: waist at the navel, in cm | Front | 20–40 s |
+| `test-hinge.mp4` | Assessment: hip hinge with a broomstick, Frank writes a note | Side | 20–40 s |
+| `personal-checkin.mp4` | How the weekly check-in works | Upright | 45–60 s |
+| `personal-photos.mp4` | How to take progress photos | Upright | 45–60 s |
+
+The tests are the ones in the prototype's example assessment
+(`personal/data.js`). If Frank uses other tests, change this list and that file.
+
+## Food: 6 videos, 12 photos
+
+The meals in the Personal food plan (`personal/data.js`). Portions in hands,
+not grams or calories, as in the app.
+
+- **Cooking videos:** phone sideways on a tripod looking down at the counter.
+  Frank may stop between steps and send numbered clips (`cook-bowl-1.mp4`,
+  `cook-bowl-2.mp4`); they're joined into one video of 60 to 90 seconds.
+  `cook-bowl` (ten-minute chicken bowl), `cook-oats` (overnight oats, three
+  ways), `cook-wrap` (chicken, hummus and salad wrap), `cook-salmon` (salmon,
+  potatoes and green beans), `cook-eggs` (eggs on toast), `cook-soup` (lentil
+  soup).
+- **Meal photos:** the whole plate from above, daylight, right after cooking.
+  `meal-yoghurt.jpg`, `meal-wrap.jpg`, `meal-before.jpg` (before training),
+  `meal-salmon.jpg`, `meal-eggs.jpg`, `meal-soup.jpg`, `meal-snack.jpg`,
+  `meal-bowl.jpg`.
+- **Hand portions:** Frank's hand next to the food it measures, from above.
+  `hand-palm.jpg` (chicken or fish), `hand-fist.jpg` (vegetables or oats),
+  `hand-cupped.jpg` (rice, potatoes or nuts), `hand-thumb.jpg` (peanut butter
+  or oil).
+
+The three food guides use these photos and need nothing extra.
+
+## Photos of Frank and the brand files
+
+| File | What | Where it goes |
+|---|---|---|
+| `frank-portrait.jpg` | Head and shoulders, upright | Frank's round picture in Personal |
+| `frank-half.jpg` | Waist up, upright | Top of the Frank page and "Meet your coach" (now `img/wellness-4.jpg`) |
+| `frank-full.jpg` | Full length, upright | The welcome screen, posts about the app |
+| `coach-1.jpg` to `coach-4.jpg` | Coaching a squat or hinge; an assessment; a client and the plan on a phone; a wide shot of a gym | "Train with Frank in person", Personal |
+
+Anyone who can be recognised in a coaching photo agrees in writing first, and
+the gym agrees to photos on its floor.
+
+Brand files, as Frank has them:
+- **His logo:** the original of the logo on his Instagram profile (SVG, AI or
+  PDF, or the biggest PNG). It replaces the stand-in W app icon
+  (`img/brand/`, `tools/brand/render.cjs` makes the icons).
+- **His four graphics at full size:** they replace `img/wellness-1.jpg` to
+  `img/wellness-4.jpg` (program covers and the Frank page).
 
 ## Putting a clip in the app
 

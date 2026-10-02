@@ -21,13 +21,13 @@
   };
 
   // Membership for people who train with the app, in euro (Frank sells from the Netherlands).
-  // Prices are placeholders until Frank and Victor decide. paymentLink: any checkout link
+  // The monthly price is decided; the yearly price and the trial are placeholders. paymentLink: any checkout link
   // (Mollie, Stripe, Paddle). Frank's own clients don't pay here. See docs/ACCOUNTS-AND-PAYMENTS.md.
   var BILLING = {
     trialDays: 7, paymentLink: '',
     plans: [
       { id: 'year', name: 'Yearly', price: '€119.99', per: 'year', perWeek: '€2.31', best: true },
-      { id: 'month', name: 'Monthly', price: '€14.99', per: 'month', perWeek: '€3.46' }
+      { id: 'month', name: 'Monthly', price: '€15', per: 'month', perWeek: '€3.46' }
     ]
   };
 

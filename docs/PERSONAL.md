@@ -63,17 +63,23 @@ that needs:
 - a data processing agreement with the hosting company;
 - a way for clients to export and delete everything.
 
-Frank is the controller, because these are his clients. Whoever runs the app for him
-processes the data for him. Option B needs all of this before the first real client signs
-in. Option A keeps data on the phones, but WhatsApp still carries it.
+Frank is the controller, because these are his clients. Victor will own the server
+account and run the app for him, so Victor processes the data for Frank: they sign a data
+processing agreement between them, next to the hosting company's. Option B needs all of
+this before the first real client signs in. Option A keeps data on the phones, but
+WhatsApp still carries it.
 
-## Decisions needed
+## Decisions
 
-1. A or B (or A now, B later).
-2. Who pays for and owns the server account and the client data.
-3. The Personal price, and whether in-person sessions are booked in the app or by
-   message.
-4. Frank's video list for Personal: his explanations, his cooking videos.
+Made:
+- **The server account and the client data:** Victor's account, run for Frank (see
+  Privacy above).
+- **The Personal price:** Frank sets it. It stays out of this repo, which is public.
+- **Frank's video and photo list:** `docs/FILMING-GUIDE.md`.
+
+Still open:
+1. A or B (or A now, B later). B is the recommendation.
+2. Whether in-person sessions are booked in the app or by message.
 
 ## Build order
 

@@ -58,7 +58,8 @@ Read `README.md` first. Everything a person enters is stored in their browser
    with `&coach=f` and `&mode=muscle`. Hands and feet must touch the floor, nothing
    may pass through the floor, a box, the table or the wall.
 5. The coaching text is Frank's voice: short imperative cues ("Hips back."),
-   plain words, one idea per line. It is a draft until Frank approves it.
+   plain words, one idea per line. Frank approved the app's texts in October 2026;
+   new or changed text is a draft until he approves it.
 
 ## Frank's videos
 

@@ -64,8 +64,8 @@ doesn't change when you pick one. Prices are in euro.
 
 ## Decisions for Victor and Frank
 
-1. Prices and trial length (now €14.99 a month or €119.99 a year, 7 days free:
-   placeholders, set in `BILLING.plans`).
+1. The yearly price and the trial length (now €119.99 a year and 7 days free:
+   placeholders in `BILLING.plans`). The monthly price is decided: €15.
 2. Payment provider (Mollie or Stripe through Frank's Dutch business, or Paddle).
 3. Web app first, or straight into the stores.
 4. Whether Frank's clients also get the generated plans (now: yes).

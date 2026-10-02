@@ -952,7 +952,7 @@
               : (ended ? '<button class="btn dark block" disabled>Become a member</button><p class="fine">Payments aren\'t switched on in this preview yet.</p>'
                        : '<button class="btn dark block" data-act="pay-trial">Start my ' + BILL.trialDays + '-day free trial</button><p class="fine">No payment needed for the trial. Payments aren\'t switched on in this preview, so nothing is charged.</p>')) +
         '<button class="btn white block" data-act="join">I\'m one of Frank\'s clients</button>' +
-        '<p class="fine">Prices shown are placeholders until Frank sets them. Cancel any time.</p></div></div>';
+        '<p class="fine">The yearly price is a placeholder for now. Cancel any time.</p></div></div>';
     }
   };
 
