@@ -1,7 +1,7 @@
 /* Wellness by Frank: offline cache for the app's own files. Bump VERSION when you change any file.
    Frank's videos (media/) are left to the browser's normal cache: phones ask for videos in pieces,
    which a cache can't answer. */
-const VERSION = 'wbf-8';
+const VERSION = 'wbf-9';
 const SHELL = [
   './', 'index.html', 'app.css', 'manifest.webmanifest',
   'fonts/fonts.css', 'fonts/Nunito-latin.woff2', 'fonts/GildaDisplay-latin.woff2',

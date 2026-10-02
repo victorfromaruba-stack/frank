@@ -14,7 +14,9 @@ Two kinds of users:
   membership (payments are not connected yet: see
   `docs/ACCOUNTS-AND-PAYMENTS.md`).
 - **Frank's clients** follow sessions Frank writes for them in Coach tools and
-  sends as a link. They pay Frank, not the app. A fuller premium version for
+  sends as a link, or type a client code under "I train with Frank" (make one
+  with `node tools/client-code.mjs <code>`). Either opens the whole app without
+  the membership. They pay Frank, not the app. A fuller premium version for
   them, **Personal**, is planned (`docs/PERSONAL.md`), with a clickable
   prototype in `personal/`.
 
@@ -142,6 +144,7 @@ the update.
 | `manifest.webmanifest`, `sw.js` | home-screen install and offline cache |
 | `tools/build.mjs` | packs everything into one HTML file |
 | `tools/check-plans.cjs` | checks every plan type against the twice-a-week rule |
+| `tools/client-code.mjs` | makes a client code's line for `FRANK.codes` |
 | `tools/sheet3d.html`, `tools/sheet.html` | every exercise's key poses in 3D and 2D: open them (served) to check animations after an edit |
 | `tools/coach/build_coach.py` | rebuilds the 3D coaches from the source models |
 | `tools/media/process.sh`, `docs/FILMING-GUIDE.md` | Frank's videos: how to film and add them |

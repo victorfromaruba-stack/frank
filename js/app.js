@@ -268,6 +268,15 @@
     save();
     return spec;
   }
+  // a client code from Frank: capitals and spaces don't count; only hashes are stored (tools/client-code.mjs)
+  function clientCode(text) {
+    var code = String(text || '').trim().toLowerCase().replace(/\s+/g, '');
+    if (!/^[a-z0-9-]{3,40}$/.test(code) || !(FR.codes || []).length || !(W.crypto && W.crypto.subtle)) return Promise.resolve(false);
+    return W.crypto.subtle.digest('SHA-256', new TextEncoder().encode('wbf:' + code)).then(function (buf) {
+      var hex = Array.prototype.map.call(new Uint8Array(buf), function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+      return FR.codes.indexOf(hex) !== -1;
+    }).catch(function () { return false; });
+  }
   function specById(id) {
     return S.inbox.filter(function (x) { return x.i === id; })[0] || S.coach.templates.filter(function (x) { return x.i === id; })[0] || null;
   }
@@ -615,10 +624,16 @@
     return '<button class="opt" data-act="' + act + '" data-k="' + k + '" data-v="' + v + '" aria-pressed="' + !!on + '">' +
       (iconName ? '<span class="oi">' + ic(iconName) + '</span>' : '') + '<span class="grow">' + label + (small ? '<small>' + small + '</small>' : '') + '</span><span class="tickc">' + ic('check') + '</span></button>';
   }
+  // sore spots: the app knows which moves load each one, except 'other'
+  function soreName(x) { var r = WBF.SORE.filter(function (s) { return s[0] === x; })[0]; return r ? r[1] : x; }
+  function soreKnown(list) { return (list || []).filter(function (x) { return x !== 'other'; }); }
+  function soreWords(list) { return soreKnown(list).map(function (x) { return soreName(x).toLowerCase(); }).join(' and '); }
   function cta(label, act, disabled) { return '<div class="ob-cta"><button class="btn dark block" data-act="' + (act || 'ob-next') + '"' + (disabled ? ' disabled' : '') + '>' + (label || 'Next') + '</button></div>'; }
-  function ruler(id, val, min, max, step, unit) {
-    return '<div class="ruler-wrap"><div class="big-val num" id="rv-' + id + '">' + val + '<small>' + unit + '</small></div>' +
-      '<div class="ruler" id="rl-' + id + '" data-min="' + min + '" data-max="' + max + '" data-step="' + step + '" data-val="' + val + '" aria-label="Slide to set" role="slider" aria-valuemin="' + min + '" aria-valuemax="' + max + '" aria-valuenow="' + val + '" tabindex="0"><canvas></canvas></div><div class="ruler-needle"></div></div>';
+  // fmt 'ftin': the value is in inches, shown as feet and inches (5 ft 10 in)
+  function ftIn(v) { return Math.floor(v / 12) + '<small>ft</small> ' + (v % 12) + '<small>in</small>'; }
+  function ruler(id, val, min, max, step, unit, fmt) {
+    return '<div class="ruler-wrap"><div class="big-val num" id="rv-' + id + '">' + (fmt === 'ftin' ? ftIn(val) : val + '<small>' + unit + '</small>') + '</div>' +
+      '<div class="ruler" id="rl-' + id + '"' + (fmt ? ' data-fmt="' + fmt + '"' : '') + ' data-min="' + min + '" data-max="' + max + '" data-step="' + step + '" data-val="' + val + '" aria-label="Slide to set" role="slider" aria-valuemin="' + min + '" aria-valuemax="' + max + '" aria-valuenow="' + val + '" tabindex="0"><canvas></canvas></div><div class="ruler-needle"></div></div>';
   }
   function bmiBox(kg, cm) {
     var b = bmiOf(kg, cm);
@@ -726,7 +741,7 @@
         var cm = d.cm || (d.sex === 'f' ? 165 : 178);
         body = coachLine('With your weight, this gives your BMI and a safe weekly pace.') +
           '<div class="ruler-wrap"><span class="unit-seg" role="group" aria-label="Units"><button data-act="hunits" data-v="cm" aria-pressed="' + !ft + '">cm</button><button data-act="hunits" data-v="ft" aria-pressed="' + ft + '">ft</button></span></div>' +
-          (ft ? ruler('h', Math.round(cm / 2.54), 48, 90, 1, 'in') : ruler('h', Math.round(cm), 120, 220, 1, 'cm'));
+          (ft ? ruler('h', Math.round(cm / 2.54), 48, 90, 1, 'in', 'ftin') : ruler('h', Math.round(cm), 120, 220, 1, 'cm'));
       } else if (id === 'weight') {
         q = 'What\'s your <em>current</em> weight?';
         var lb = S.settings.units === 'lb';
@@ -756,7 +771,13 @@
         var inj = d.injuries || [];
         body = '<div class="opt-list">' + opt('ob-none', 'injuries', 'none', 'None', '', !inj.length && d.soreDone) +
           WBF.SORE.map(function (s) { return '<button class="opt" role="checkbox" data-act="ob-multi" data-k="injuries" data-v="' + s[0] + '" aria-checked="' + (inj.indexOf(s[0]) !== -1) + '"><span class="grow">' + s[1] + '</span><span class="tickc">' + ic('check') + '</span></button>'; }).join('') + '</div>';
-        if (inj.length) body += coachLine('Got it. Moves that load your ' + inj.map(function (x) { return WBF.SORE.filter(function (s) { return s[0] === x; })[0][1].toLowerCase(); }).join(' and ') + ' are left out or swapped. Stop any move that hurts.');
+        if (inj.length) {
+          var known = soreKnown(inj);
+          body += coachLine(inj.indexOf('other') === -1 ? 'Got it. Moves that load your ' + soreWords(inj) + ' are left out or swapped. Stop any move that hurts.'
+            : (known.length ? 'Got it. Moves that load your ' + soreWords(inj) + ' are left out or swapped, and jumps are left out. For the other spot'
+                            : 'Got it. Jumps are left out. For this spot') +
+              ', the app can\'t tell which moves load it: skip any move that hurts it, and check with a doctor or physio first.');
+        }
       } else if (id === 'active') {
         q = 'How <em>active</em> are you?';
         var a = +d.active || 0, A_ = ACTIVE[a];
@@ -841,7 +862,8 @@
   };
   function buildSteps(d) {
     var out = ['Choosing moves for ' + (WBF.GOALS[d.goal] || WBF.GOALS.fit).name.toLowerCase()];
-    if ((d.injuries || []).length) out.push('Leaving out moves that load your ' + d.injuries.map(function (x) { return WBF.SORE.filter(function (s) { return s[0] === x; })[0][1].toLowerCase(); }).join(' and '));
+    if (soreKnown(d.injuries).length) out.push('Leaving out moves that load your ' + soreWords(d.injuries));
+    if ((d.injuries || []).indexOf('other') !== -1) out.push('Leaving out jumps for your ' + (soreKnown(d.injuries).length ? 'other ' : '') + 'sore spot');
     out.push('Setting doses for ' + (WBF.LEVELS[d.level || 'b'] || 'Beginner').toLowerCase() + 's');
     out.push('Scheduling ' + d.days + ' days a week, ' + d.minutes + ' minutes each');
     var fw = (d.focus || []).filter(function (f) { return f !== 'full' && WBF.BODY_BY_ID[f]; });
@@ -874,7 +896,7 @@
       '<div class="sum-row"><span>Target weight</span><b>' + target + '</b></div>' +
       '<div class="sum-row"><span>Level</span><b>' + WBF.LEVELS[WBF.plan.levelFor(d)] + '</b></div>' +
       '<div class="sum-row"><span>Focus</span><b>' + esc(focusWords(d)) + '</b></div>' +
-      ((d.injuries || []).length ? '<div class="sum-row"><span>Sore spots</span><b>' + d.injuries.map(function (x) { return WBF.SORE.filter(function (s) { return s[0] === x; })[0][1]; }).join(', ') + '<small>Moves that load them are left out</small></b></div>' : '') +
+      ((d.injuries || []).length ? '<div class="sum-row"><span>Sore spots</span><b>' + d.injuries.map(soreName).join(', ') + '<small>' + (d.injuries.indexOf('other') === -1 ? 'Moves that load them are left out' : soreKnown(d.injuries).length ? 'Moves that load them, and jumps, are left out' : 'Jumps are left out') + '</small></b></div>' : '') +
       (av.gentle ? '<div class="sum-row"><span>Health</span><b>Gentle mode<small>Until your doctor clears you</small></b></div>' : '') +
       (d.health && d.health.pregnant ? '<div class="sum-row"><span>Pregnancy</span><b>Pregnancy mode</b></div>' : '') + '</div>' +
       '<div class="summary"><p class="label" style="color:var(--ink-d2)">Plan overview</p><p class="h2" style="text-transform:uppercase">' + esc(planName(d)) + '</p>' +
@@ -892,20 +914,21 @@
     var c = cv.getContext('2d');
     c.scale(dpr, dpr);
     c.font = '700 12px Nunito, system-ui, sans-serif'; c.textAlign = 'center'; c.fillStyle = '#7A9183';
-    var per = step < 1 ? 10 : step === 1 && max > 300 ? 10 : 10;
+    var ftin = el.getAttribute('data-fmt') === 'ftin', per = ftin ? 12 : 10;
     for (var i = 0; i <= n; i++) {
       var x = w / 2 + i * px, v = min + i * step, major = i % per === 0, half = i % (per / 2) === 0;
       c.strokeStyle = major ? '#4A6455' : '#B9C7BF'; c.lineWidth = major ? 2 : 1.2;
       c.beginPath(); c.moveTo(x, 6); c.lineTo(x, major ? 40 : half ? 30 : 20); c.stroke();
-      if (major) c.fillText(String(Math.round(v)), x, 60);
+      if (major) c.fillText(ftin ? Math.round(v / 12) + ' ft' : String(Math.round(v)), x, 60);
     }
     el.scrollLeft = (val - min) / step * px;
     var id = el.id.slice(3), out = $('#rv-' + id), t = null;
     function read() {
       var v = clamp(min + Math.round(el.scrollLeft / px) * step, min, max);
       v = Math.round(v * 10) / 10;
-      if (out) out.innerHTML = v + '<small>' + out.querySelector('small').textContent + '</small>';
+      if (out) out.innerHTML = ftin ? ftIn(v) : v + '<small>' + out.querySelector('small').textContent + '</small>';
       el.setAttribute('aria-valuenow', v);
+      if (ftin) el.setAttribute('aria-valuetext', Math.floor(v / 12) + ' feet ' + (v % 12) + ' inches');
       rulerSet(id, v);
     }
     el.addEventListener('scroll', function () { read(); clearTimeout(t); t = setTimeout(function () { el.scrollTo({ left: Math.round(el.scrollLeft / px) * px, behavior: 'smooth' }); }, 140); });
@@ -1652,7 +1675,7 @@
       (pr ? '<section class="card"><p class="label">Health</p>' +
         (parq ? '<div class="set-row"><div><b>Cleared by a doctor</b><span class="meta">You answered yes to a health question. Switch this on once a doctor or qualified professional says vigorous exercise is fine.</span></div><button class="switch" role="switch" data-act="health" data-k="cleared" aria-checked="' + !!h.cleared + '" aria-label="Cleared by a doctor"></button></div>' : '') +
         '<div class="set-row"><div><b>Pregnancy mode</b><span class="meta">No lying flat, no jumping, no balance pad or rings</span></div><button class="switch" role="switch" data-act="health" data-k="pregnant" aria-checked="' + !!h.pregnant + '" aria-label="Pregnancy mode"></button></div>' +
-        '<p class="small">Sore spots: ' + ((pr.injuries || []).length ? pr.injuries.map(function (x) { return WBF.SORE.filter(function (s) { return s[0] === x; })[0][1]; }).join(', ') : 'none') + '. <button class="link" data-act="ob-edit-step" data-step="sore" style="min-height:0;padding:0">Change</button></p></section>' : '') +
+        '<p class="small">Sore spots: ' + ((pr.injuries || []).length ? pr.injuries.map(soreName).join(', ') : 'none') + '. <button class="link" data-act="ob-edit-step" data-step="sore" style="min-height:0;padding:0">Change</button></p></section>' : '') +
       membershipCard() + install +
       '<section class="card"><p class="label">The science</p><p class="small">How the plans follow the research on strength, cardio, balance and safety, with every source.</p>' +
       '<button class="btn two block" data-act="science">Why the plans work</button></section>' +
@@ -1703,10 +1726,10 @@
     html: function () {
       return '<div class="screen bare">' + backBar('Frank\'s clients') +
         '<h1 class="h1">Sessions from Frank</h1>' +
-        '<p class="lead">Frank writes your sessions and sends each one as a link. Open the link on this phone and the session lands on your plan. Or paste the link or code here.</p>' +
+        '<p class="lead">Frank writes your sessions and sends each one as a link. Open the link on this phone and the session lands on your plan. Or paste the link here, or type the code Frank gave you.</p>' +
         '<form class="stack" data-form="join"><label for="join-in" class="sr">Link or code from Frank</label>' +
-        '<textarea class="input" id="join-in" rows="3" placeholder="Paste the link or code from Frank" style="padding:14px 16px;min-height:100px;resize:vertical"></textarea>' +
-        '<button class="btn block" type="submit">Add the session</button></form>' +
+        '<textarea class="input" id="join-in" rows="3" placeholder="Paste the link, or type your code" autocapitalize="off" autocorrect="off" spellcheck="false" style="padding:14px 16px;min-height:100px;resize:vertical"></textarea>' +
+        '<button class="btn block" type="submit">Continue</button></form>' +
         '<div class="card quiet"><p class="small">Not training with Frank yet? He coaches in person and online.</p>' +
         '<a class="link" href="' + FR.dm + '" target="_blank" rel="noopener">' + ic('msg') + 'Message Frank</a></div></div>';
     }
@@ -2151,11 +2174,20 @@
       save(); render(false);
       var again = $('#meal-in'); if (again) again.focus();
     } else if (kind === 'join') {
-      var spec = importSession($('#join-in').value);
-      if (!spec) { toast('That link or code didn\'t work. Ask Frank to send it again.'); return; }
-      stack = [{ name: 'plan', params: {} }, { name: 'workout', params: { coach: spec.i } }];
-      render(true);
-      toast('Added: ' + spec.t);
+      var text = $('#join-in').value, spec = importSession(text);
+      if (spec) {
+        stack = [{ name: 'plan', params: {} }, { name: 'workout', params: { coach: spec.i } }];
+        render(true);
+        toast('Added: ' + spec.t);
+        return;
+      }
+      clientCode(text).then(function (ok) {
+        if (!ok) { toast('That link or code didn\'t work. Ask Frank to send it again.'); return; }
+        S.access = Object.assign(S.access || {}, { client: true });
+        save();
+        if (S.profile) { stack = [{ name: 'plan', params: {} }]; render(true); } else A['ob-start']();
+        toast('Welcome. The whole app is open to you.');
+      });
     } else if (kind === 'weight') {
       var kg = toKg($('#w-in').value);
       if (!kg || kg < 20 || kg > 400) { toast('Enter your weight as a number'); return; }

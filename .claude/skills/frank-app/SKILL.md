@@ -93,6 +93,13 @@ VP9 copies with the same names. The service worker leaves videos to the browser.
 - Client links carry the whole session, base64url JSON after `#frank.`. Keep
   them plain-anchor safe (letters, digits, `-`, `_`, `.`). `cleanSpec()`
   validates everything that comes in.
+- Client codes: `FRANK.codes` in `js/programs.js` holds SHA-256 hashes of
+  `'wbf:' + code` (lower case, no spaces), so the codes can't be read in the
+  public repo. `node tools/client-code.mjs <code>` prints the line to add. A
+  matching code sets `access.client`. Like the paywall, it's a check on the
+  phone until accounts exist.
+- Sore spots (`SORE`): each id must match the `stress` tags on exercises, except
+  `other`, which only leaves out jumps (`avoidFor`).
 
 ## Check your work
 

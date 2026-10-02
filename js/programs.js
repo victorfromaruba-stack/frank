@@ -17,7 +17,13 @@
     // what his certificate says (NHA Fitness Trainer level 3, which covers sports nutrition and biomechanics);
     // keep claims to what he holds: neuroscience is his own interest, not a qualification
     bio: 'Fitness trainer (NHA level 3), trained in sports nutrition and biomechanics. Based in The Hague. Neuroscience is his side passion.',
-    tagline: 'Not only a trainer, but purposely an educator.'
+    tagline: 'Not only a trainer, but purposely an educator.',
+    // Client codes: typing one on "Frank's clients" opens the whole app without the membership.
+    // Only hashes live here, so the codes can't be read in this public repo. Add one with
+    // node tools/client-code.mjs <code>. Like the paywall, it's a check on the phone, not a lock.
+    codes: [
+      '3423e93ea2938ccbb786555bc73794e7b5216f5f85a319ebe19c57d723e3b57b'   // 2026-10-02
+    ]
   };
 
   // Membership for people who train with the app, in euro (Frank sells from the Netherlands).
@@ -221,7 +227,8 @@
     ['joint', 'Do you have a bone, joint or soft-tissue problem that more activity could make worse?'],
     ['supervised', 'Has your doctor ever said you should only do medically supervised physical activity?']
   ];
-  var SORE = [['shoulder', 'Shoulder'], ['wrist', 'Wrist'], ['knee', 'Knee'], ['ankle', 'Ankle'], ['back', 'Lower back']];
+  // 'other' is a sore spot the app can't place: it only leaves out jumps (see avoidFor)
+  var SORE = [['shoulder', 'Shoulder'], ['wrist', 'Wrist'], ['knee', 'Knee'], ['ankle', 'Ankle'], ['back', 'Lower back'], ['other', 'Other']];
 
   // what a person's answers rule out: { supine, prone, jump, vigorous, kit: [...], stress: [...], gentle, older }
   function avoidFor(profile) {
@@ -236,6 +243,7 @@
     var yrs = age(profile);
     if (yrs != null && yrs >= 60) { a.jump = true; a.older = true; }
     if (h.injury) a.jump = true;                      // the older yes/no injury question
+    if (a.stress.indexOf('other') !== -1) a.jump = true;   // a sore spot the app can't place
     return a;
   }
   function vigorous(ex) { return ex.met >= 7; }
