@@ -1,7 +1,9 @@
 # Writing poses and animations
 
 The 2D engine (`js/figure.js`) solves every frame; the 3D coach (`js/figure3d.js`)
-puts body parts on the same joints. Get the 2D pose right and the 3D follows.
+turns the rigged model's bones to match the same joints. Get the 2D pose right and
+the 3D follows. The model was fitted to the engine's bone lengths
+(`tools/coach/build_coach.py`), so a hand planted in 2D lands on the floor in 3D.
 
 ## Coordinates
 
@@ -9,7 +11,8 @@ puts body parts on the same joints. Get the 2D pose right and the 3D follows.
 - A standing figure is about 97 units tall. Bone lengths (`H.L`): torso 30,
   head 11 above the shoulders (radius 6.2), upper arm 15.5, forearm 14.5,
   thigh 24, shin 23, foot 8 (heel 2.4 behind the ankle). The ankle sits 2.5
-  above the floor when the foot is flat.
+  above the floor when the foot is flat. Front-view widths match the 3D model:
+  half the shoulders 10.8, half the hips 5.8. One unit is about 2 cm on the coach.
 - Angles: 0 points down, 90 forward, 180 up, -90 back.
 - Figures face right when upright. Lying on the back: head to the left.
   Lying face down: head to the right. Keep this, or the spine curve bends the
@@ -59,9 +62,24 @@ anim: { k: [poseA, poseB, ...], d: [secondsAtoB, secondsBtoC, ...], h: [holdAtA,
 | `breathe(P, dy)` | a hold that moves a little |
 | `H.line`, `H.ang` | body-line maths and the angle between two points |
 
+## What the 3D coach adds
+
+- Arms reach their hand points with two-bone IK; legs copy the 2D directions.
+- Contact: a hand or foot below about 4.6 units counts as planted flat on the
+  floor; hands on a box or chair press on its top, on the table they grip the
+  edge; a wall stays a wall. Each animation gets one ground offset so no frame
+  sinks into the floor.
+- Mats appear only for floor work. Props (`box`, `table`, `wall`, `pad`, `wedge`)
+  and held kit (`hold: { db, rings }`) are drawn by the 3D module.
+- The Muscle view greys the body and lights the exercise's `mus` muscles; the
+  map view (lists, focus areas) shows the coach from the front or back.
+
 ## Checking
 
-- `tools/sheet.html?from=0&to=12` shows 2D key poses; `tools/sheet3d.html?ids=a,b`
-  shows 3D ones. Serve the folder first.
-- Look for: feet or hands below the floor, limbs through the body, a knee bending
-  backwards (flip `b`), a label covering the figure (change `focus.at`).
+- `tools/sheet3d.html?ids=a,b` shows 3D key poses (`&keys=4` for more frames,
+  `&coach=f` for the female coach, `&mode=muscle`). `tools/sheet.html?from=0&to=12`
+  shows the 2D ones. Serve the folder first.
+- Look for: feet or hands below the floor or floating above it, limbs through
+  the body or through a box or table, a knee bending backwards (flip `b`), a
+  label covering the figure (change `focus.at`). Check both coaches: their
+  proportions differ a little.

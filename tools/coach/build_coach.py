@@ -24,10 +24,14 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, '..', '..', 'assets', 'coach-%s.glb' % WHO)
 
 CFG = {
-    'm': dict(body='Superhero_Male_FullBody', hair='Hair_SimpleParted', extra=[],
-              shirt=(16, 74, 42), shorts=(24, 27, 26), skin='T_Superhero_Male_Dark.png', hairColor=[0.16, 0.11, 0.08, 1]),
-    'f': dict(body='Superhero_Female_FullBody', hair='Hair_Buns', extra=[],
-              shirt=(16, 74, 42), shorts=(24, 27, 26), skin='T_Superhero_Female_Dark_BaseColor.png', hairColor=[0.16, 0.11, 0.08, 1]),
+    # sleeve: how far down the upper arm the top reaches (0 = sleeveless); legs: how far down
+    # the thigh the shorts reach, or past 1 for leggings (1 + share of the shin); scoop: neckline depth
+    'm': dict(body='Superhero_Male_FullBody', hair='Hair_SimpleParted', who='Male',
+              shirt=(16, 74, 42), shorts=(24, 27, 26), skin='T_Superhero_Male_Dark.png', hairColor=[0.16, 0.11, 0.08, 1],
+              sleeve=0.43, legs=0.53, scoop=0.05),
+    'f': dict(body='Superhero_Female_FullBody', hair='Hair_Buns', who='Female',
+              shirt=(16, 74, 42), shorts=(26, 29, 28), skin='T_Superhero_Female_Dark_BaseColor.png', hairColor=[0.14, 0.09, 0.06, 1],
+              sleeve=0.0, legs=1.72, scoop=0.07),
 }[WHO]
 
 # the 2D engine's bone lengths (js/figure.js) and where its feet and hands sit
@@ -322,7 +326,7 @@ def clothing(pr):
     nb = P('neck_01')
     rn = np.hypot(x - nb[0], (z - nb[2]) * 0.92)
     front = smooth(-0.02, 0.05, z - nb[2])
-    collar_y = nb[1] - 0.012 - 0.05 * front
+    collar_y = nb[1] - 0.012 - CFG['scoop'] * front
     neck_skin = (1 - smooth(0.074, 0.088, rn)) * smooth(-0.006, 0.006, y - collar_y)
     above_neck = np.maximum(neck_skin, smooth(0.0, 0.01, y - (nb[1] + 0.03)))
     # sleeves: to about 45% down the upper arm
@@ -331,7 +335,7 @@ def clothing(pr):
         a = J['upperarm_' + sd]
         t = ((pos - head[a]) @ axisY[a]) / seg('upperarm_' + sd, 'lowerarm_' + sd)
         t_arm = np.where(np.sign(x) == (1 if sd == 'l' else -1), t, t_arm)
-    sleeve = 1 - smooth(0.40, 0.46, t_arm)
+    sleeve = (1 - smooth(CFG['sleeve'] - 0.03, CFG['sleeve'] + 0.03, t_arm)) if CFG['sleeve'] > 0 else 1 - smooth(-0.02, 0.06, t_arm)
     # shorts: from the waist to about 55% down the thigh
     t_leg = np.zeros(len(pos))
     for sd in ('l', 'r'):
@@ -342,8 +346,22 @@ def clothing(pr):
     waist = P('pelvis')[1] + 0.075               # where the shorts start
     shirt = np.clip(torso + arm_u * sleeve, 0, 1) * (1 - above_neck) * smooth(-0.006, 0.006, y - hem)
     shirt = np.where(arm_u + torso < 0.5, 0, shirt)
-    shorts = np.clip(torso + leg_u, 0, 1) * (1 - smooth(-0.006, 0.006, y - waist)) * (1 - smooth(0.50, 0.56, t_leg))
-    shorts = np.where(wsum(['calf', 'foot', 'ball']) > 0.3, 0, shorts)
+    L = CFG['legs']
+    if L <= 1:
+        shorts = np.clip(torso + leg_u, 0, 1) * (1 - smooth(-0.006, 0.006, y - waist)) * (1 - smooth(L - 0.03, L + 0.03, t_leg))
+        shorts = np.where(wsum(['calf', 'foot', 'ball']) > 0.3, 0, shorts)
+    else:
+        # leggings: the whole thigh and part of the shin
+        t_shin = np.zeros(len(pos))
+        for sd in ('l', 'r'):
+            a = J['calf_' + sd]
+            t = ((pos - head[a]) @ axisY[a]) / seg('calf_' + sd, 'foot_' + sd)
+            t_shin = np.where(np.sign(x) == (1 if sd == 'l' else -1), t, t_shin)
+        leg_all = wsum(['thigh', 'calf'])
+        cut = L - 1
+        shorts = np.clip(torso + leg_all, 0, 1) * (1 - smooth(-0.006, 0.006, y - waist))
+        shorts = shorts * np.where(wsum(['calf']) > 0.3, 1 - smooth(cut - 0.03, cut + 0.03, t_shin), 1)
+        shorts = np.where(wsum(['foot', 'ball']) > 0.3, 0, shorts)
     return shirt, shorts, t_arm, t_leg
 
 
@@ -429,13 +447,13 @@ cloth *= (1 - 0.25 * np.clip(edge_s + edge_b, 0, 1))[..., None]
 cloth_img = Image.fromarray(np.clip(cloth * 255, 0, 255).astype(np.uint8))
 
 # normal map: flatter under fabric; roughness: matte fabric
-nrm = np.asarray(Image.open(os.path.join(TEX, 'T_Superhero_%s_Normal.png' % ('Male' if WHO == 'm' else 'Female'))).convert('RGB')
+nrm = np.asarray(Image.open(os.path.join(TEX, 'T_Superhero_%s_Normal.png' % CFG['who'])).convert('RGB')
                  .resize((TS, TS), Image.LANCZOS)).astype(np.float32) / 255
 flat = np.array([0.5, 0.5, 1.0], np.float32)
 fab = np.clip(shirt_m + shorts_m, 0, 1)[..., None]
 nrm = nrm * (1 - 0.55 * fab) + flat * 0.55 * fab
 nrm_img = Image.fromarray(np.clip(nrm * 255, 0, 255).astype(np.uint8))
-rough = np.asarray(Image.open(os.path.join(TEX, 'T_Superhero_%s_Roughness.png' % ('Male' if WHO == 'm' else 'Female'))).convert('L')
+rough = np.asarray(Image.open(os.path.join(TEX, 'T_Superhero_%s_Roughness.png' % CFG['who'])).convert('L')
                    .resize((512, 512), Image.LANCZOS)).astype(np.float32) / 255
 fab512 = np.asarray(Image.fromarray((fab[..., 0] * 255).astype(np.uint8)).resize((512, 512))).astype(np.float32) / 255
 rough = rough * (1 - fab512) + 0.92 * fab512
@@ -465,7 +483,7 @@ for ni, n in enumerate(hg['nodes']):
         M = B[J['Head']] @ hibm[hj.index('Head')]
         hp2 = (M[:3, :3] @ hp.T).T + M[:3, 3]
         hn2 = (M[:3, :3] @ hn.T).T
-        hair = dict(name='Hair', mat='MI_Hair_1', pos=hp2, nor=hn2, uv=acc(hg, hbufs, a['TEXCOORD_0']),
+        hair = dict(name='Hair', mat=hg['materials'][p['material']]['name'], pos=hp2, nor=hn2, uv=acc(hg, hbufs, a['TEXCOORD_0']),
                     j=np.tile([J['Head'], 0, 0, 0], (len(hp), 1)), w=np.tile([1.0, 0, 0, 0], (len(hp), 1)),
                     idx=acc(hg, hbufs, p['indices']).reshape(-1).astype(np.uint32))
 prims.append(hair)
@@ -550,10 +568,14 @@ t_cloth = image(jpg(cloth_img), 'image/jpeg')
 t_nrm = image(jpg(nrm_img, 90), 'image/jpeg')
 t_mr = image(jpg(mr_img, 85), 'image/jpeg')
 t_skin = image(jpg(skin_img), 'image/jpeg')
-hair_bc = Image.open(os.path.join(TEX, 'T_Hair_1_BaseColor.png')).convert('RGB').resize((512, 512), Image.LANCZOS)
-hair_n = Image.open(os.path.join(TEX, 'T_Hair_1_Normal.png')).convert('RGB').resize((512, 512), Image.LANCZOS)
-t_hair = image(jpg(hair_bc), 'image/jpeg')
-t_hairn = image(jpg(hair_n, 90), 'image/jpeg')
+# hair and eyebrows: each source material keeps its own texture set (T_Hair_1 or T_Hair_2)
+hair_sets = {}
+def hair_tex(n):
+    if n not in hair_sets:
+        bc = Image.open(os.path.join(TEX, 'T_Hair_%s_BaseColor.png' % n)).convert('RGB').resize((512, 512), Image.LANCZOS)
+        nm = Image.open(os.path.join(TEX, 'T_Hair_%s_Normal.png' % n)).convert('RGB').resize((512, 512), Image.LANCZOS)
+        hair_sets[n] = (image(jpg(bc), 'image/jpeg'), image(jpg(nm, 90), 'image/jpeg'))
+    return hair_sets[n]
 eye = Image.open(os.path.join(TEX, 'T_Eye_Brown.png')).convert('RGB').resize((128, 128), Image.LANCZOS)
 t_eye = image(jpg(eye, 90), 'image/jpeg')
 
@@ -561,16 +583,25 @@ out['materials'] = [
     {'name': 'body', 'pbrMetallicRoughness': {'baseColorTexture': {'index': t_cloth}, 'metallicFactor': 0,
                                               'metallicRoughnessTexture': {'index': t_mr}},
      'normalTexture': {'index': t_nrm}, 'extras': {'skinTexture': t_skin}},
-    {'name': 'hair', 'pbrMetallicRoughness': {'baseColorTexture': {'index': t_hair}, 'metallicFactor': 0, 'roughnessFactor': 0.75,
-                                              'baseColorFactor': CFG['hairColor']},
-     'normalTexture': {'index': t_hairn}, 'doubleSided': True},
     {'name': 'eyes', 'pbrMetallicRoughness': {'baseColorTexture': {'index': t_eye}, 'metallicFactor': 0, 'roughnessFactor': 0.3}},
 ]
-MATI = {'body': 0, 'hair': 1, 'eyes': 2}
+MATI = {'body': 0, 'eyes': 1}
 
 
 def matname(m):
-    return 'body' if 'Superhero' in m else 'eyes' if 'Eye' in m else 'hair'
+    if 'Superhero' in m:
+        return 'body'
+    if 'Eye' in m:
+        return 'eyes'
+    n = '2' if m.endswith('_2') else '1'
+    key = 'hair' + n
+    if key not in MATI:
+        bc, nm = hair_tex(n)
+        out['materials'].append({'name': key, 'pbrMetallicRoughness': {'baseColorTexture': {'index': bc}, 'metallicFactor': 0, 'roughnessFactor': 0.75,
+                                                                     'baseColorFactor': CFG['hairColor']},
+                                 'normalTexture': {'index': nm}, 'doubleSided': True})
+        MATI[key] = len(out['materials']) - 1
+    return key
 
 
 for pr in prims:

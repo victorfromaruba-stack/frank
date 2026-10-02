@@ -5,7 +5,10 @@
    dose: { b, i, a } for beginner, intermediate, advanced.
    eq: what you need ([] = nothing). Values: chair, table, db (dumbbells),
        rings, wedge (heel wedges), pad (balance pad), load (anything heavy).
-   area: core, lower, upper, full, mobility, cardio. met: effort, for the kcal estimate.
+   area: core, lower, upper, full, mobility, cardio.
+   met: effort in METs from the 2024 Adult Compendium of Physical Activities (Herrmann 2024),
+        for the calorie estimate: calisthenics light 2.8, moderate 3.8, vigorous 7.5; bodyweight
+        resistance 3.0; weights 3.5; jogging in place 4.8; stretching 2.3; stepping 2.0; lying still 1.3.
    alts: easier or kit-free swaps, in order of preference. */
 (function (W) {
   'use strict';
@@ -39,7 +42,7 @@
 
     // ---- Brace and core ------------------------------------------------
     'brace-breathe': {
-      name: 'Brace and breathe', area: ['core', 'mobility'], pattern: 'brace', type: 'time', dose: { b: 40, i: 45, a: 60 }, eq: [], met: 1.8,
+      name: 'Brace and breathe', area: ['core', 'mobility'], pattern: 'brace', type: 'time', dose: { b: 40, i: 45, a: 60 }, eq: [], met: 1.3,
       cue: ['Breathe into your sides.', 'Ribs wide, then down.', 'Long, slow breath out.'],
       setup: 'Lie on your back, knees bent, feet flat. Hands on your lower ribs.',
       steps: ['Breathe in through your nose so your ribs widen into your hands.', 'Breathe out slowly until your ribs drop and your belly firms up.', 'Keep that firmness and take the next breath on top of it.'],
@@ -51,7 +54,7 @@
       alts: []
     },
     'dead-bug': {
-      name: 'Dead bug', area: ['core'], pattern: 'brace', type: 'reps', each: true, dose: { b: 6, i: 8, a: 10 }, eq: [], met: 3,
+      name: 'Dead bug', area: ['core'], pattern: 'brace', type: 'reps', each: true, dose: { b: 6, i: 8, a: 10 }, eq: [], met: 2.8,
       cue: ['Back stays flat.', 'Reach long, slow.', 'Breathe out as you reach.'],
       setup: 'Lie on your back. Arms up to the ceiling, knees bent at 90 degrees above your hips.',
       steps: ['Press your lower back gently into the floor.', 'Reach one arm overhead and the opposite leg out long, just above the floor.', 'Come back to the start and switch sides.'],
@@ -65,7 +68,7 @@
       alts: ['bird-dog', 'brace-breathe']
     },
     'bird-dog': {
-      name: 'Bird dog', area: ['core', 'mobility'], pattern: 'brace', type: 'reps', each: true, dose: { b: 6, i: 8, a: 10 }, eq: [], met: 3,
+      name: 'Bird dog', area: ['core', 'mobility'], pattern: 'brace', type: 'reps', each: true, dose: { b: 6, i: 8, a: 10 }, eq: [], met: 2.8,
       cue: ['Spine still as a table.', 'Reach long, not high.', 'Hips stay level.'],
       setup: 'On hands and knees. Hands under shoulders, knees under hips.',
       steps: ['Slide one arm forward and the opposite leg back until both are straight.', 'Hold for a breath without letting your hips turn.', 'Bring them back under you and switch sides.'],
@@ -115,7 +118,7 @@
       alts: ['dead-bug', 'bird-dog']
     },
     'bear-hold': {
-      name: 'Bear hold', area: ['core', 'full'], pattern: 'brace', type: 'time', dose: { b: 15, i: 25, a: 40 }, eq: [], met: 4,
+      name: 'Bear hold', area: ['core', 'full'], pattern: 'brace', type: 'time', dose: { b: 15, i: 25, a: 40 }, eq: [], met: 3.8,
       cue: ['Knees two fingers off the floor.', 'Back flat.', 'Keep breathing.'],
       setup: 'On hands and knees, toes tucked under.',
       steps: ['Press into your hands and lift your knees just off the floor.', 'Keep your back flat and still.', 'Hold and breathe.'],
@@ -141,7 +144,7 @@
       alts: ['dead-bug']
     },
     'mountain-climber': {
-      name: 'Mountain climbers', area: ['core', 'cardio'], pattern: 'cardio', type: 'time', dose: { b: 20, i: 30, a: 40 }, eq: [], met: 8,
+      name: 'Mountain climbers', area: ['core', 'cardio'], pattern: 'cardio', type: 'time', dose: { b: 20, i: 30, a: 40 }, eq: [], met: 7.5,
       cue: ['Shoulders over hands.', 'Hips low and still.', 'Quick, light feet.'],
       setup: 'High plank: hands under shoulders, body in one line.',
       steps: ['Drive one knee toward your chest.', 'Switch legs quickly, like running.', 'Keep your hips level the whole time.'],
@@ -153,7 +156,7 @@
       alts: ['march']
     },
     'shoulder-taps': {
-      name: 'Plank shoulder taps', area: ['core', 'upper'], pattern: 'brace', type: 'reps', each: true, dose: { b: 6, i: 10, a: 14 }, eq: [], met: 4,
+      name: 'Plank shoulder taps', area: ['core', 'upper'], pattern: 'brace', type: 'reps', each: true, dose: { b: 6, i: 10, a: 14 }, eq: [], met: 3.8,
       cue: ['Feet wide.', 'Hips don\'t rock.', 'Slow taps.'],
       setup: 'High plank with your feet a bit wider than your hips.',
       steps: ['Lift one hand and tap the opposite shoulder.', 'Put it back down and tap with the other hand.', 'Keep your hips as still as you can.'],
@@ -166,7 +169,7 @@
 
     // ---- Hinge and glutes ------------------------------------------------
     'glute-bridge': {
-      name: 'Glute bridge', area: ['lower', 'core'], pattern: 'hinge', type: 'reps', dose: { b: 10, i: 15, a: 20 }, eq: [], met: 3.5,
+      name: 'Glute bridge', area: ['lower', 'core'], pattern: 'hinge', type: 'reps', dose: { b: 10, i: 15, a: 20 }, eq: [], met: 3.0,
       cue: ['Push through your heels.', 'Ribs down, hips up.', 'Squeeze at the top.'],
       setup: 'Lie on your back, knees bent, feet flat and hip-width apart.',
       steps: ['Breathe out, press your heels down and lift your hips.', 'Stop when shoulders, hips and knees make a line.', 'Lower slowly.'],
@@ -178,7 +181,7 @@
       alts: ['hip-hinge']
     },
     'single-leg-bridge': {
-      name: 'Single-leg bridge', area: ['lower', 'core'], pattern: 'hinge', type: 'reps', each: true, dose: { b: 6, i: 8, a: 12 }, eq: [], met: 3.8,
+      name: 'Single-leg bridge', area: ['lower', 'core'], pattern: 'hinge', type: 'reps', each: true, dose: { b: 6, i: 8, a: 12 }, eq: [], met: 3.0,
       cue: ['Hips stay level.', 'Drive through one heel.', 'Pause at the top.'],
       setup: 'Lie on your back, one foot flat, the other leg straight.',
       steps: ['Press the planted heel down and lift your hips.', 'Keep both sides of the pelvis at the same height.', 'Lower slowly, then switch legs.'],
@@ -190,7 +193,7 @@
       alts: ['glute-bridge', 'single-leg-rdl']
     },
     'hip-hinge': {
-      name: 'Hip hinge', area: ['lower'], pattern: 'hinge', type: 'reps', dose: { b: 8, i: 12, a: 15 }, eq: [], met: 3.5,
+      name: 'Hip hinge', area: ['lower'], pattern: 'hinge', type: 'reps', dose: { b: 8, i: 12, a: 15 }, eq: [], met: 3.0,
       cue: ['Hips back.', 'Spine stays long.', 'Stand up by pushing the hips forward.'],
       setup: 'Stand with feet hip-width apart, knees soft.',
       steps: ['Push your hips back as if closing a car door behind you.', 'Let your chest come forward with a long, flat back.', 'Stop when you feel the back of your thighs, then drive your hips forward to stand.'],
@@ -201,7 +204,7 @@
       alts: ['glute-bridge']
     },
     'single-leg-rdl': {
-      name: 'Single-leg hinge', area: ['lower', 'core'], pattern: 'hinge', type: 'reps', each: true, dose: { b: 6, i: 8, a: 10 }, eq: [], met: 3.8,
+      name: 'Single-leg hinge', area: ['lower', 'core'], pattern: 'hinge', type: 'reps', each: true, dose: { b: 6, i: 8, a: 10 }, eq: [], met: 3.0,
       cue: ['Hips still square.', 'Back leg and chest move together.', 'Soft standing knee.'],
       setup: 'Stand on one leg, knee soft. Hold a wall lightly if you need balance.',
       steps: ['Hinge forward while the free leg reaches straight back.', 'Go until your body is close to level, hips pointing at the floor.', 'Drive the standing hip forward to come up.'],
@@ -251,7 +254,7 @@
       alts: ['squat']
     },
     'goblet-squat': {
-      name: 'Goblet squat', area: ['lower'], pattern: 'squat', type: 'reps', dose: { b: 8, i: 12, a: 15 }, eq: ['db'], met: 5,
+      name: 'Goblet squat', area: ['lower'], pattern: 'squat', type: 'reps', dose: { b: 8, i: 12, a: 15 }, eq: ['db'], met: 3.5,
       cue: ['Weight close to your chest.', 'Elbows inside the knees.', 'Tall back.'],
       setup: 'Hold one dumbbell upright against your chest, feet a little wider than hips.',
       steps: ['Sit down between your heels, keeping the weight on your chest.', 'Let your elbows brush the inside of your knees at the bottom.', 'Stand up tall.'],
@@ -264,7 +267,7 @@
       alts: ['squat']
     },
     'wall-sit': {
-      name: 'Wall sit', area: ['lower'], pattern: 'squat', type: 'time', dose: { b: 20, i: 30, a: 45 }, eq: [], met: 3.5,
+      name: 'Wall sit', area: ['lower'], pattern: 'squat', type: 'time', dose: { b: 20, i: 30, a: 45 }, eq: [], met: 3.8,
       cue: ['Back flat on the wall.', 'Knees over ankles.', 'Keep breathing.'],
       setup: 'Back against a wall, feet about a step in front of you.',
       steps: ['Slide down until your thighs are close to level.', 'Knees over your ankles, weight in your heels.', 'Hold and breathe.'],
@@ -276,7 +279,7 @@
       alts: ['box-squat']
     },
     'jump-squat': {
-      name: 'Jump squat', area: ['lower', 'cardio'], pattern: 'squat', type: 'reps', dose: { b: 6, i: 10, a: 12 }, eq: [], met: 8,
+      name: 'Jump squat', area: ['lower', 'cardio'], pattern: 'squat', type: 'reps', dose: { b: 6, i: 10, a: 12 }, eq: [], met: 7.5,
       cue: ['Land soft and quiet.', 'Knees over toes.', 'Explode up.'],
       setup: 'Feet a little wider than your hips.',
       steps: ['Squat down, arms back.', 'Jump up, swinging the arms.', 'Land softly, sinking straight into the next squat.'],
@@ -302,7 +305,7 @@
       alts: ['reverse-lunge']
     },
     'reverse-lunge': {
-      name: 'Reverse lunge', area: ['lower'], pattern: 'lunge', type: 'reps', each: true, dose: { b: 6, i: 10, a: 12 }, eq: [], met: 4,
+      name: 'Reverse lunge', area: ['lower'], pattern: 'lunge', type: 'reps', each: true, dose: { b: 6, i: 10, a: 12 }, eq: [], met: 3.8,
       cue: ['Step back, not out.', 'Knee straight down.', 'Push off the front heel.'],
       setup: 'Stand tall, feet hip-width.',
       steps: ['Step one foot back and lower the back knee toward the floor.', 'Keep most of your weight on the front leg.', 'Push through the front heel to return. Alternate or do one side at a time.'],
@@ -318,7 +321,7 @@
       alts: ['split-squat']
     },
     'lateral-lunge': {
-      name: 'Side lunge', area: ['lower', 'mobility'], pattern: 'lunge', type: 'reps', each: true, dose: { b: 6, i: 8, a: 10 }, eq: [], met: 4,
+      name: 'Side lunge', area: ['lower', 'mobility'], pattern: 'lunge', type: 'reps', each: true, dose: { b: 6, i: 8, a: 10 }, eq: [], met: 3.8,
       cue: ['Sit back into one hip.', 'Other leg long.', 'Feet flat.'],
       setup: 'Feet wide, toes forward or slightly out.',
       steps: ['Shift your weight to one side, bending that knee and sitting the hip back.', 'Keep the other leg straight and both feet flat.', 'Push back to the middle, then go to the other side.'],
@@ -333,7 +336,7 @@
       alts: ['split-squat']
     },
     'step-up': {
-      name: 'Step-up', area: ['lower'], pattern: 'lunge', type: 'reps', each: true, dose: { b: 6, i: 10, a: 12 }, eq: ['chair'], met: 4.5,
+      name: 'Step-up', area: ['lower'], pattern: 'lunge', type: 'reps', each: true, dose: { b: 6, i: 10, a: 12 }, eq: ['chair'], met: 3.8,
       cue: ['Whole foot on the step.', 'Drive through the top leg.', 'Control the way down.'],
       setup: 'Face a sturdy step or low box, one foot fully on top.',
       steps: ['Lean slightly forward and push through the top foot to stand on the step.', 'Bring the other knee up, then step it back down slowly.', 'Finish all reps on one leg, then switch.'],
@@ -346,7 +349,7 @@
       alts: ['split-squat']
     },
     'bulgarian-split-squat': {
-      name: 'Rear-foot-up split squat', area: ['lower'], pattern: 'lunge', type: 'reps', each: true, dose: { b: 5, i: 8, a: 10 }, eq: ['chair'], met: 5,
+      name: 'Rear-foot-up split squat', area: ['lower'], pattern: 'lunge', type: 'reps', each: true, dose: { b: 5, i: 8, a: 10 }, eq: ['chair'], met: 3.8,
       cue: ['Most weight on the front leg.', 'Back knee straight down.', 'Hips square.'],
       setup: 'Top of your back foot on a sturdy chair behind you, front foot a long step forward.',
       steps: ['Lower the back knee toward the floor.', 'Keep the front heel down and torso slightly forward.', 'Push through the front foot to rise. Then switch legs.'],
@@ -359,7 +362,7 @@
       alts: ['split-squat']
     },
     'calf-raise': {
-      name: 'Calf raise', area: ['lower'], pattern: 'lunge', type: 'reps', dose: { b: 12, i: 15, a: 20 }, eq: [], met: 2.8,
+      name: 'Calf raise', area: ['lower'], pattern: 'lunge', type: 'reps', dose: { b: 12, i: 15, a: 20 }, eq: [], met: 3.0,
       cue: ['Up on the big toe.', 'Pause at the top.', 'Slow down.'],
       setup: 'Stand tall, feet hip-width. Fingers on a wall for balance.',
       steps: ['Rise onto the balls of your feet as high as you can.', 'Pause for a second.', 'Lower slowly all the way down.'],
@@ -370,7 +373,7 @@
       alts: []
     },
     'balance': {
-      name: 'Single-leg balance', area: ['lower', 'mobility'], pattern: 'balance', type: 'time', each: true, dose: { b: 20, i: 30, a: 40 }, eq: [], met: 2.3,
+      name: 'Single-leg balance', area: ['lower', 'mobility'], pattern: 'balance', type: 'time', each: true, dose: { b: 20, i: 30, a: 40 }, eq: [], met: 2.0,
       cue: ['Grip the floor with your foot.', 'Hips level.', 'Eyes on one point.'],
       setup: 'Stand near a wall. Lift one knee to hip height.',
       steps: ['Spread your toes and press the whole foot into the floor.', 'Keep your hips level and stand tall.', 'Hold. To make it harder, close your eyes.'],
@@ -384,7 +387,7 @@
       alts: []
     },
     'pad-balance': {
-      name: 'Balance pad stand', area: ['lower', 'mobility'], pattern: 'balance', type: 'time', each: true, dose: { b: 20, i: 30, a: 40 }, eq: ['pad'], met: 2.5,
+      name: 'Balance pad stand', area: ['lower', 'mobility'], pattern: 'balance', type: 'time', each: true, dose: { b: 20, i: 30, a: 40 }, eq: ['pad'], met: 2.0,
       cue: ['Soft knee.', 'Quiet foot.', 'Breathe.'],
       setup: 'Stand on the balance pad on one foot. A wall within reach.',
       steps: ['Let the foot and ankle make the small corrections.', 'Keep your hips level and your chest tall.', 'Hold, then switch.'],
@@ -442,7 +445,7 @@
       alts: ['knee-push-up']
     },
     'decline-push-up': {
-      name: 'Feet-up push-up', area: ['upper'], pattern: 'push', type: 'reps', dose: { b: 5, i: 8, a: 12 }, eq: ['chair'], met: 4,
+      name: 'Feet-up push-up', area: ['upper'], pattern: 'push', type: 'reps', dose: { b: 5, i: 8, a: 12 }, eq: ['chair'], met: 3.8,
       cue: ['Glutes tight.', 'Hands under shoulders.', 'Slow down.'],
       setup: 'Feet on a sturdy chair behind you, hands on the floor.',
       steps: ['Lower your chest toward the floor, body straight.', 'Keep your hips from sagging.', 'Push back up.'],
@@ -458,7 +461,7 @@
     },
     'pike-push-up': {
       cam: { yaw: 14, pitch: 8 },
-      name: 'Pike push-up', area: ['upper'], pattern: 'push', type: 'reps', dose: { b: 5, i: 8, a: 10 }, eq: [], met: 4,
+      name: 'Pike push-up', area: ['upper'], pattern: 'push', type: 'reps', dose: { b: 5, i: 8, a: 10 }, eq: [], met: 3.8,
       cue: ['Hips high.', 'Head goes past the hands.', 'Elbows back.'],
       setup: 'Hands and feet on the floor, hips high in an upside-down V.',
       steps: ['Bend your elbows and lower the top of your head toward the floor in front of your hands.', 'Keep your hips high.', 'Push back up.'],
@@ -497,7 +500,7 @@
       alts: ['wall-slide']
     },
     'wall-slide': {
-      name: 'Wall slide', area: ['upper', 'mobility'], pattern: 'pull', type: 'reps', dose: { b: 8, i: 10, a: 12 }, eq: [], met: 2.5,
+      name: 'Wall slide', area: ['upper', 'mobility'], pattern: 'pull', type: 'reps', dose: { b: 8, i: 10, a: 12 }, eq: [], met: 2.8,
       cue: ['Ribs down.', 'Forearms on the wall.', 'Slide up, pull down.'],
       setup: 'Back against a wall, arms in a goalpost shape, forearms touching the wall.',
       steps: ['Slide your arms up the wall without letting your ribs flare.', 'Go as high as you can while keeping contact.', 'Pull your elbows back down as if into your back pockets.'],
@@ -508,7 +511,7 @@
       alts: ['prone-y-raise']
     },
     'scap-push-up': {
-      name: 'Scapular push-up', area: ['upper', 'core'], pattern: 'pull', type: 'reps', dose: { b: 8, i: 10, a: 12 }, eq: [], met: 3,
+      name: 'Scapular push-up', area: ['upper', 'core'], pattern: 'pull', type: 'reps', dose: { b: 8, i: 10, a: 12 }, eq: [], met: 2.8,
       cue: ['Arms stay straight.', 'Spread the shoulder blades, then pinch.', 'Small and slow.'],
       setup: 'High plank, or on your knees.',
       steps: ['With straight arms, let your chest sink between your shoulders.', 'Push the floor away until your upper back rounds slightly.', 'Repeat slowly.'],
@@ -519,7 +522,7 @@
       alts: ['wall-slide']
     },
     'table-row': {
-      name: 'Table row', area: ['upper'], pattern: 'pull', type: 'reps', dose: { b: 6, i: 10, a: 12 }, eq: ['table'], met: 4,
+      name: 'Table row', area: ['upper'], pattern: 'pull', type: 'reps', dose: { b: 6, i: 10, a: 12 }, eq: ['table'], met: 3.8,
       cue: ['Chest to the table.', 'Elbows past your ribs.', 'Body stiff as a plank.'],
       setup: 'Lie under a sturdy table. Grip the edge with both hands, heels on the floor. Check that the table can\'t tip.',
       steps: ['Pull your chest up toward the edge, elbows going past your ribs.', 'Keep your body in a straight line.', 'Lower with control.'],
@@ -534,7 +537,7 @@
       alts: ['prone-y-raise']
     },
     'superman': {
-      name: 'Superman', area: ['core', 'upper'], pattern: 'pull', type: 'reps', dose: { b: 8, i: 10, a: 12 }, eq: [], met: 3,
+      name: 'Superman', area: ['core', 'upper'], pattern: 'pull', type: 'reps', dose: { b: 8, i: 10, a: 12 }, eq: [], met: 2.8,
       cue: ['Lift long, not high.', 'Glutes on.', 'Look at the floor.'],
       setup: 'Lie face down, arms overhead.',
       steps: ['Squeeze your glutes and lift arms, chest and legs a few centimetres.', 'Reach long in both directions.', 'Hold a breath, then lower.'],
@@ -547,7 +550,7 @@
 
     // ---- Kit: dumbbells and rings ---------------------------------------------
     'db-rdl': {
-      name: 'Dumbbell Romanian deadlift', area: ['lower'], pattern: 'hinge', type: 'reps', dose: { b: 8, i: 10, a: 12 }, eq: ['db'], met: 5,
+      name: 'Dumbbell Romanian deadlift', area: ['lower'], pattern: 'hinge', type: 'reps', dose: { b: 8, i: 10, a: 12 }, eq: ['db'], met: 3.5,
       cue: ['Weights slide down your thighs.', 'Hips back.', 'Squeeze to stand.'],
       setup: 'Stand tall holding a dumbbell in each hand in front of your thighs.',
       steps: ['Push your hips back and let the weights slide down your legs.', 'Go until you feel a strong stretch in the back of your thighs.', 'Drive your hips forward to stand.'],
@@ -559,7 +562,7 @@
       alts: ['hip-hinge']
     },
     'db-row': {
-      name: 'One-arm dumbbell row', area: ['upper'], pattern: 'pull', type: 'reps', each: true, dose: { b: 8, i: 10, a: 12 }, eq: ['db', 'chair'], met: 4,
+      name: 'One-arm dumbbell row', area: ['upper'], pattern: 'pull', type: 'reps', each: true, dose: { b: 8, i: 10, a: 12 }, eq: ['db', 'chair'], met: 3.5,
       cue: ['Elbow to your back pocket.', 'Flat back.', 'Shoulder away from the ear.'],
       setup: 'One hand on a sturdy chair, back flat, dumbbell hanging in the other hand.',
       steps: ['Pull the dumbbell up toward your hip, elbow close to your side.', 'Pause with your shoulder blade drawn back.', 'Lower all the way. Then switch sides.'],
@@ -573,7 +576,7 @@
       alts: ['prone-y-raise', 'table-row']
     },
     'db-press': {
-      name: 'Dumbbell overhead press', area: ['upper'], pattern: 'push', type: 'reps', dose: { b: 8, i: 10, a: 12 }, eq: ['db'], met: 4.5,
+      name: 'Dumbbell overhead press', area: ['upper'], pattern: 'push', type: 'reps', dose: { b: 8, i: 10, a: 12 }, eq: ['db'], met: 3.5,
       cue: ['Ribs down.', 'Press up and slightly back.', 'Glutes on.'],
       setup: 'Stand tall, dumbbells at your shoulders, palms facing each other.',
       steps: ['Brace and press the weights straight up.', 'Finish with your arms by your ears.', 'Lower to the shoulders with control.'],
@@ -585,7 +588,7 @@
       alts: ['pike-push-up']
     },
     'farmer-carry': {
-      name: 'Farmer carry', area: ['full', 'core'], pattern: 'carry', type: 'time', dose: { b: 30, i: 40, a: 60 }, eq: ['load'], met: 4.5,
+      name: 'Farmer carry', area: ['full', 'core'], pattern: 'carry', type: 'time', dose: { b: 30, i: 40, a: 60 }, eq: ['load'], met: 3.5,
       cue: ['Tall, and walk past.', 'Shoulders down.', 'Short, quiet steps.'],
       setup: 'A dumbbell or a heavy bag in each hand. Two full shopping bags work too.',
       steps: ['Stand tall with the weights at your sides.', 'Walk with short, even steps. Turn and come back in a small space.', 'Put the weights down with a hinge, not a rounded back.'],
@@ -604,7 +607,7 @@
       alts: []
     },
     'suitcase-carry': {
-      name: 'Suitcase carry', area: ['core', 'full'], pattern: 'carry', type: 'time', each: true, dose: { b: 20, i: 30, a: 40 }, eq: ['load'], met: 4.5,
+      name: 'Suitcase carry', area: ['core', 'full'], pattern: 'carry', type: 'time', each: true, dose: { b: 20, i: 30, a: 40 }, eq: ['load'], met: 3.5,
       cue: ['Don\'t lean.', 'Both shoulders level.', 'Walk tall.'],
       setup: 'One dumbbell or heavy bag in one hand, the other hand free.',
       steps: ['Stand tall and level, as if the weight wasn\'t there.', 'Walk with short, even steps.', 'Switch hands halfway.'],
@@ -623,7 +626,7 @@
       alts: ['farmer-carry']
     },
     'ring-row': {
-      name: 'Ring row', area: ['upper'], pattern: 'pull', type: 'reps', dose: { b: 6, i: 10, a: 12 }, eq: ['rings'], met: 4.5,
+      name: 'Ring row', area: ['upper'], pattern: 'pull', type: 'reps', dose: { b: 6, i: 10, a: 12 }, eq: ['rings'], met: 3.8,
       cue: ['Lean back, body straight.', 'Pull the rings to your ribs.', 'Turn the rings as you pull.'],
       setup: 'Rings at waist height. Hold them and walk your feet forward until you lean back with straight arms.',
       steps: ['Pull your chest up to the rings, elbows past your ribs.', 'Let the rings turn so your palms face you at the top.', 'Lower slowly. Walk your feet forward to make it harder.'],
@@ -641,7 +644,7 @@
 
     // ---- Cardio ------------------------------------------------------------
     'march': {
-      name: 'March in place', area: ['cardio', 'full'], pattern: 'cardio', type: 'time', dose: { b: 30, i: 40, a: 45 }, eq: [], met: 3.5,
+      name: 'March in place', area: ['cardio', 'full'], pattern: 'cardio', type: 'time', dose: { b: 30, i: 40, a: 45 }, eq: [], met: 2.0,
       cue: ['Knees up.', 'Opposite arm swings.', 'Stand tall.'],
       setup: 'Stand tall with space around you.',
       steps: ['Lift one knee toward hip height while the opposite arm swings forward.', 'Switch at a steady rhythm.', 'Speed up as you warm up.'],
@@ -657,7 +660,7 @@
       alts: []
     },
     'high-knees': {
-      name: 'High knees', area: ['cardio'], pattern: 'cardio', type: 'time', dose: { b: 20, i: 30, a: 40 }, eq: [], met: 8,
+      name: 'High knees', area: ['cardio'], pattern: 'cardio', type: 'time', dose: { b: 20, i: 30, a: 40 }, eq: [], met: 7.5,
       cue: ['Knees to hip height.', 'Light on the balls of your feet.', 'Drive the arms.'],
       setup: 'Stand tall. Low impact option: a fast march.',
       steps: ['Run in place, bringing each knee up to hip height.', 'Land softly on the balls of your feet.', 'Pump the arms with the legs.'],
@@ -672,7 +675,7 @@
       alts: ['march']
     },
     'jumping-jacks': {
-      name: 'Jumping jacks', area: ['cardio', 'full'], pattern: 'cardio', type: 'time', dose: { b: 20, i: 30, a: 40 }, eq: [], met: 8,
+      name: 'Jumping jacks', area: ['cardio', 'full'], pattern: 'cardio', type: 'time', dose: { b: 20, i: 30, a: 40 }, eq: [], met: 7.5,
       cue: ['Soft knees.', 'Light feet.', 'Arms all the way up.'],
       setup: 'Stand tall, feet together. Low impact: step one foot out at a time.',
       steps: ['Jump your feet out wide as your arms swing overhead.', 'Jump back together, arms down.', 'Keep a steady rhythm.'],
@@ -683,7 +686,7 @@
       alts: ['march']
     },
     'burpee': {
-      name: 'Burpee', area: ['cardio', 'full'], pattern: 'cardio', type: 'reps', dose: { b: 5, i: 8, a: 12 }, eq: [], met: 8,
+      name: 'Burpee', area: ['cardio', 'full'], pattern: 'cardio', type: 'reps', dose: { b: 5, i: 8, a: 12 }, eq: [], met: 7.5,
       cue: ['Hands down, feet back.', 'Body straight in the plank.', 'Jump tall.'],
       setup: 'Stand with space in front of you. Easier: step back and in instead of jumping.',
       steps: ['Squat and put your hands on the floor.', 'Jump or step your feet back to a plank.', 'Jump or step your feet in, then stand and jump up.'],
@@ -702,7 +705,7 @@
     },
     'inchworm': {
       cam: { yaw: 18 },
-      name: 'Inchworm', area: ['mobility', 'full'], pattern: 'mobility', type: 'reps', dose: { b: 4, i: 6, a: 8 }, eq: [], met: 4,
+      name: 'Inchworm', area: ['mobility', 'full'], pattern: 'mobility', type: 'reps', dose: { b: 4, i: 6, a: 8 }, eq: [], met: 3.8,
       cue: ['Walk the hands out.', 'Plank, then walk back.', 'Soft knees are fine.'],
       setup: 'Stand with feet hip-width.',
       steps: ['Fold forward and put your hands on the floor, bending your knees as needed.', 'Walk your hands out to a plank.', 'Walk them back and roll up to stand.'],
@@ -733,7 +736,7 @@
     },
     'childs-pose': {
       cam: { yaw: 30, pitch: 20 },
-      name: 'Child\'s pose', area: ['mobility'], pattern: 'mobility', type: 'time', dose: { b: 30, i: 40, a: 45 }, eq: [], met: 1.8,
+      name: 'Child\'s pose', area: ['mobility'], pattern: 'mobility', type: 'time', dose: { b: 30, i: 40, a: 45 }, eq: [], met: 2.3,
       cue: ['Hips to heels.', 'Breathe into your back.', 'Let the arms be heavy.'],
       setup: 'Kneel, big toes together, knees apart.',
       steps: ['Sit your hips back toward your heels.', 'Walk your hands forward and rest your forehead down.', 'Breathe slowly into your back.'],
@@ -748,7 +751,7 @@
     },
     'down-dog': {
       cam: { yaw: 16, pitch: 8 },
-      name: 'Downward dog', area: ['mobility'], pattern: 'mobility', type: 'time', dose: { b: 25, i: 30, a: 40 }, eq: [], met: 2.5,
+      name: 'Downward dog', area: ['mobility'], pattern: 'mobility', type: 'time', dose: { b: 25, i: 30, a: 40 }, eq: [], met: 2.3,
       cue: ['Push the floor away.', 'Hips high and back.', 'Pedal the heels.'],
       setup: 'Hands and feet on the floor, hips high.',
       steps: ['Push through your hands so your chest moves toward your thighs.', 'Lift your hips up and back. Bend your knees if your back rounds.', 'Pedal one heel down, then the other.'],
@@ -819,7 +822,7 @@
       alts: ['superman', 'cat-cow']
     },
     'leg-swings': {
-      name: 'Leg swings', area: ['mobility'], pattern: 'mobility', type: 'time', each: true, dose: { b: 20, i: 20, a: 25 }, eq: [], met: 2.5,
+      name: 'Leg swings', area: ['mobility'], pattern: 'mobility', type: 'time', each: true, dose: { b: 20, i: 20, a: 25 }, eq: [], met: 2.3,
       cue: ['Relaxed leg.', 'Tall standing side.', 'Bigger each swing.'],
       setup: 'Stand side-on to a wall, one hand on it.',
       steps: ['Swing the outside leg forward and back like a pendulum.', 'Let it get a little bigger each time.', 'Switch legs.'],
@@ -830,7 +833,7 @@
       alts: []
     },
     'arm-circles': {
-      name: 'Arm circles', area: ['mobility', 'upper'], pattern: 'mobility', type: 'time', dose: { b: 20, i: 30, a: 30 }, eq: [], met: 2.5,
+      name: 'Arm circles', area: ['mobility', 'upper'], pattern: 'mobility', type: 'time', dose: { b: 20, i: 30, a: 30 }, eq: [], met: 2.3,
       cue: ['Big, slow circles.', 'Ribs stay down.', 'Switch direction halfway.'],
       setup: 'Stand tall, arms by your sides.',
       steps: ['Swing your arms in big circles, forward.', 'Keep your ribs down so the shoulders do the moving.', 'Halfway through, go backward.'],
@@ -849,7 +852,7 @@
   function crunchLegs(o) { return supine(extend({ lN: { ik: [26, 2.5], b: [0, 1] }, lF: { ik: [25, 2.5], b: [0, 1] } }, o)); }
   var MORE = {
     'crunch': {
-      name: 'Crunch', area: ['core'], pattern: 'brace', type: 'reps', dose: { b: 12, i: 16, a: 20 }, eq: [], met: 2.8,
+      name: 'Crunch', area: ['core'], pattern: 'brace', type: 'reps', dose: { b: 12, i: 16, a: 20 }, eq: [], met: 3.8,
       cue: ['Ribs toward hips.', 'Chin tucked, neck long.', 'Breathe out on the way up.'],
       setup: 'Lie on your back, knees bent, feet flat. Reach your hands toward your knees.',
       steps: ['Breathe out and curl your head and shoulders off the floor, ribs toward your hips.', 'Stop when your shoulder blades lift. Your lower back stays down.', 'Lower slowly.'],
@@ -896,7 +899,7 @@
       alts: ['dead-bug', 'bird-dog']
     },
     'v-up': {
-      name: 'V-up', area: ['core'], pattern: 'brace', type: 'reps', dose: { b: 5, i: 8, a: 12 }, eq: [], met: 5,
+      name: 'V-up', area: ['core'], pattern: 'brace', type: 'reps', dose: { b: 5, i: 8, a: 12 }, eq: [], met: 3.8,
       cue: ['Reach for your toes.', 'Legs and chest rise together.', 'Lower with control.'],
       setup: 'Lie on your back, arms overhead, legs straight.',
       steps: ['Lift your legs and chest at the same time, reaching your hands toward your feet.', 'Balance for a moment on your seat in a V.', 'Lower both ends slowly back to the floor.'],
@@ -908,7 +911,7 @@
       alts: ['crunch', 'reverse-crunch', 'bird-dog']
     },
     'knee-to-chest': {
-      name: 'Knees to chest', area: ['mobility'], pattern: 'mobility', type: 'time', dose: { b: 30, i: 30, a: 40 }, eq: [], met: 1.8,
+      name: 'Knees to chest', area: ['mobility'], pattern: 'mobility', type: 'time', dose: { b: 30, i: 30, a: 40 }, eq: [], met: 2.3,
       cue: ['Hug your knees in.', 'Lower back long on the floor.', 'Slow breaths.'],
       setup: 'Lie on your back and pull both knees toward your chest.',
       steps: ['Hold your shins or the backs of your thighs.', 'Gently draw your knees closer as you breathe out.', 'Let your lower back lengthen into the floor.'],
@@ -933,7 +936,7 @@
       alts: ['push-up', 'knee-push-up']
     },
     'diamond-push-up': {
-      name: 'Diamond push-up', area: ['upper'], pattern: 'push', type: 'reps', dose: { b: 4, i: 8, a: 12 }, eq: [], met: 4,
+      name: 'Diamond push-up', area: ['upper'], pattern: 'push', type: 'reps', dose: { b: 4, i: 8, a: 12 }, eq: [], met: 3.8,
       cue: ['Hands together under your chest.', 'Elbows brush your ribs.', 'Slow down.'],
       setup: 'Thumbs and index fingers touching to make a diamond under your chest. Knees down to make it easier.',
       steps: ['Lower your chest to your hands, elbows close to your sides.', 'Keep your body in one line.', 'Push back up.'],
@@ -984,7 +987,7 @@
       alts: ['chair-dip', 'diamond-push-up']
     },
     'punches': {
-      name: 'Punches', area: ['cardio', 'upper'], pattern: 'cardio', type: 'time', dose: { b: 30, i: 40, a: 45 }, eq: [], met: 5.5,
+      name: 'Punches', area: ['cardio', 'upper'], pattern: 'cardio', type: 'time', dose: { b: 30, i: 40, a: 45 }, eq: [], met: 3.8,
       cue: ['Fists by your chin.', 'Turn into each punch.', 'Fast and light.'],
       setup: 'Stand with one foot slightly forward, knees soft, fists up by your chin.',
       steps: ['Punch one arm straight forward, turning your shoulder into it.', 'Pull it back to your chin as the other arm punches.', 'Keep a quick, steady rhythm.'],
@@ -1009,7 +1012,7 @@
       alts: ['wall-slide']
     },
     'plank-up-down': {
-      name: 'Plank up-down', area: ['core', 'upper'], pattern: 'push', type: 'reps', each: true, dose: { b: 4, i: 6, a: 10 }, eq: [], met: 5,
+      name: 'Plank up-down', area: ['core', 'upper'], pattern: 'push', type: 'reps', each: true, dose: { b: 4, i: 6, a: 10 }, eq: [], met: 3.8,
       cue: ['Hips stay level.', 'Hand where the elbow was.', 'Feet wide for balance.'],
       setup: 'Forearm plank, feet a bit wider than your hips.',
       steps: ['Put one hand where that elbow was and push up, then the other, into a high plank.', 'Lower back down one forearm at a time.', 'Lead with the other arm next time.'],
@@ -1039,7 +1042,7 @@
       alts: ['squat']
     },
     'donkey-kick': {
-      name: 'Donkey kick', area: ['lower'], pattern: 'hinge', type: 'reps', each: true, dose: { b: 10, i: 12, a: 15 }, eq: [], met: 3,
+      name: 'Donkey kick', area: ['lower'], pattern: 'hinge', type: 'reps', each: true, dose: { b: 10, i: 12, a: 15 }, eq: [], met: 3.0,
       cue: ['Foot drives to the ceiling.', 'Knee stays bent.', 'Back stays flat.'],
       setup: 'On hands and knees, hands under shoulders, knees under hips.',
       steps: ['Keeping the knee bent, lift one leg until the thigh is level with your back.', 'Squeeze the glute at the top.', 'Lower without touching down, then repeat. Switch sides.'],
@@ -1050,7 +1053,7 @@
       alts: ['glute-bridge', 'bird-dog']
     },
     'side-leg-raise': {
-      name: 'Side-lying leg raise', area: ['lower'], pattern: 'balance', type: 'reps', each: true, dose: { b: 10, i: 15, a: 20 }, eq: [], met: 2.8,
+      name: 'Side-lying leg raise', area: ['lower'], pattern: 'balance', type: 'reps', each: true, dose: { b: 10, i: 15, a: 20 }, eq: [], met: 3.0,
       cue: ['Hips stacked.', 'Lead with the heel.', 'Toes point forward.'],
       setup: 'Lie on your side, legs straight and stacked, head resting on your lower arm.',
       steps: ['Lift your top leg to about 45 degrees, keeping it straight.', 'Keep your hips stacked; don\'t roll back.', 'Lower slowly. Finish the set, then switch sides.'],
@@ -1094,7 +1097,7 @@
       alts: ['down-dog']
     },
     'butt-kicks': {
-      name: 'Butt kicks', area: ['cardio'], pattern: 'cardio', type: 'time', dose: { b: 20, i: 30, a: 40 }, eq: [], met: 8,
+      name: 'Butt kicks', area: ['cardio'], pattern: 'cardio', type: 'time', dose: { b: 20, i: 30, a: 40 }, eq: [], met: 4.8,
       cue: ['Heels to your seat.', 'Quick, light feet.', 'Stand tall.'],
       setup: 'Stand tall with space around you. Low impact: walk it, one heel at a time.',
       steps: ['Jog in place, kicking each heel up toward your seat.', 'Stay on the balls of your feet.', 'Swing your arms with the legs.'],
@@ -1109,7 +1112,7 @@
       alts: ['march']
     },
     'skipping': {
-      name: 'Skipping, no rope', area: ['cardio'], pattern: 'cardio', type: 'time', dose: { b: 20, i: 30, a: 45 }, eq: [], met: 8,
+      name: 'Skipping, no rope', area: ['cardio'], pattern: 'cardio', type: 'time', dose: { b: 20, i: 30, a: 45 }, eq: [], met: 7.5,
       cue: ['Small hops.', 'Wrists turn the rope.', 'Land on the balls of the feet.'],
       setup: 'Stand tall, elbows by your sides, hands out as if holding a rope.',
       steps: ['Hop a few centimetres off the floor with both feet.', 'Turn your wrists in small circles as if turning a rope.', 'Keep a quick, steady rhythm.'],
@@ -1175,6 +1178,18 @@
     var list = function (t) { return (t || '').trim().split(/\s+/).filter(Boolean); };
     if (EX[id]) EX[id].mus = { p: list(two[0]), s: list(two[1]) };
   });
+
+  // joints a move loads: with a sore area, the plan swaps these for a move that spares it
+  var STRESS = {
+    wrist: ['push-up', 'knee-push-up', 'incline-push-up', 'wide-push-up', 'diamond-push-up', 'decline-push-up', 'pike-push-up', 'chair-dip',
+            'bear-hold', 'mountain-climber', 'shoulder-taps', 'plank-up-down', 'burpee', 'inchworm', 'down-dog', 'scap-push-up'],
+    shoulder: ['pike-push-up', 'db-press', 'chair-dip', 'decline-push-up', 'db-triceps', 'plank-up-down', 'burpee', 'diamond-push-up'],
+    knee: ['jump-squat', 'bulgarian-split-squat', 'split-squat', 'reverse-lunge', 'lateral-lunge', 'step-up', 'deep-squat-hold', 'heel-squat',
+           'wall-sit', 'squat', 'sumo-squat', 'goblet-squat', 'high-knees', 'skipping', 'butt-kicks', 'burpee', 'jumping-jacks'],
+    ankle: ['jump-squat', 'jumping-jacks', 'high-knees', 'skipping', 'butt-kicks', 'burpee', 'pad-balance', 'lateral-lunge'],
+    back: ['superman', 'v-up', 'leg-raise', 'flutter-kicks', 'db-rdl', 'burpee', 'jump-squat', 'crunch', 'bicycle-crunch']
+  };
+  Object.keys(STRESS).forEach(function (j) { STRESS[j].forEach(function (id) { (EX[id].stress = EX[id].stress || []).push(j); }); });
 
   var POS = { supine: ['brace-breathe', 'dead-bug', 'hollow-hold', 'reverse-crunch', 'glute-bridge', 'single-leg-bridge',
                        'crunch', 'leg-raise', 'bicycle-crunch', 'flutter-kicks', 'v-up', 'knee-to-chest'],

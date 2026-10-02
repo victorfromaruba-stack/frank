@@ -11,54 +11,76 @@ code. On a phone it installs to the home screen and works offline.
 Two kinds of users:
 
 - **Members** train with generated, science-based plans: a free trial, then a
-  monthly membership (payments are not connected yet: see
+  membership (payments are not connected yet: see
   `docs/ACCOUNTS-AND-PAYMENTS.md`).
 - **Frank's clients** follow sessions Frank writes for them in Coach tools and
   sends as a link. They pay Frank, not the app.
 
 ## What it does
 
-- **Onboarding**: goal, level, days a week, kit at home, six health questions,
-  then name, age and weight (all optional). Pregnancy, injury and age 60+ change
-  which moves the plan uses: no jumping, nothing flat on the back or front in
-  pregnancy, balance work for 60+.
-- **A 4-week plan**: training and rest days, a little harder each week, and
-  sessions that adjust to "Too easy / About right / Too hard" after every workout.
-- **Workouts**: Frank's three programs (Essentials, Change the method, Gravity),
-  core, lower body, upper body, full body and cardio at three levels, plus mobility
-  and quick sessions.
-- **80 exercises**, each with a moving 3D demo (drag or tap to turn it, the
-  muscles worked light up), set-up, steps, cues, common mistakes and "why it
-  works". Without WebGL the app shows a 2D skeleton instead. Moves that need kit
-  you don't have are swapped automatically, and you can swap any move yourself.
+- **Onboarding** in three parts, like the reference app. Goal and focus: goal,
+  body parts to focus on (shown on a muscle map), what you want most. Your body:
+  who demonstrates (the male or female coach), year of birth, height and weight
+  on sliding rulers with BMI, target weight with a realistic date range, the
+  PAR-Q+ health questions and pregnancy, sore spots. Fitness: how active you
+  are, a push-up test that sets the level, days a week, minutes, kit at home.
+  Then Frank, your name, the plan being built, and a summary.
+- **The plan**: 28 days in four weeks (Foundation, Build, Push, Peak) on a
+  day grid, with this week's sessions listed. Every muscle is trained twice a
+  week, the focus areas get extra work, and "Too easy / Just right / Too hard"
+  after each session tunes the next ones. Pregnancy, PAR-Q+ answers, sore spots
+  and age 60+ change which moves the plan uses.
+- **Workouts**: body parts (Full body, Abs, Chest, Arms, Legs & glutes,
+  Shoulders & back, Cardio, Stretch) at three levels, filters by level and
+  length, search, Frank's three programs (Essentials, Change the method,
+  Gravity) and the library of 80 exercises.
+- **Every exercise** has a Video tab (a moving 3D coach, or Frank's own clip
+  once he films it), a Muscle tab (the muscles it works light up on the coach),
+  and a How-to tab (slow motion, or Frank explaining it), plus steps, cues,
+  common mistakes, "why it works" and easier options. Drag the coach to turn it.
 - **The player**: get-ready countdown, timers or rep counts, rest with +20 s and
-  skip, switching sides, pause, voice coach, beeps, vibration, and the screen
-  stays on.
-- **Progress**: sessions, minutes, a calendar, minutes per week, weight trend and
-  dumbbell weights.
-- **Food**: water and a simple meal journal (protein? vegetables?). If someone is
-  pregnant, under 18 or has a medical condition that affects food, the page only
-  refers them to a dietitian or their doctor.
+  skip, switching sides, pause, How-to mid-workout, voice coach, beeps,
+  vibration, and the screen stays on.
+- **Today**: the week, active minutes, moving minutes toward the WHO 150
+  (250 for fat loss), walks, water, and a simple food journal. If someone is
+  pregnant, under 18 or has a medical condition that affects food, the food
+  card only refers them to a dietitian or doctor.
+- **Me**: workouts, minutes, streak, minutes per week, weight trend with the
+  goal, a calendar, history, dumbbell weights, settings, health switches,
+  membership, the science, delete my data.
 - **Frank**: his bio, the method, "Train with Frank in person" (Instagram DM),
-  membership status, settings, and a delete-my-data button.
-- **Coach tools** (Frank tab, For Frank): Frank builds a session from the
-  library (moves, reps or seconds, circuit or sets, rest, warm-up, cool-down, a
-  note), saves it, and sends it on WhatsApp or as a link.
+  and **Coach tools**: Frank builds a session from the library (moves, reps or
+  seconds, circuit or sets, rest, warm-up, cool-down, a note) and sends it on
+  WhatsApp or as a link.
+- **The science** screen: every rule the plans follow, with 36 sources.
 
 Everything a person enters stays in their own browser (localStorage). Nothing is
 sent anywhere.
+
+## The 3D coach
+
+The demos use two realistic, rigged 3D people (male and female) from
+Quaternius' Universal Base Characters (CC0, free for commercial use). Each
+exercise is written as 2D key poses (`js/figure.js`); the 3D coach copies the
+joints, keeps hands and feet on the floor, a box, the table or the wall, and
+can light up the muscles. `tools/coach/build_coach.py` fitted the models to the
+pose engine and dressed them in Frank's green.
+
+When Frank films a move, his clip replaces the coach for that move:
+`docs/FILMING-GUIDE.md` has the shot list and how to add a clip.
 
 ## Frank needs to check or supply
 
 1. **The words.** The exercise texts (`js/exercises.js`), the daily lessons and
    the method lines (`js/programs.js`, `js/app.js`) are drafts written from his
    graphics. He should read them and put them in his own words.
-2. **His WhatsApp number**, if he wants a WhatsApp button: `whatsapp` in
+2. **His videos**, when he's ready: `docs/FILMING-GUIDE.md`.
+3. **Prices and the trial** (now placeholders: $9.99 a month, $59.99 a year,
+   7 days free) and a payment provider: `docs/ACCOUNTS-AND-PAYMENTS.md`.
+4. **His WhatsApp number**, if he wants a WhatsApp button: `whatsapp` in
    `js/programs.js`, digits only with the country code (Aruba is 297).
-3. **Programs and doses.** The workouts and reps in `js/programs.js` and
+5. **Programs and doses.** The workouts and reps in `js/programs.js` and
    `js/exercises.js` are sensible defaults. He may want his own.
-4. **Later: his own videos.** Each exercise could show a short clip of Frank
-   instead of the skeleton.
 
 ## Run it, host it
 
@@ -67,7 +89,8 @@ offline mode need HTTPS.
 
 ```bash
 python3 -m http.server 8000      # then open http://localhost:8000
-node tools/build.mjs             # makes dist/wellness-by-frank.html, the whole app in one file
+node tools/check-plans.cjs       # every plan trains each body region twice a week
+node tools/build.mjs             # dist/wellness-by-frank.html: the whole app in one file (about 3 MB)
 ```
 
 When you change a file, bump `VERSION` in `sw.js` so installed phones pick up
@@ -78,17 +101,23 @@ the update.
 | File | What |
 |---|---|
 | `index.html`, `app.css` | the page and its look |
-| `js/figure.js` | the 2D pose engine and skeleton: poses, joints, the annotation arrows |
-| `js/figure3d.js` | the 3D coach: body parts on the same joints, one shared WebGL renderer |
-| `vendor/three.module.min.js` | three.js r170 (MIT), used by the 3D coach |
-| `js/exercises.js` | the 80 exercises: text, doses, kit, swaps, animations |
-| `js/programs.js` | Frank's details, workouts, the 4-week plan, session builder, lessons |
-| `js/app.js` | screens, the player, access (trial, member, client), coach tools, progress, food, settings |
+| `js/figure.js` | the 2D pose engine: poses, joints, the annotation arrows |
+| `js/figure3d.js` | the 3D coach: poses the rigged models on the 2D joints, muscle view, muscle maps |
+| `assets/coach-m.glb`, `assets/coach-f.glb`, `assets/CREDITS.txt` | the two coaches and their licence |
+| `vendor/` | three.js r170 and its model loader (MIT) |
+| `js/exercises.js` | the 80 exercises: text, doses, kit, swaps, muscles, animations |
+| `js/media.js` | Frank's own clips, when he films them |
+| `js/programs.js` | Frank's details, prices, workouts, the 28-day plan, safety rules, session builder |
+| `js/science.js` | the science screen and its sources |
+| `js/app.js` | screens, onboarding, the player, access (trial, member, client), coach tools, Today, Me |
 | `js/sound.js` | beeps, voice, vibration, keeping the screen on |
 | `img/` | Frank's four graphics and the app icons |
 | `manifest.webmanifest`, `sw.js` | home-screen install and offline cache |
 | `tools/build.mjs` | packs everything into one HTML file |
-| `tools/sheet.html`, `tools/sheet3d.html` | every exercise's key poses in 2D and 3D: open them (served) to check animations after an edit |
+| `tools/check-plans.cjs` | checks every plan type against the twice-a-week rule |
+| `tools/sheet3d.html`, `tools/sheet.html` | every exercise's key poses in 3D and 2D: open them (served) to check animations after an edit |
+| `tools/coach/build_coach.py` | rebuilds the 3D coaches from the source models |
+| `tools/media/process.sh`, `docs/FILMING-GUIDE.md` | Frank's videos: how to film and add them |
 | `docs/ACCOUNTS-AND-PAYMENTS.md` | what a real membership needs, and which payment providers work from Aruba |
 | `.claude/skills/frank-app/` | how to change this app safely, for Claude and other agents |
 

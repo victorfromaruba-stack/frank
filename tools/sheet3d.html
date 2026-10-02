@@ -10,11 +10,11 @@
 <script src="../js/figure.js"></script><script src="../js/exercises.js"></script><script src="../js/figure3d.js"></script>
 <script type="module">
 // Every exercise's key poses on the 3D coach, for checking animations.
-//   ?ids=squat,push-up   ?from=0&to=20   ?keys=3   ?mode=muscle   ?note=0   ?w=260&h=200&cols=4
+//   ?ids=squat,push-up   ?from=0&to=20   ?keys=3   ?mode=muscle|map   ?note=0   ?w=260&h=200&cols=4   ?coach=f
 import * as THREE from 'three';
 import { GLTFLoader } from '../vendor/jsm/GLTFLoader.js';
 import { RoomEnvironment } from '../vendor/jsm/RoomEnvironment.js';
-window.THREE = THREE; window.WBF_GLTF = GLTFLoader; window.WBF_ROOM = RoomEnvironment; window.WBF_COACH = '../assets/coach-m.glb';
+window.THREE = THREE; window.WBF_GLTF = GLTFLoader; window.WBF_ROOM = RoomEnvironment; window.WBF_COACH = '../assets/coach-' + (new URLSearchParams(location.search).get('coach') || 'm') + '.glb';
 const q = new URLSearchParams(location.search), g = document.getElementById('g');
 ['w', 'h', 'cols'].forEach((k) => { if (q.get(k)) document.documentElement.style.setProperty('--' + k, k === 'cols' ? q.get(k) : q.get(k) + 'px'); });
 function draw() {

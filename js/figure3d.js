@@ -15,7 +15,7 @@
 (function (W) {
   'use strict';
   var F = W.WBF.fig;
-  var T = null, R = null, C = null, loading = false;
+  var T = null, R = null, C = null;
   var SH_W = 10.8, HIP_W = 5.8;                // half shoulder and hip widths, the same as the 3D coach's
   var KIT = 0x3e7fb0, KIT_HI = 0x9fd4f3, MAT = 0x0b4a27;
   var MUSCLES = ['none', 'chest', 'abs', 'obliques', 'front-deltoids', 'back-deltoids', 'biceps', 'triceps',
@@ -72,7 +72,7 @@
       ground.position.y = -0.7;
       ground.receiveShadow = true;
       scene.add(ground);
-      R = { canvas: canvas, gl: gl, scene: scene, cam: cam, key: key, rim: rim, w: 512, h: 512 };
+      R = { canvas: canvas, gl: gl, scene: scene, cam: cam, key: key, rim: rim, ground: ground, w: 512, h: 512 };
       R.mat = materials();
       R.kit = kit();
       scene.add(R.kit.group);
@@ -85,13 +85,42 @@
     }
   }
 
+  // two coaches: m and f. One is shown; the other loads when someone picks it.
+  var coaches = {}, want = 'm', pending = {};
+  function urlFor(id) {
+    var U = W.WBF_COACH_URLS || {};
+    return U[id] || (W.WBF_COACH && id === 'm' ? W.WBF_COACH : 'assets/coach-' + id + '.glb');
+  }
   function loadCoach() {
-    if (loading || C || !W.WBF_GLTF) return;
-    loading = true;
-    new W.WBF_GLTF().load(W.WBF_COACH || 'assets/coach-m.glb', function (g) {
-      try { C = coach(g); } catch (e) { warn('model', e); R.failed = true; return; }
+    if (C || !W.WBF_GLTF) return;
+    fetchCoach(want);
+  }
+  function fetchCoach(id) {
+    if (coaches[id] || pending[id] || !W.WBF_GLTF || !R || R.failed) return;
+    pending[id] = true;
+    new W.WBF_GLTF().load(urlFor(id), function (g) {
+      pending[id] = false;
+      var c;
+      try { c = coach(g); c.id = id; } catch (e) { warn('model', e); if (!C) R.failed = true; return; }
+      coaches[id] = c;
+      c.holder.visible = false;
+      if (id === want || !C) use(id);
       W.dispatchEvent(new Event('wbf-three'));
-    }, undefined, function (e) { warn('load', e); R.failed = true; });
+    }, undefined, function (e) { pending[id] = false; warn('load', e); if (!C) R.failed = true; });
+  }
+  function use(id) {
+    if (!coaches[id]) return;
+    if (C) C.holder.visible = false;
+    C = coaches[id];
+    C.holder.visible = true;
+  }
+  // pick the coach figure: 'm' or 'f'. Returns true when it is already showing.
+  function setCoach(id) {
+    id = id === 'f' ? 'f' : 'm';
+    want = id;
+    if (coaches[id]) { use(id); return true; }
+    fetchCoach(id);
+    return false;
   }
 
   function materials() {
@@ -274,10 +303,12 @@
         sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n\tvHL = uHL[int(_muscle + 0.5)];');
       sh.fragmentShader = 'uniform float uMode;\nvarying float vHL;\n' +
         sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n' +
-          '\tif (uMode > 0.5) { float lu = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114)); diffuseColor.rgb = vec3(0.62, 0.64, 0.67) * (0.55 + lu); }\n' +
-          '\tdiffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.62, 0.04, 0.02), clamp(vHL, 0.0, 1.0) * 0.92);');
+          '\tfloat lu = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));\n' +
+          '\tif (uMode > 1.5) { diffuseColor.rgb = vec3(0.035, 0.05, 0.042) * (0.7 + lu); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.08, 0.36, 0.66), clamp(vHL, 0.0, 1.0)); }\n' +
+          '\telse { if (uMode > 0.5) diffuseColor.rgb = vec3(0.62, 0.64, 0.67) * (0.55 + lu);\n' +
+          '\t  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.62, 0.04, 0.02), clamp(vHL, 0.0, 1.0) * 0.92); }');
     };
-    m.customProgramCacheKey = function () { return 'wbf-coach-1'; };
+    m.customProgramCacheKey = function () { return 'wbf-coach-3'; };
     m.needsUpdate = true;
     // vertices that find the floor
     var count = body.geometry.attributes.position.count, step = Math.max(1, Math.floor(count / 500));
@@ -513,7 +544,8 @@
   // lift or lower the whole figure so its lowest point over the move touches the floor
   function groundFor(fig) {
     var an = fig.an;
-    if (an._g3 != null) return an._g3;
+    var gk = '_g3' + C.id;
+    if (an[gk] != null) return an[gk];
     var T0 = F.cycle(an), n = Math.max(8, Math.min(24, an.k.length * 6)), lo = Infinity, v = V(0, 0, 0), body = C.body;
     C.holder.position.y = 0;
     for (var i = 0; i < n; i++) {
@@ -525,8 +557,8 @@
         if (v.y < lo) lo = v.y;
       }
     }
-    an._g3 = isFinite(lo) ? Math.max(-6, Math.min(6, -lo)) : 0;
-    return an._g3;
+    an[gk] = isFinite(lo) ? Math.max(-6, Math.min(6, -lo)) : 0;
+    return an[gk];
   }
 
   function placeKit(fig, info) {
@@ -558,8 +590,8 @@
 
   // muscle view: grey body, the muscles a move works in red
   function shade(fig) {
-    var muscle = fig.mode === 'muscle';
-    C.mode.value = muscle ? 1 : 0;
+    var muscle = fig.mode === 'muscle' || fig.mode === 'map';
+    C.mode.value = fig.mode === 'map' ? 2 : muscle ? 1 : 0;
     C.body.material.map = muscle && C.skin ? C.skin : C.cloth;
     C.others.forEach(function (o) { o.visible = !muscle; });
     C.hl.value.fill(0);
@@ -705,12 +737,19 @@
 
   Figure.prototype.draw = function (spec) {
     if (!init()) return;
+    var keep = C, other = this.opt.coach && coaches[this.opt.coach];
+    if (other && other !== C) use(other.id);          // a figure can show the other coach
+    try { this.render(spec); } finally { if (C !== keep) use(keep.id); }
+  };
+  Figure.prototype.render = function (spec) {
     this.last = spec;
     var w = this.canvas.width, h = this.canvas.height, gl = R.gl;
     ensureSize(w, h);
-    var props = propsFor(this.an), mat = matFor(this);
+    var map = this.mode === 'map';
+    var props = map ? null : propsFor(this.an), mat = map ? null : matFor(this);
     if (props) R.scene.add(props);
     if (mat) R.scene.add(mat);
+    R.ground.visible = !map;
     var off = groundFor(this);
     var j = joints(F.resolve(spec), this.an, this.flip);
     var info = solve(j, this);
@@ -808,10 +847,49 @@
 
   W.addEventListener('resize', function () { live.forEach(function (f) { f.resize(); }); });
 
+  // A still picture of the coach standing, with muscles lit: the focus-area maps and body-part icons.
+  // mus: { p: [...], s: [...] } in the names js/exercises.js uses. Returns a data URL, or null before
+  // the model has loaded.
+  var ANAT = { v: 'f', p: [0, 49.3], t: 180, aN: [14, 6], aF: [14, 6], lN: [3, 1], lF: [3, 1] };
+  var maps = {};
+  function mapImage(mus, view, w, h) {
+    if (!init()) return null;
+    mus = mus || { p: [], s: [] };
+    var key = C.id + '|' + (mus.p || []).join() + '|' + (mus.s || []).join() + '|' + view + '|' + w + 'x' + h;
+    if (maps[key]) return maps[key];
+    var an = { k: [ANAT], mus: mus, cam: { yaw: view === 'back' ? -90 : 90, pitch: 2 }, focus: null };
+    var f = new Figure(an, { mode: 'map' });
+    f.canvas.width = w; f.canvas.height = h; f.dpr = 1;
+    f.draw(ANAT);
+    maps[key] = f.canvas.toDataURL('image/png');
+    return maps[key];
+  }
+
+  // A picture of one coach standing, for choosing between them. Null until that coach has
+  // loaded; asking starts the download, and 'wbf-three' fires when it is there.
+  var STAND = { v: 'f', p: [0, 49.3], t: 180, aN: [9, 8], aF: [9, 8], lN: [2.5, 1], lF: [2.5, 1] };
+  function portrait(id, w, h) {
+    if (!init()) return null;
+    id = id === 'f' ? 'f' : 'm';
+    if (!coaches[id]) { fetchCoach(id); return null; }
+    var key = 'p|' + id + '|' + w + 'x' + h;
+    if (maps[key]) return maps[key];
+    var f = new Figure({ k: [STAND], cam: { yaw: 62, pitch: 5 }, focus: null }, { coach: id });
+    f.canvas.width = w; f.canvas.height = h; f.dpr = 1;
+    f.draw(STAND);
+    maps[key] = f.canvas.toDataURL('image/png');
+    return maps[key];
+  }
+
   W.WBF.fig3d = {
     init: init,
     ready: function () { return !!(R && !R.failed && C); },
     Figure: Figure,
+    mapImage: mapImage,
+    portrait: portrait,
+    load: function (id) { if (init()) fetchCoach(id === 'f' ? 'f' : 'm'); },
+    setCoach: setCoach,
+    coach: function () { return C ? C.id : want; },
     MUSCLES: MUSCLES
   };
 })(window);

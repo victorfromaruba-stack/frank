@@ -2,8 +2,9 @@
 
 ## Built now (no server)
 
-- **Members**: a free trial (`BILLING.trialDays`, 7) that starts with the first
-  workout, then a paywall that links to a checkout page (`BILLING.paymentLink`).
+- **Members**: a free trial (`BILLING.trialDays`, 7) that starts on the paywall
+  after onboarding (or with the first workout), then a paywall with a yearly and
+  a monthly plan that links to a checkout page (`BILLING.paymentLink`).
 - **Frank's clients**: Frank writes a session in Coach tools and sends it as a
   link. Opening it puts the session on the client's plan and opens the app to
   them without the membership. Frank bills his clients himself.
@@ -57,7 +58,8 @@ the app doesn't change when you pick one.
 
 ## Decisions for Victor and Frank
 
-1. Price and trial length (now $9.99 a month, 7 days: placeholders).
+1. Prices and trial length (now $59.99 a year or $9.99 a month, 7 days free:
+   placeholders, set in `BILLING.plans`).
 2. Payment provider (Paddle, PayPal, or a company in a Stripe country).
 3. Web app first, or straight into the stores.
 4. Whether Frank's clients also get the generated plans (now: yes).
