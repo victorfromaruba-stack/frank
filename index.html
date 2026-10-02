@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Wellness by Frank</title>
+<meta name="description" content="Home workouts on Frank's method: a 4-week plan, guided sessions with a moving coach, and the why behind every exercise.">
+<meta name="theme-color" content="#012D12">
+<meta name="color-scheme" content="dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Frank">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="img/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="img/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gilda+Display&family=Nunito:wght@400;600;700;800;900&display=swap">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main id="app" class="app" aria-live="off"></main>
+<nav class="tabs" id="tabs" aria-label="Sections">
+  <div class="tabs-in">
+    <button class="tab" data-tab="plan"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4M8 14h3"/></svg>Plan</button>
+    <button class="tab" data-tab="workouts"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 12h8"/><path d="M5.2 7.5 8 9.1v5.8l-2.8 1.6-2.8-1.6V9.1z"/><path d="M18.8 7.5l2.8 1.6v5.8l-2.8 1.6-2.8-1.6V9.1z"/></svg>Workouts</button>
+    <button class="tab" data-tab="food"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12h17a8.5 8.5 0 0 1-17 0z"/><path d="M12 12c0-4 2.5-6.5 6-7-.3 3.6-2.6 6-6 7z"/></svg>Food</button>
+    <button class="tab" data-tab="progress"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16"/><path d="M5 15l4.5-5 3.5 3 6-7"/><path d="M15 6h4v4"/></svg>Progress</button>
+    <button class="tab" data-tab="frank"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c.8-4 3.8-6 7.5-6s6.7 2 7.5 6"/></svg>Frank</button>
+  </div>
+</nav>
+<div id="overlay" hidden></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script src="js/figure.js"></script>
+<script src="js/exercises.js"></script>
+<script src="js/programs.js"></script>
+<script src="js/science.js"></script>
+<script src="js/sound.js"></script>
+<script src="js/figure3d.js"></script>
+<script src="js/app.js"></script>
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
+<script type="module">
+  // the 3D coach: the app starts with the 2D skeleton and switches when the model has loaded
+  import * as THREE from 'three';
+  import { GLTFLoader } from './vendor/jsm/GLTFLoader.js';
+  import { RoomEnvironment } from './vendor/jsm/RoomEnvironment.js';
+  window.THREE = THREE;
+  window.WBF_GLTF = GLTFLoader;
+  window.WBF_ROOM = RoomEnvironment;
+  window.dispatchEvent(new Event('wbf-three'));
+</script>
+</body>
+</html>

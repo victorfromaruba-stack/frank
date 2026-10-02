@@ -1,0 +1,16 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#012D12}</style></head><body>
+<canvas id="c" width="400" height="300"></canvas>
+<script type="module">
+import * as THREE from '../vendor/three.module.min.js';
+const r = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true, alpha: true });
+r.shadowMap.enabled = true;
+const scene = new THREE.Scene();
+const cam = new THREE.PerspectiveCamera(35, 4/3, 0.1, 100); cam.position.set(3, 2, 5); cam.lookAt(0, 0.6, 0);
+scene.add(new THREE.HemisphereLight(0xdff3ff, 0x0b3a1a, 1.4));
+const d = new THREE.DirectionalLight(0xffffff, 1.6); d.position.set(2, 5, 3); d.castShadow = true; scene.add(d);
+const m = new THREE.MeshStandardMaterial({ color: 0x7cc4ee, roughness: 0.55 });
+const cap = new THREE.Mesh(new THREE.CapsuleGeometry(0.3, 1, 8, 24), m); cap.position.y = 0.8; cap.castShadow = true; scene.add(cap);
+const g = new THREE.Mesh(new THREE.PlaneGeometry(10, 10), new THREE.ShadowMaterial({ opacity: 0.35 })); g.rotation.x = -Math.PI/2; g.receiveShadow = true; scene.add(g);
+r.render(scene, cam);
+document.title = 'ok ' + r.getContext().getParameter(r.getContext().VERSION);
+</script></body></html>

@@ -1,0 +1,16 @@
+{
+  "name": "Wellness by Frank",
+  "short_name": "Frank",
+  "description": "Home workouts on Frank's method: a 4-week plan, guided sessions and the why behind every exercise.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#012D12",
+  "theme_color": "#012D12",
+  "icons": [
+    { "src": "img/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "img/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "img/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
