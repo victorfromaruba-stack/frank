@@ -12,6 +12,8 @@ What it does:
 
 Run:  pip install numpy pillow
       python3 tools/coach/build_coach.py "<path to Universal Base Characters[Standard]>" m
+      add --hd for the showcase copy (assets/hd/): 2048 px textures, about 4 MB, used only for
+      screenshots and marketing renders (.claude/skills/frank-showcase), never by the app itself.
 """
 import io, json, math, os, struct, sys
 import numpy as np
@@ -20,8 +22,10 @@ from PIL import Image, ImageFilter
 SRC = sys.argv[1]
 WHO = sys.argv[2] if len(sys.argv) > 2 else 'm'
 DEBUG = '--debug' in sys.argv
+DBG = os.environ.get('COACH_DEBUG_DIR', '/tmp/coach-debug')
+HD = '--hd' in sys.argv
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT = os.path.join(HERE, '..', '..', 'assets', 'coach-%s.glb' % WHO)
+OUT = os.path.join(HERE, '..', '..', 'assets', *(['hd'] if HD else []), 'coach-%s.glb' % WHO)
 
 CFG = {
     # sleeve: how far down the upper arm the top reaches (0 = sleeveless); legs: how far down
@@ -112,6 +116,7 @@ def trs(n):
 
 BASE = os.path.join(SRC, 'Base Characters', 'Godot - UE')
 TEX = os.path.join(SRC, 'Base Characters', 'Textures')
+NRM = os.path.join(TEX, 'Normals Unity - Godot')        # +Y up, as glTF expects (the other set is DirectX)
 g, bufs, _ = load(os.path.join(BASE, CFG['body'] + '.gltf'))
 nodes = g['nodes']
 skin = g['skins'][0]
@@ -418,16 +423,18 @@ def dilate(img, cov, n=6):
     return img, cov
 
 
-TS = 1024
-masks, cov = raster(body['uv'], body['idx'], [shirt_v, shorts_v], TS)
-masks, _ = dilate(masks, cov, 4)
+TS = 2048 if HD else 1024                          # body textures
+RS = TS // 2                                       # roughness, hair
+K = TS // 1024                                     # pixel distances scale with the texture
+masks, cov = raster(body['uv'], body['idx'], [shirt_v, shorts_v, (muscle == MID['head']).astype(np.float32)], TS)
+masks, _ = dilate(masks, cov, 4 * K)
 shirt_m = np.clip((masks[0] - 0.5) * 6 + 0.5, 0, 1)
 shorts_m = np.clip((masks[1] - 0.5) * 6 + 0.5, 0, 1) * (1 - shirt_m)
 
 skin_img = Image.open(os.path.join(TEX, CFG['skin'])).convert('RGB').resize((TS, TS), Image.LANCZOS)
 sk = np.asarray(skin_img).astype(np.float32) / 255
 lum = sk @ np.array([0.299, 0.587, 0.114])
-blur = np.asarray(Image.fromarray((lum * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(14))).astype(np.float32) / 255
+blur = np.asarray(Image.fromarray((lum * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(14 * K))).astype(np.float32) / 255
 shade = np.clip(lum / np.maximum(blur, 0.05), 0.55, 1.35)
 shade = 0.72 + 0.28 * shade                       # keep a little of the baked shading under the fabric
 
@@ -447,24 +454,63 @@ cloth *= (1 - 0.25 * np.clip(edge_s + edge_b, 0, 1))[..., None]
 cloth_img = Image.fromarray(np.clip(cloth * 255, 0, 255).astype(np.uint8))
 
 # normal map: flatter under fabric; roughness: matte fabric
-nrm = np.asarray(Image.open(os.path.join(TEX, 'T_Superhero_%s_Normal.png' % CFG['who'])).convert('RGB')
+nrm = np.asarray(Image.open(os.path.join(NRM, 'T_Superhero_%s_Normal.png' % CFG['who'])).convert('RGB')
                  .resize((TS, TS), Image.LANCZOS)).astype(np.float32) / 255
 flat = np.array([0.5, 0.5, 1.0], np.float32)
 fab = np.clip(shirt_m + shorts_m, 0, 1)[..., None]
+nrm_full_img = Image.fromarray(np.clip(nrm * 255, 0, 255).astype(np.uint8))   # all the muscle detail, for the muscle view
 nrm = nrm * (1 - 0.55 * fab) + flat * 0.55 * fab
 nrm_img = Image.fromarray(np.clip(nrm * 255, 0, 255).astype(np.uint8))
+
+# the muscle view's skin: an anatomy-chart grey drawn from the full normal map's curvature (its
+# divergence): fine creases become the lines between muscles, broad hollows a soft shade, bulges a
+# touch lighter. Only measured well inside the parts of the texture the body uses, so seams stay
+# clean, and faint on the face.
+def gblur(a, s):
+    """Gaussian blur of a float array (FFT; the edges wrap, which only touches the empty margin)."""
+    fy = np.fft.fftfreq(a.shape[0])[:, None]
+    fx = np.fft.rfftfreq(a.shape[1])[None, :]
+    return np.fft.irfft2(np.fft.rfft2(a) * np.exp(-2 * (np.pi * s) ** 2 * (fx ** 2 + fy ** 2)), a.shape).astype(np.float32)
+
+
+nf = np.asarray(nrm_full_img).astype(np.float32) / 255 * 2 - 1
+div = np.gradient(nf[..., 0], axis=1) - np.gradient(nf[..., 1], axis=0)    # green is up, rows run down
+ins = np.asarray(Image.fromarray(((cov > 0) * 255).astype(np.uint8)).filter(ImageFilter.MinFilter(5 * K | 1))).astype(np.float32) / 255
+
+
+def curve(s):
+    """curvature at one scale, -1 (deepest hollow) .. 1 (strongest bulge); seams left out"""
+    c = gblur(div * ins, s) / np.maximum(gblur(ins, s), 1e-3)
+    return np.clip(c / max(1e-6, np.percentile(np.abs(c[ins > 0.5]), 98)), -1, 1)
+
+
+fine, broad = curve(1.0 * K), curve(4.5 * K)
+face = 1 - 0.7 * np.clip(gblur(masks[2], 6 * K), 0, 1)
+fade = np.clip(gblur(ins, 2 * K), 0, 1) * face
+crease = np.clip((-fine - 0.15) / 0.85, 0, 1) ** 0.9 * fade
+hollow = np.clip(-broad, 0, 1) * fade
+bulge = np.clip(broad, 0, 1) * fade
+# the source skin's painted shading adds depth, but not where it paints underwear (grey, not skin-toned)
+sat = (sk.max(-1) - sk.min(-1)) / np.maximum(sk.max(-1), 1e-3)
+skin_w = np.clip(gblur(np.clip((sat - 0.12) / 0.1, 0, 1), 3 * K), 0, 1)
+detail = 1 + (np.clip(lum / max(1e-6, np.median(lum)), 0.75, 1.2) - 1) * skin_w
+anat = (np.array([0.70, 0.71, 0.73], np.float32)[None, None, :]
+        * ((0.8 + 0.2 * detail) * (1 - 0.5 * crease) * (1 - 0.4 * hollow) * (1 + 0.12 * bulge))[..., None])
+anat_img = Image.fromarray(np.clip(anat * 255, 0, 255).astype(np.uint8))
 rough = np.asarray(Image.open(os.path.join(TEX, 'T_Superhero_%s_Roughness.png' % CFG['who'])).convert('L')
-                   .resize((512, 512), Image.LANCZOS)).astype(np.float32) / 255
-fab512 = np.asarray(Image.fromarray((fab[..., 0] * 255).astype(np.uint8)).resize((512, 512))).astype(np.float32) / 255
-rough = rough * (1 - fab512) + 0.92 * fab512
-mr = np.zeros((512, 512, 3), np.uint8)             # glTF: G = roughness, B = metalness
+                   .resize((RS, RS), Image.LANCZOS)).astype(np.float32) / 255
+fab_r = np.asarray(Image.fromarray((fab[..., 0] * 255).astype(np.uint8)).resize((RS, RS))).astype(np.float32) / 255
+rough = rough * (1 - fab_r) + 0.92 * fab_r
+mr = np.zeros((RS, RS, 3), np.uint8)               # glTF: G = roughness, B = metalness
 mr[..., 1] = np.clip(rough * 255, 0, 255)
 mr_img = Image.fromarray(mr)
 
 if DEBUG:
-    os.makedirs('/tmp/coach-debug', exist_ok=True)
-    cloth_img.save('/tmp/coach-debug/cloth.png')
-    Image.fromarray((np.stack([shirt_m, shorts_m, np.zeros_like(shirt_m)], -1) * 255).astype(np.uint8)).save('/tmp/coach-debug/masks.png')
+    os.makedirs(DBG, exist_ok=True)
+    cloth_img.save(DBG + '/cloth.png')
+    Image.fromarray((np.stack([shirt_m, shorts_m, np.zeros_like(shirt_m)], -1) * 255).astype(np.uint8)).save(DBG + '/masks.png')
+    anat_img.save(DBG + '/anat.png')
+    Image.fromarray((skin_w * 255).astype(np.uint8)).save(DBG + '/skin_w.png')
 
 # ---------------------------------------------------------------- hair
 hg, hbufs, _ = load(os.path.join(SRC, 'Hairstyles', 'Rigged to Head Bone', 'glTF (Godot -Unreal)', CFG['hair'] + '.gltf'))
@@ -526,6 +572,8 @@ class Writer:
 
 
 def jpg(img, q=88):
+    if HD:
+        q = max(q, 93)
     b = io.BytesIO(); img.save(b, 'JPEG', quality=q, optimize=True); return b.getvalue()
 
 
@@ -567,22 +615,23 @@ def image(data, mime):
 t_cloth = image(jpg(cloth_img), 'image/jpeg')
 t_nrm = image(jpg(nrm_img, 90), 'image/jpeg')
 t_mr = image(jpg(mr_img, 85), 'image/jpeg')
-t_skin = image(jpg(skin_img), 'image/jpeg')
+t_skin = image(jpg(anat_img), 'image/jpeg')
+t_skin_n = image(jpg(nrm_full_img, 90), 'image/jpeg')
 # hair and eyebrows: each source material keeps its own texture set (T_Hair_1 or T_Hair_2)
 hair_sets = {}
 def hair_tex(n):
     if n not in hair_sets:
-        bc = Image.open(os.path.join(TEX, 'T_Hair_%s_BaseColor.png' % n)).convert('RGB').resize((512, 512), Image.LANCZOS)
-        nm = Image.open(os.path.join(TEX, 'T_Hair_%s_Normal.png' % n)).convert('RGB').resize((512, 512), Image.LANCZOS)
+        bc = Image.open(os.path.join(TEX, 'T_Hair_%s_BaseColor.png' % n)).convert('RGB').resize((RS, RS), Image.LANCZOS)
+        nm = Image.open(os.path.join(NRM, 'T_Hair_%s_Normal.png' % n)).convert('RGB').resize((RS, RS), Image.LANCZOS)
         hair_sets[n] = (image(jpg(bc), 'image/jpeg'), image(jpg(nm, 90), 'image/jpeg'))
     return hair_sets[n]
-eye = Image.open(os.path.join(TEX, 'T_Eye_Brown.png')).convert('RGB').resize((128, 128), Image.LANCZOS)
+eye = Image.open(os.path.join(TEX, 'T_Eye_Brown.png')).convert('RGB').resize((128 * K, 128 * K), Image.LANCZOS)
 t_eye = image(jpg(eye, 90), 'image/jpeg')
 
 out['materials'] = [
     {'name': 'body', 'pbrMetallicRoughness': {'baseColorTexture': {'index': t_cloth}, 'metallicFactor': 0,
                                               'metallicRoughnessTexture': {'index': t_mr}},
-     'normalTexture': {'index': t_nrm}, 'extras': {'skinTexture': t_skin}},
+     'normalTexture': {'index': t_nrm}, 'extras': {'skinTexture': t_skin, 'skinNormal': t_skin_n}},
     {'name': 'eyes', 'pbrMetallicRoughness': {'baseColorTexture': {'index': t_eye}, 'metallicFactor': 0, 'roughnessFactor': 0.3}},
 ]
 MATI = {'body': 0, 'eyes': 1}

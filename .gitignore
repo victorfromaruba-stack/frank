@@ -3,3 +3,6 @@ dist/
 node_modules/
 __pycache__/
 .DS_Store
+
+# images made by .claude/skills/frank-showcase (big PNGs: commit only the ones you choose)
+/showcase/

@@ -281,7 +281,7 @@
     opts = opts || {};
     return '<div class="fig-box' + (opts.cls ? ' ' + opts.cls : '') + '" data-fig="' + esc(id) + '"' + (opts.deco ? ' data-deco="1"' : '') + (opts.flip ? ' data-flip="1"' : '') +
       (opts.drag ? ' data-drag="1"' : '') + (opts.mode ? ' data-mode="' + opts.mode + '"' : '') + (opts.note === false ? ' data-note="0"' : '') +
-      (opts.speed ? ' data-speed="' + opts.speed + '"' : '') + (opts.still != null ? ' data-still="' + opts.still + '"' : '') + (opts.video === false ? ' data-video="0"' : '') + '></div>';
+      (opts.speed ? ' data-speed="' + opts.speed + '"' : '') + (opts.still != null ? ' data-still="' + opts.still + '"' : '') + (opts.video === false ? ' data-video="0"' : '') + (opts.orbit ? ' data-orbit="' + opts.orbit + '"' : '') + (opts.noteTop ? ' data-note-top="' + opts.noteTop + '"' : '') + '></div>';
   }
   function thumbHtml(id, cls) { return '<div class="thumb' + (cls ? ' ' + cls : '') + '" data-thumb="' + esc(id) + '"></div>'; }
   function media(id) { return (WBF.MEDIA || {})[id] || null; }
@@ -315,7 +315,7 @@
       }
       if (use3d()) {
         f = new WBF.fig3d.Figure(ex.anim, { note: el.getAttribute('data-note') !== '0', flip: flip, drag: el.hasAttribute('data-drag'), mode: mode,
-                                            speed: +(el.getAttribute('data-speed') || 1) }).mount(el);
+                                            speed: +(el.getAttribute('data-speed') || 1), orbit: reduce ? 0 : +(el.getAttribute('data-orbit') || 0), noteTop: +(el.getAttribute('data-note-top') || 0) }).mount(el);
       } else {
         var box = el.getBoundingClientRect();
         var aspect = box.width && box.height ? box.width / box.height : 4 / 3;
@@ -323,7 +323,7 @@
       }
       el._fig = f;
       if (still != null) f.still(+still);
-      else if (reduce && el.hasAttribute('data-deco')) f.still(thumbKey(ex));
+      else if ((reduce && el.hasAttribute('data-deco')) || (W.WBF_SHOT && W.WBF_SHOT.still)) f.still(thumbKey(ex));
       else f.play();
     });
     $$('[data-turn]', root).forEach(function (b) {
@@ -472,9 +472,9 @@
     });
     var alts = (ex.alts || []).filter(function (a) { return EX[a]; });
     var m = media(id), tabFig;
-    if (XS.tab === 'muscle') tabFig = figHtml(id, { mode: 'muscle', drag: true, note: false, video: false });
+    if (XS.tab === 'muscle') tabFig = figHtml(id, { mode: 'muscle', drag: true, note: false, video: false, orbit: 20 });
     else if (XS.tab === 'howto') tabFig = m && m.howto && !/youtu/.test(m.howto) ? '<div class="fig-box is3d"><video src="' + esc(m.howto) + '"' + (m.poster ? ' poster="' + esc(m.poster) + '"' : '') + ' controls playsinline></video></div>'
-      : figHtml(id, { drag: true, speed: 0.55, video: false });
+      : figHtml(id, { drag: true, speed: 0.55, video: false, noteTop: 30 });
     else tabFig = figHtml(id, { drag: true, note: false });
     var mus = ex.mus || { p: [], s: [] };
     var n = XS.list.length;
@@ -1347,7 +1347,7 @@
       var side = st.side === 1 ? 'First side' : st.side === 2 ? 'Second side' : st.side === 3 ? 'Each side' : '';
       var nxt = s.steps[PL.i + 1];
       return '<div class="player">' + top + '<div class="pl-body">' +
-        '<div class="pl-media"><div class="pl-fig" data-drag="1" data-fig="' + st.ex + '"' + (st.side === 2 ? ' data-flip="1"' : '') + '></div>' +
+        '<div class="pl-media"><div class="pl-fig" data-drag="1" data-note-top="40" data-fig="' + st.ex + '"' + (st.side === 2 ? ' data-flip="1"' : '') + '></div>' +
         '<button class="howto" data-act="pl-how">' + ic('info') + 'How to</button>' +
         '<button class="icon-btn glass turn" data-act="turn" data-turn="1" aria-label="Turn the figure" hidden>' + ic('turn') + '</button></div>' +
         '<div class="pl-name"><h1>' + esc(ex.name) + '</h1><span class="meta num">' + (PL.i + 1) + '/' + s.steps.length + '</span></div>' +
@@ -1576,12 +1576,12 @@
     svg += '<line class="grid" x1="0" x2="' + Wd + '" y1="' + (Hh - bottom) + '" y2="' + (Hh - bottom) + '"/>';
     weeks.forEach(function (w, i) {
       var h = (Hh - top - bottom) * w.min / nice, x = i * step + (step - bw) / 2, y = Hh - bottom - h;
-      if (w.min) svg += '<rect class="bar' + (i === 7 ? '' : ' dim') + '" x="' + x + '" y="' + y + '" width="' + bw + '" height="' + Math.max(2, h) + '" rx="5"/>';
+      if (w.min) svg += '<rect class="col' + (i === 7 ? '' : ' dim') + '" x="' + x + '" y="' + y + '" width="' + bw + '" height="' + Math.max(2, h) + '" rx="5"/>';
       if (w.min) svg += '<text class="val" x="' + (x + bw / 2) + '" y="' + (y - 6) + '" text-anchor="middle">' + w.min + '</text>';
       if (i % 2 === 1) svg += '<text x="' + (x + bw / 2) + '" y="' + (Hh - 6) + '" text-anchor="' + (i === 7 ? 'end' : 'middle') + '"' + (i === 7 ? ' dx="12"' : '') + '>' + esc(w.label) + '</text>';
     });
     svg += '</svg>';
-    return '<section class="card"><div class="between"><p class="label">Minutes per week</p><p class="meta">Week of</p></div>' + svg + '</section>';
+    return '<section class="card"><div class="between"><p class="label">Minutes per week</p><p class="meta">Last 8 weeks</p></div>' + svg + '</section>';
   }
   function weightCard() {
     var u = wUnit(), ws = S.weights, pr = S.profile || {};
@@ -1683,7 +1683,7 @@
       ];
       return '<div class="screen"><div class="frank-hero"><img src="' + img('img/wellness-4.jpg') + '" alt="Frank\'s graphic: Not only a trainer, but purposely an educator"></div>' +
         '<div class="stack tight"><h1 class="display xl sky">Frank</h1><p class="note s">' + esc(FR.bio) + '</p></div>' +
-        '<section class="card"><p class="label">Train with Frank in person</p><p class="lead">The app teaches the method. In a session, Frank watches how you move and fixes one thing at a time.</p>' +
+        '<section class="card"><p class="label">Train with Frank in person</p><p class="lead">The app teaches the method. In ' + esc(FR.city) + ', Frank starts with an assessment of how you move, then trains you at your level and fixes one thing at a time.</p>' +
         '<a class="btn block" href="' + FR.dm + '" target="_blank" rel="noopener">' + ic('msg') + 'Message on Instagram</a>' +
         (wa ? '<a class="btn two block" href="' + wa + '" target="_blank" rel="noopener">WhatsApp</a>' : '') +
         '<div class="between"><span class="handle">@' + esc(FR.handle) + '</span><button class="link" data-act="copy" data-v="@' + esc(FR.handle) + '">' + ic('copy') + 'Copy</button></div></section>' +
@@ -2209,5 +2209,9 @@
   fromLink();
   if (W.THREE && WBF.fig3d) WBF.fig3d.init();
   render(true);
-  W.WBF.app = { state: function () { return S; }, go: go, tab: tab };
+  // hooks for tests and the showcase captures (.claude/skills/frank-showcase)
+  // for tests and the showcase captures (.claude/skills/frank-showcase)
+  W.WBF.app = { state: function () { return S; }, go: go, tab: tab,
+                sheet: function (id, tabName) { exerciseSheet(id); if (tabName && XS) { XS.tab = tabName; paintExMedia(); } },
+                nextDay: nextDay, session: session, kcal: kcalOf };
 })(window);

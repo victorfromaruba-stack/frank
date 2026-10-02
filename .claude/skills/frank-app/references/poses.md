@@ -47,8 +47,15 @@ anim: { k: [poseA, poseB, ...], d: [secondsAtoB, secondsBtoC, ...], h: [holdAtA,
 - A free limb in one pose and a planted one in the next is fine: the engine
   converts and blends them.
 - Exercise-level options passed to the animation: `props` (box, pad, wedge,
-  wall, table), `hold` (`db: 'both'|'near'|'far'`, `rings: true`), `cam`
+  wall, table), `hold` (`db: 'both'|'near'|'far'|'goblet'`, `rings: true`), `cam`
   (`{ yaw, pitch }` for the 3D camera), `focus` (the annotated joint).
+- On the animation itself, for the 3D coach: `handsZ` and `feetZ` (how far apart
+  the hands and feet are, side views; default shoulder and hip width) and
+  `elbowsZ` (how far out the elbows point: about 19 with `handsZ: 13` gives a
+  45-degree push-up).
+- A bone drawn shorter than it is (the optional 3rd/4th values of a front-view
+  limb) points at the viewer. If that hides what matters, as with the side
+  plank's forearm, give the exercise a `cam` that shows it.
 
 ## Helpers in `js/exercises.js`
 
@@ -70,9 +77,13 @@ anim: { k: [poseA, poseB, ...], d: [secondsAtoB, secondsBtoC, ...], h: [holdAtA,
   edge; a wall stays a wall. Each animation gets one ground offset so no frame
   sinks into the floor.
 - Mats appear only for floor work. Props (`box`, `table`, `wall`, `pad`, `wedge`)
-  and held kit (`hold: { db, rings }`) are drawn by the 3D module.
-- The Muscle view greys the body and lights the exercise's `mus` muscles; the
-  map view (lists, focus areas) shows the coach from the front or back.
+  and held kit (`hold: { db, rings }`) are drawn by the 3D module. `db: 'goblet'`
+  is one dumbbell held upright against the chest in both hands.
+- The Muscle view is an anatomy chart: a grey body with the lines between the
+  muscles (baked from the model's normal map by `tools/coach/build_coach.py`),
+  the exercise's `mus` muscles in red. In the exercise page it turns slowly until
+  someone drags it. The map view (lists, focus areas) shows the coach from the
+  front or back.
 
 ## Checking
 

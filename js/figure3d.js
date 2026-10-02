@@ -27,6 +27,10 @@
   function lerp(a, b, k) { return a + (b - a) * k; }
   function smooth(a, b, x) { var t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); }
   function warn(what, e) { if (W.console) W.console.warn('3D coach: ' + what, e); }
+  // Screenshot mode, set by .claude/skills/frank-showcase before the page loads:
+  // { dpr: canvas pixels per CSS pixel (app: up to 2), ss: supersampling factor,
+  //   shadow: shadow map size, still: true to freeze figures (read by js/app.js) }
+  var SHOT = W.WBF_SHOT || null;
 
   // ---- shared renderer and scene ---------------------------------------------------
   function init() {
@@ -60,7 +64,8 @@
       scene.add(new T.HemisphereLight(0xffffff, 0xd6dad6, 0.75));
       var key = new T.DirectionalLight(0xfff4ea, 2.4);
       key.castShadow = true;
-      key.shadow.mapSize.set(1024, 1024);
+      var sm = (SHOT && SHOT.shadow) || 1024;
+      key.shadow.mapSize.set(sm, sm);
       key.shadow.bias = -0.0004;
       key.shadow.normalBias = 0.5;
       key.shadow.radius = 6;
@@ -72,7 +77,8 @@
       ground.position.y = -0.7;
       ground.receiveShadow = true;
       scene.add(ground);
-      R = { canvas: canvas, gl: gl, scene: scene, cam: cam, key: key, rim: rim, ground: ground, w: 512, h: 512 };
+      R = { canvas: canvas, gl: gl, scene: scene, cam: cam, key: key, rim: rim, ground: ground, w: 512, h: 512,
+            max: Math.min(SHOT ? 4096 : 2048, gl.getContext().getParameter(gl.getContext().MAX_RENDERBUFFER_SIZE) || 2048) };
       R.mat = materials();
       R.kit = kit();
       scene.add(R.kit.group);
@@ -99,13 +105,15 @@
     if (coaches[id] || pending[id] || !W.WBF_GLTF || !R || R.failed) return;
     pending[id] = true;
     new W.WBF_GLTF().load(urlFor(id), function (g) {
-      pending[id] = false;
       var c;
-      try { c = coach(g); c.id = id; } catch (e) { warn('model', e); if (!C) R.failed = true; return; }
-      coaches[id] = c;
+      try { c = coach(g); c.id = id; } catch (e) { pending[id] = false; warn('model', e); if (!C) R.failed = true; return; }
       c.holder.visible = false;
-      if (id === want || !C) use(id);
-      W.dispatchEvent(new Event('wbf-three'));
+      c.ready.then(function () {
+        pending[id] = false;
+        coaches[id] = c;
+        if (id === want || !C) use(id);
+        W.dispatchEvent(new Event('wbf-three'));
+      });
     }, undefined, function (e) { pending[id] = false; warn('load', e); if (!C) R.failed = true; });
   }
   function use(id) {
@@ -284,14 +292,22 @@
         }
       });
     });
-    // skin colour for the muscle view; the dressed texture is the default
+    // skin colour and full muscle detail for the muscle view; the dressed textures are the default
     c.cloth = body.material.map;
-    var mx = json.materials && json.materials[0] && json.materials[0].extras;
+    c.clothN = body.material.normalMap;
+    c.nScale = body.material.normalScale.clone();
+    var mx = json.materials && json.materials[0] && json.materials[0].extras, waits = [];
     if (mx && mx.skinTexture != null) {
-      g.parser.getDependency('texture', mx.skinTexture).then(function (t) {
+      waits.push(g.parser.getDependency('texture', mx.skinTexture).then(function (t) {
         t.colorSpace = T.SRGBColorSpace; t.flipY = false; c.skin = t;
-      }).catch(function () { /* the dressed model still works */ });
+      }).catch(function () { /* the dressed model still works */ }));
     }
+    if (mx && mx.skinNormal != null) {
+      waits.push(g.parser.getDependency('texture', mx.skinNormal).then(function (t) {
+        t.colorSpace = T.NoColorSpace; t.flipY = false; c.skinN = t;
+      }).catch(function () { /* falls back to the dressed normals */ }));
+    }
+    c.ready = Promise.all(waits);           // the coach shows once its muscle-view textures are in
     // muscle highlight: every vertex carries its muscle group (_muscle)
     c.hl = { value: new Float32Array(32) };
     c.mode = { value: 0 };
@@ -301,14 +317,18 @@
       sh.uniforms.uMode = c.mode;
       sh.vertexShader = 'attribute float _muscle;\nuniform float uHL[32];\nvarying float vHL;\n' +
         sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n\tvHL = uHL[int(_muscle + 0.5)];');
+      // muscle view (uMode 1): an anatomy-chart look, grey with dark creases between muscles,
+      // the worked muscles red; map view (uMode 2): dark body, sky-blue muscles
       sh.fragmentShader = 'uniform float uMode;\nvarying float vHL;\n' +
         sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n' +
           '\tfloat lu = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));\n' +
           '\tif (uMode > 1.5) { diffuseColor.rgb = vec3(0.035, 0.05, 0.042) * (0.7 + lu); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.08, 0.36, 0.66), clamp(vHL, 0.0, 1.0)); }\n' +
-          '\telse { if (uMode > 0.5) diffuseColor.rgb = vec3(0.62, 0.64, 0.67) * (0.55 + lu);\n' +
-          '\t  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.62, 0.04, 0.02), clamp(vHL, 0.0, 1.0) * 0.92); }');
+          // the muscle texture is already the grey chart with its creases; the red keeps the creases
+          '\telse if (uMode > 0.5) diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.72, 0.04, 0.025) * (0.25 + 1.1 * lu), clamp(vHL, 0.0, 1.0) * 0.95);\n' +
+          '\telse diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.62, 0.04, 0.02), clamp(vHL, 0.0, 1.0) * 0.92);')
+        .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n\tif (uMode > 0.5 && uMode < 1.5) roughnessFactor = 0.48;');
     };
-    m.customProgramCacheKey = function () { return 'wbf-coach-3'; };
+    m.customProgramCacheKey = function () { return 'wbf-coach-4'; };
     m.needsUpdate = true;
     // vertices that find the floor
     var count = body.geometry.attributes.position.count, step = Math.max(1, Math.floor(count / 500));
@@ -347,6 +367,7 @@
     var P = front ? function (p, d) { return V(d || 0, p[1], p[0] * mz); }
                   : function (p, z) { return V(p[0], p[1], (z || 0) * mz); };
     var hz = an.handsZ != null ? an.handsZ : SH_W, fz = an.feetZ != null ? an.feetZ : HIP_W;
+    var ez = an.elbowsZ != null ? an.elbowsZ : lerp(SH_W, hz, 0.45);   // how far out the elbows point
     out.pel = P(J.pel); out.ctrl = P(J.ctrl); out.sc = P(J.sc); out.head = P(J.head);
     ['N', 'F'].forEach(function (s, i) {
       var sg = i ? -1 : 1, arm = J['a' + s], leg = J['l' + s];
@@ -363,7 +384,7 @@
         out['to' + s] = out['an' + s].clone().add(V(8, out['an' + s].y < 4.6 ? 0 : -1.2, sg * 0.8 * mz));
       } else {
         out['sh' + s] = P(arm.root, sg * SH_W);
-        out['el' + s] = P(arm.mid, sg * lerp(SH_W, hz, 0.45));
+        out['el' + s] = P(arm.mid, sg * ez);
         out['wr' + s] = P(arm.end, sg * hz);
         out['hd' + s] = P(arm.hand, sg * hz);
         out['hp' + s] = P(leg.root, sg * HIP_W);
@@ -472,8 +493,8 @@
       var hdir = hdirE.lengthSq() > 1e-8 ? D(hdirE) : u2.clone();
       var palm = palmE ? D(palmE) : palmRest.clone().applyQuaternion(qFa);
       place('hand_' + sd, delta(hdir, palm, c.dir['hd' + sd], palmRest).multiply(rest['hand_' + sd].wq));
-      var holding = hold.db === 'both' || (hold.db === 'near' && e === 'N') || (hold.db === 'far' && e === 'F');
-      info.curl[sd] = holding ? 1 : hold.rings ? 0.85 : sup && sup.grip ? 0.55 : sup ? 0.05 : 0.38;
+      var holding = hold.db === 'both' || hold.db === 'goblet' || (hold.db === 'near' && e === 'N') || (hold.db === 'far' && e === 'F');
+      info.curl[sd] = holding ? (hold.db === 'goblet' ? 0.7 : 1) : hold.rings ? 0.85 : sup && sup.grip ? 0.55 : sup ? 0.05 : 0.38;
       info.hold = info.hold || {};
       info.hold[sd] = holding;
       info.palm[sd] = Wp['hand_' + sd].clone().addScaledVector(hdir, 0.075).addScaledVector(palm, 0.03);
@@ -565,10 +586,15 @@
     var K = R.kit.parts, hold = fig.an.hold || {}, hq = C.holder;
     var toWorld = function (p) { return hq.localToWorld(p.clone()); };
     var dirWorld = function (d) { return d.clone().applyQuaternion(hq.quaternion).normalize(); };
+    var goblet = hold.db === 'goblet';
     ['l', 'r'].forEach(function (sd) {
-      var db = K['db' + sd], on = !!(info.hold && info.hold[sd]);
+      var db = K['db' + sd], on = !!(info.hold && info.hold[sd]) && !(goblet && sd === 'r');
       db.visible = on;
-      if (on) {
+      if (on && goblet) {                    // one dumbbell upright against the chest, both hands under its top plate
+        var up = dirWorld(V(0, 1, 0));
+        db.position.copy(toWorld(info.palm.l.clone().add(info.palm.r).multiplyScalar(0.5))).addScaledVector(up, -3.6);
+        db.quaternion.setFromUnitVectors(V(1, 0, 0), up);
+      } else if (on) {
         db.position.copy(toWorld(info.palm[sd]));
         var h = info.hand[sd], across = V(0, 0, 0).crossVectors(h.dir, h.palm).normalize();
         db.quaternion.setFromUnitVectors(V(1, 0, 0), dirWorld(across));
@@ -593,6 +619,8 @@
     var muscle = fig.mode === 'muscle' || fig.mode === 'map';
     C.mode.value = fig.mode === 'map' ? 2 : muscle ? 1 : 0;
     C.body.material.map = muscle && C.skin ? C.skin : C.cloth;
+    C.body.material.normalMap = fig.mode === 'muscle' && C.skinN ? C.skinN : C.clothN;
+    C.body.material.normalScale.copy(C.nScale).multiplyScalar(fig.mode === 'muscle' ? 1.7 : 1);
     C.others.forEach(function (o) { o.visible = !muscle; });
     C.hl.value.fill(0);
     if (!muscle && !fig.opt.light) return;
@@ -602,10 +630,11 @@
   }
 
   // ---- camera ------------------------------------------------------------------------------
-  function samplePoints(fig) {
-    var an = fig.an, T0 = F.cycle(an), n = Math.max(12, an.k.length * 8), pts = [];
+  // fitKey (a key pose index): frame that pose alone, for still pictures; otherwise the whole movement
+  function samplePoints(fig, fitKey) {
+    var an = fig.an, T0 = F.cycle(an), n = fitKey != null ? 1 : Math.max(12, an.k.length * 8), pts = [];
     for (var i = 0; i < n; i++) {
-      var J = F.resolve(F.sample(an, (i / n) * T0));
+      var J = F.resolve(fitKey != null ? an.k[Math.min(fitKey, an.k.length - 1)] : F.sample(an, (i / n) * T0));
       var j = joints(J, an, fig.flip);
       ['pel', 'sc', 'head'].forEach(function (k) { pts.push(j[k]); });
       pts.push(j.head.clone().add(V(0, 8.5, 0)));
@@ -635,7 +664,8 @@
       hh = Math.max(hh, Math.abs(tmp.dot(up)));
       dz = Math.max(dz, tmp.dot(dir));
     });
-    hw = hw * 1.1 + 4; hh = hh * 1.1 + 4;
+    var zoom = fig.opt.zoom || 1;                    // below 1 frames looser
+    hw = (hw * 1.1 + 4) / zoom; hh = (hh * 1.1 + 4) / zoom;
     var vf = rad(cam.fov) / 2, hf = Math.atan(Math.tan(vf) * aspect);
     var d = Math.max(hh / Math.tan(vf), hw / Math.tan(hf)) + dz;
     cam.aspect = aspect;
@@ -658,8 +688,8 @@
 
   function ensureSize(w, h) {
     if (w <= R.w && h <= R.h) return;
-    R.w = Math.max(R.w, Math.min(2048, w));
-    R.h = Math.max(R.h, Math.min(2048, h));
+    R.w = Math.max(R.w, Math.min(R.max, w));
+    R.h = Math.max(R.h, Math.min(R.max, h));
     R.gl.setSize(R.w, R.h, false);
   }
 
@@ -686,13 +716,14 @@
     this.mode = opt.mode || 'demo';
     this.front = an.k[0].v === 'f';
     var cam = an.cam || {};
-    this.pts = samplePoints(this);
+    this.pts = samplePoints(this, opt.fitKey);
     var b = this.box, lying = (b.max.y - b.min.y) < 0.55 * Math.max(b.max.x - b.min.x, 1);
     this.yaw0 = opt.yaw != null ? opt.yaw : cam.yaw != null ? cam.yaw : (this.front ? 62 : 34);
     if (this.flip) this.yaw0 = this.front ? 180 - this.yaw0 : -this.yaw0;
     this.yaw = this.yaw0;
     this.pitch = opt.pitch != null ? opt.pitch : cam.pitch != null ? cam.pitch : (lying ? 22 : 9);
     this.speed = opt.speed || 1;
+    this.orbit = opt.orbit || 0;                     // degrees a second the camera circles, until someone turns it
     this.offset = 0; this.t0 = 0;
     this.playing = false;
     this.canvas = document.createElement('canvas');
@@ -713,7 +744,7 @@
     return this;
   };
   Figure.prototype.resize = function () {
-    var r = this.host.getBoundingClientRect(), dpr = Math.min(2, W.devicePixelRatio || 1);
+    var r = this.host.getBoundingClientRect(), dpr = Math.min((SHOT && SHOT.dpr) || 2, W.devicePixelRatio || 1);
     var w = Math.max(40, Math.round(r.width * dpr)), h = Math.max(40, Math.round(r.height * dpr));
     if (this.canvas.width !== w || this.canvas.height !== h) { this.canvas.width = w; this.canvas.height = h; }
     this.dpr = dpr;
@@ -723,7 +754,7 @@
     var c = this.canvas;
     c.style.touchAction = 'pan-y';
     c.style.cursor = 'grab';
-    c.addEventListener('pointerdown', function (e) { x0 = e.clientX; yaw0 = self.yaw; try { c.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ } });
+    c.addEventListener('pointerdown', function (e) { x0 = e.clientX; yaw0 = self.yaw; self.orbit = 0; try { c.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ } });
     c.addEventListener('pointermove', function (e) {
       if (x0 == null) return;
       self.yaw = yaw0 - (e.clientX - x0) * 0.6;
@@ -744,9 +775,12 @@
   Figure.prototype.render = function (spec) {
     this.last = spec;
     var w = this.canvas.width, h = this.canvas.height, gl = R.gl;
-    ensureSize(w, h);
+    // supersampling (screenshot mode): render bigger, then scale down into the figure's canvas
+    var ss = Math.max(1, Math.min((SHOT && SHOT.ss) || 1, R.max / w, R.max / h));
+    var rw = Math.round(w * ss), rh = Math.round(h * ss);
+    ensureSize(rw, rh);
     var map = this.mode === 'map';
-    var props = map ? null : propsFor(this.an), mat = map ? null : matFor(this);
+    var props = map ? null : propsFor(this.an), mat = map || this.opt.mat === false ? null : matFor(this);
     if (props) R.scene.add(props);
     if (mat) R.scene.add(mat);
     R.ground.visible = !map;
@@ -758,8 +792,8 @@
     placeKit(this, info);
     shade(this);
     aim(this, w, h);
-    gl.setViewport(0, 0, w, h);
-    gl.setScissor(0, 0, w, h);
+    gl.setViewport(0, 0, rw, rh);
+    gl.setScissor(0, 0, rw, rh);
     gl.setScissorTest(true);
     gl.setClearColor(0x000000, 0);
     gl.clear();
@@ -768,7 +802,8 @@
     if (mat) R.scene.remove(mat);
     var ctx = this.ctx;
     ctx.clearRect(0, 0, w, h);
-    ctx.drawImage(R.canvas, 0, R.h - h, w, h, 0, 0, w, h);
+    if (ss > 1) { ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'; }
+    ctx.drawImage(R.canvas, 0, R.h - rh, rw, rh, 0, 0, w, h);
     if (this.opt.note && this.an.focus) this.note(j);
   };
 
@@ -782,34 +817,41 @@
     var v = pick.clone().add(lift).project(R.cam);
     var to = [(v.x + 1) / 2 * w, (1 - v.y) / 2 * h];
     var pos = f.at || 'tr', right = pos[1] === 'r', top = pos[0] === 't';
-    var pad = 12 * d, fs = Math.round(Math.max(13, Math.min(20, w / d / 18)) * d);
-    var ink = '#0B4A27';
+    // noteSize / noteInk / noteHalo: big light labels for showcase renders on Frank's green; the app uses the defaults
+    var big = this.opt.noteSize ? this.opt.noteSize / 20 : 1;
+    var pad = 12 * d * big, fs = Math.round((this.opt.noteSize || Math.max(13, Math.min(20, w / d / 18))) * d);
+    var ink = this.opt.noteInk || '#0B4A27';
+    var halo = this.opt.noteHalo === false ? null : 'rgba(255,255,255,0.88)';   // the halo keeps it readable over the green shirt
     ctx.font = fs + 'px "Gilda Display", Didot, Georgia, serif';
-    ctx.fillStyle = ink;
     ctx.textAlign = right ? 'right' : 'left';
     ctx.textBaseline = top ? 'top' : 'bottom';
-    var lx = right ? w - pad : pad, ly = top ? pad : h - pad;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    // noteTop: room (CSS px) the host keeps at the top left for its own buttons and tags
+    var lx = right ? w - pad : pad, ly = top ? pad + (right ? 0 : (this.opt.noteTop || 0) * d) : h - pad;
+    if (halo) { ctx.strokeStyle = halo; ctx.lineWidth = 4 * d * big; ctx.strokeText(f.label, lx, ly); }
+    ctx.fillStyle = ink;
     ctx.fillText(f.label, lx, ly);
     var tw = ctx.measureText(f.label).width;
     var from = [right ? lx - tw * 0.55 : lx + tw * 0.55, top ? ly + fs + 4 * d : ly - fs - 4 * d];
     var vx = to[0] - from[0], vy = to[1] - from[1], dist = Math.hypot(vx, vy);
     if (dist < 30 * d) return;
-    var ux = vx / dist, uy = vy / dist, stop = 14 * d;
+    var ux = vx / dist, uy = vy / dist, stop = 14 * d * big;
     var ex = to[0] - ux * stop, ey = to[1] - uy * stop;
     var bow = (f.bow == null ? 0.22 : f.bow) * dist * (right ? 1 : -1);
     var cx = (from[0] + ex) / 2 - uy * bow, cy = (from[1] + ey) / 2 + ux * bow;
-    ctx.strokeStyle = ink;
-    ctx.lineWidth = 1.4 * d;
-    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    ctx.beginPath(); ctx.moveTo(from[0], from[1]); ctx.quadraticCurveTo(cx, cy, ex, ey); ctx.stroke();
     var tx = ex - cx, ty = ey - cy, tl = Math.hypot(tx, ty) || 1;
     tx /= tl; ty /= tl;
-    var a = 7 * d;
-    ctx.beginPath();
-    ctx.moveTo(ex - tx * a - ty * a * 0.6, ey - ty * a + tx * a * 0.6);
-    ctx.lineTo(ex, ey);
-    ctx.lineTo(ex - tx * a + ty * a * 0.6, ey - ty * a - tx * a * 0.6);
-    ctx.stroke();
+    var a = 7 * d * big;
+    (halo ? [[halo, 4.6 * d * big], [ink, 1.4 * d * big]] : [[ink, 1.6 * d * big]]).forEach(function (st) {
+      ctx.strokeStyle = st[0];
+      ctx.lineWidth = st[1];
+      ctx.beginPath(); ctx.moveTo(from[0], from[1]); ctx.quadraticCurveTo(cx, cy, ex, ey); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(ex - tx * a - ty * a * 0.6, ey - ty * a + tx * a * 0.6);
+      ctx.lineTo(ex, ey);
+      ctx.lineTo(ex - tx * a + ty * a * 0.6, ey - ty * a - tx * a * 0.6);
+      ctx.stroke();
+    });
   };
 
   Figure.prototype.setMode = function (mode) {
@@ -818,12 +860,15 @@
     return this;
   };
   Figure.prototype.turn = function (deg) {
+    this.orbit = 0;
     this.yaw += deg;
     if (!this.playing && this.last) this.draw(this.last);
   };
   Figure.prototype.frame = function (now) {
     if (!this.canvas.isConnected) { live.delete(this); return; }
     if (!this.t0) this.t0 = now;
+    if (this.orbit && this.tLast) this.yaw += this.orbit * Math.min(0.1, (now - this.tLast) / 1000);
+    this.tLast = now;
     this.draw(F.sample(this.an, this.offset + (now - this.t0) / 1000 * this.speed));
   };
   Figure.prototype.still = function (key) {
@@ -840,6 +885,7 @@
   Figure.prototype.pause = function () {
     if (!this.playing) return this;
     this.playing = false;
+    this.tLast = 0;
     if (this.t0) this.offset += (performance.now() - this.t0) / 1000 * this.speed;
     live.delete(this);
     return this;

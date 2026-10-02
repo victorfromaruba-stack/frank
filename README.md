@@ -14,7 +14,8 @@ Two kinds of users:
   membership (payments are not connected yet: see
   `docs/ACCOUNTS-AND-PAYMENTS.md`).
 - **Frank's clients** follow sessions Frank writes for them in Coach tools and
-  sends as a link. They pay Frank, not the app.
+  sends as a link. They pay Frank, not the app. A fuller premium version for
+  them, **Personal**, is planned: `docs/PERSONAL.md`.
 
 ## What it does
 
@@ -35,9 +36,10 @@ Two kinds of users:
   length, search, Frank's three programs (Essentials, Change the method,
   Gravity) and the library of 80 exercises.
 - **Every exercise** has a Video tab (a moving 3D coach, or Frank's own clip
-  once he films it), a Muscle tab (the muscles it works light up on the coach),
-  and a How-to tab (slow motion, or Frank explaining it), plus steps, cues,
-  common mistakes, "why it works" and easier options. Drag the coach to turn it.
+  once he films it), a Muscle tab (an anatomy view that turns slowly, the
+  muscles the move works in red), and a How-to tab (slow motion, or Frank
+  explaining it), plus steps, cues, common mistakes, "why it works" and easier
+  options. Drag the coach to turn it.
 - **The player**: get-ready countdown, timers or rep counts, rest with +20 s and
   skip, switching sides, pause, How-to mid-workout, voice coach, beeps,
   vibration, and the screen stays on.
@@ -64,7 +66,9 @@ Quaternius' Universal Base Characters (CC0, free for commercial use). Each
 exercise is written as 2D key poses (`js/figure.js`); the 3D coach copies the
 joints, keeps hands and feet on the floor, a box, the table or the wall, and
 can light up the muscles. `tools/coach/build_coach.py` fitted the models to the
-pose engine and dressed them in Frank's green.
+pose engine, dressed them in Frank's green and drew the Muscle tab's anatomy
+look from the models' own muscle detail (`--hd` makes the sharper set in
+`assets/hd/` that screenshots use).
 
 When Frank films a move, his clip replaces the coach for that move:
 `docs/FILMING-GUIDE.md` has the shot list and how to add a clip.
@@ -75,11 +79,13 @@ When Frank films a move, his clip replaces the coach for that move:
    the method lines (`js/programs.js`, `js/app.js`) are drafts written from his
    graphics. He should read them and put them in his own words.
 2. **His videos**, when he's ready: `docs/FILMING-GUIDE.md`.
-3. **Prices and the trial** (now placeholders: $9.99 a month, $59.99 a year,
+3. **Prices and the trial** (now placeholders: €14.99 a month, €119.99 a year,
    7 days free) and a payment provider: `docs/ACCOUNTS-AND-PAYMENTS.md`.
-4. **His WhatsApp number**, if he wants a WhatsApp button: `whatsapp` in
+4. **His bio.** The app now says only what his certificate covers: fitness trainer,
+   NHA level 3, with sports nutrition and biomechanics. He should approve the wording.
+5. **His WhatsApp number**, if he wants a WhatsApp button: `whatsapp` in
    `js/programs.js`, digits only with the country code (Aruba is 297).
-5. **Programs and doses.** The workouts and reps in `js/programs.js` and
+6. **Programs and doses.** The workouts and reps in `js/programs.js` and
    `js/exercises.js` are sensible defaults. He may want his own.
 
 ## Run it, host it

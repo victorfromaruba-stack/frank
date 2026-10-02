@@ -27,22 +27,28 @@ memberships to strangers.
 With that in place, Coach tools can show Frank his client list, assign
 sessions without sending links, and see who trained.
 
-## The payment provider: Aruba matters
+## The payment provider: Frank sells from the Netherlands
 
-- **Stripe does not accept businesses based in Aruba** (outlying territories
-  of supported countries aren't supported):
-  https://support.stripe.com/questions/stripe-availability-for-outlying-territories-of-supported-countries
-  It works if the business is registered in a Stripe country (a US LLC, for
-  example).
-- **Paddle** is a merchant of record: it sells in 200+ countries, handles sales
-  tax, and pays out monthly by bank transfer, PayPal or Payoneer:
+Frank works in The Hague, so the simplest set-up has his Dutch business (registered with
+the KvK) as the seller:
+
+- **Mollie** (Dutch): iDEAL, cards and recurring payments for subscriptions. It is the
+  most familiar checkout for Dutch customers: https://www.mollie.com/
+- **Stripe** supports Dutch businesses, with iDEAL and cards, Stripe Billing for
+  subscriptions and Stripe Tax for VAT: https://stripe.com/global
+- **Paddle** is a merchant of record, so it handles EU VAT itself:
   https://developer.paddle.com/concepts/sell/supported-countries-locales
-  Check with Paddle that an Aruban seller is accepted.
-- **PayPal subscriptions** (plans with trials, monthly billing). Check that an
-  Aruban business account can use them.
 
-`BILLING.paymentLink` takes any checkout link (Paddle, PayPal or Stripe), so
-the app doesn't change when you pick one.
+With Mollie or Stripe, Frank's business charges VAT. Digital services to EU consumers use
+the customer's country rate (21% in the Netherlands), so set prices including VAT.
+
+If the studio in Aruba were the seller instead: Stripe doesn't accept businesses based in
+Aruba
+(https://support.stripe.com/questions/stripe-availability-for-outlying-territories-of-supported-countries),
+while Paddle and PayPal may.
+
+`BILLING.paymentLink` takes any checkout link (Mollie, Stripe, Paddle or PayPal), so the app
+doesn't change when you pick one. Prices are in euro.
 
 ## If the app goes into the App Store or Google Play
 
@@ -58,8 +64,9 @@ the app doesn't change when you pick one.
 
 ## Decisions for Victor and Frank
 
-1. Prices and trial length (now $59.99 a year or $9.99 a month, 7 days free:
+1. Prices and trial length (now €14.99 a month or €119.99 a year, 7 days free:
    placeholders, set in `BILLING.plans`).
-2. Payment provider (Paddle, PayPal, or a company in a Stripe country).
+2. Payment provider (Mollie or Stripe through Frank's Dutch business, or Paddle).
 3. Web app first, or straight into the stores.
 4. Whether Frank's clients also get the generated plans (now: yes).
+5. Personal, the app for Frank's one-to-one clients: see `docs/PERSONAL.md`.

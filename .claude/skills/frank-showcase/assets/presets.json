@@ -1,0 +1,290 @@
+{
+ "_read_me": "Image sets for scripts/make.cjs. Captions are drafts in Frank's voice: true to what the app does, no prices, no results promised, no 'best', '#1', 'new', 'free' or 'download now'. {cues} becomes the exercise's own cues from js/exercises.js. Frank approves captions before anything goes public.",
+ "appstore": {
+  "about": "App Store, iPhone 6.9-inch: 1320 x 2868, the one iPhone size Apple requires (it scales them for smaller iPhones). Apple takes 1 to 10.",
+  "device": "iphone-6.9",
+  "rules": "appstore",
+  "defaults": {
+   "size": [
+    1320,
+    2868
+   ],
+   "layout": "phone",
+   "theme": "forest",
+   "frame": "phone",
+   "bleed": true
+  },
+  "items": [
+   {
+    "screen": "plan",
+    "kicker": "Wellness by Frank",
+    "title": "Your plan, *built for you*",
+    "note": "28 days around your goal, your time and your body"
+   },
+   {
+    "screen": "sheet",
+    "title": "Every move, *shown in 3D*",
+    "note": "Turn the coach and see it from every side",
+    "ex": "mountain-climber"
+   },
+   {
+    "screen": "muscle",
+    "title": "See the *muscles* it works",
+    "note": "Every move shows what it works, and why",
+    "ex": "lateral-lunge"
+   },
+   {
+    "screen": "player",
+    "title": "Press play, *follow along*",
+    "note": "Timers, reps, rest and voice cues",
+    "ex": "high-knees"
+   },
+   {
+    "screen": "coaches",
+    "title": "Pick your *coach*",
+    "note": "A woman or a man shows every move",
+    "theme": "paper",
+    "bleed": false
+   },
+   {
+    "screen": "today",
+    "title": "Every minute *counts*",
+    "note": "Workouts, walks and water in one place"
+   },
+   {
+    "screen": "tools",
+    "title": "Train with *Frank*",
+    "note": "His clients get sessions he writes for them"
+   }
+  ]
+ },
+ "play": {
+  "about": "Google Play phone screenshots: 1080 x 1920 (9:16). Caption in the top fifth and the screen without a device, which Play asks for to recommend an app. Plus the feature graphic, 1024 x 500, with the coach instead of phones.",
+  "device": "android",
+  "rules": "play",
+  "defaults": {
+   "size": [
+    1080,
+    1920
+   ],
+   "layout": "band",
+   "theme": "forest"
+  },
+  "items": [
+   {
+    "screen": "plan",
+    "title": "Your plan, *built for you*"
+   },
+   {
+    "screen": "sheet",
+    "title": "Every move, *shown in 3D*",
+    "ex": "mountain-climber"
+   },
+   {
+    "screen": "muscle",
+    "title": "See the *muscles* it works",
+    "ex": "lateral-lunge"
+   },
+   {
+    "screen": "player",
+    "title": "Press play, *follow along*",
+    "ex": "high-knees"
+   },
+   {
+    "screen": "today",
+    "title": "Every minute *counts*"
+   },
+   {
+    "screen": "tools",
+    "title": "Train with *Frank*"
+   },
+   {
+    "name": "feature",
+    "size": [
+     1024,
+     500
+    ],
+    "layout": "feature",
+    "coach": {
+     "ex": "squat"
+    },
+    "kicker": "Wellness by Frank",
+    "title": "Home workouts, *shown in 3D*",
+    "note": "Frank's method, built on the research"
+   }
+  ]
+ },
+ "instagram": {
+  "about": "Instagram: feed posts at 3:4 (1080 x 1440), the tallest Instagram allows since May 2025 and the shape of the profile grid; one story at 1080 x 1920 with the top 14% and bottom 35% kept free of words.",
+  "device": "iphone-6.9",
+  "rules": "instagram",
+  "defaults": {
+   "size": [
+    1080,
+    1440
+   ],
+   "theme": "forest"
+  },
+  "items": [
+   {
+    "name": "squat",
+    "layout": "coach",
+    "coach": {
+     "ex": "squat",
+     "note": 100
+    },
+    "kicker": "Wellness by Frank",
+    "title": "The squat, *done right*",
+    "note": "{cues}"
+   },
+   {
+    "name": "lunge-muscles",
+    "layout": "coach",
+    "coach": {
+     "ex": "reverse-lunge",
+     "mode": "muscle",
+     "key": 2
+    },
+    "kicker": "Wellness by Frank",
+    "title": "See what it *works*",
+    "note": "Reverse lunge: {cues}"
+   },
+   {
+    "screen": "plan",
+    "layout": "phone",
+    "kicker": "Wellness by Frank",
+    "title": "Your plan, *built for you*",
+    "note": "28 days around your goal and your time",
+    "phoneWidth": 64,
+    "bleed": true
+   },
+   {
+    "name": "story-player",
+    "screen": "player",
+    "layout": "phone",
+    "size": [
+     1080,
+     1920
+    ],
+    "top": 26,
+    "title": "Press play, *follow along*",
+    "phoneWidth": 70,
+    "bleed": true
+   }
+  ]
+ },
+ "preview": {
+  "about": "For showing a client how the app looks: three labelled screens per image, 3000 x 2500, so each phone stays readable after WhatsApp resizes it (send with HD on).",
+  "device": "iphone-6.9",
+  "rules": "any",
+  "defaults": {
+   "size": [
+    3000,
+    2500
+   ],
+   "layout": "phones",
+   "theme": "paper",
+   "kicker": "Wellness by Frank"
+  },
+  "items": [
+   {
+    "name": "start",
+    "screens": [
+     "welcome",
+     "focus",
+     "coaches"
+    ],
+    "labels": [
+     "Welcome",
+     "Your focus",
+     "Pick a coach"
+    ],
+    "title": "Getting *started*"
+   },
+   {
+    "name": "plan",
+    "screens": [
+     "target",
+     "ready",
+     "plan"
+    ],
+    "labels": [
+     "Target weight",
+     "Your plan",
+     "Plan tab"
+    ],
+    "title": "Your *plan*"
+   },
+   {
+    "name": "moves",
+    "screens": [
+     "sheet",
+     "muscle",
+     "player"
+    ],
+    "labels": [
+     "Exercise",
+     "Muscles",
+     "Workout"
+    ],
+    "title": "Every *move*"
+   },
+   {
+    "name": "days",
+    "screens": [
+     "today",
+     "me",
+     "frank"
+    ],
+    "labels": [
+     "Today",
+     "Progress",
+     "Frank"
+    ],
+    "title": "Every *day*"
+   }
+  ]
+ },
+ "portfolio": {
+  "about": "The studio's portfolio: a 16:9 hero (3200 x 1800) and a square (2400 x 2400).",
+  "device": "iphone-6.9",
+  "rules": "any",
+  "defaults": {
+   "theme": "forest"
+  },
+  "items": [
+   {
+    "name": "hero",
+    "size": [
+     3200,
+     1800
+    ],
+    "layout": "hero",
+    "screens": [
+     "sheet",
+     "plan",
+     "player"
+    ],
+    "kicker": "Case study",
+    "title": "Wellness by *Frank*",
+    "note": "A home workout app with a 3D coach and plans built on the research",
+    "mark": "Web app · iPhone · Android"
+   },
+   {
+    "name": "square",
+    "size": [
+     2400,
+     2400
+    ],
+    "layout": "phones",
+    "screens": [
+     "plan",
+     "player"
+    ],
+    "kicker": "Case study",
+    "title": "Wellness by *Frank*",
+    "titleSize": 6
+   }
+  ]
+ }
+}

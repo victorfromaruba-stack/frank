@@ -13,19 +13,21 @@
     instagram: 'https://www.instagram.com/wellnessbyfrank/',
     dm: 'https://ig.me/m/wellnessbyfrank',
     whatsapp: '',
-    bio: 'Wellness Trainer. Expert in Systematic Biomechanics. Sports Nutritionist. Neuromechanist Researcher.',
+    city: 'The Hague',
+    // what his certificate says (NHA Fitness Trainer level 3, which covers sports nutrition and biomechanics);
+    // keep claims to what he holds: neuroscience is his own interest, not a qualification
+    bio: 'Fitness trainer (NHA level 3), trained in sports nutrition and biomechanics. Based in The Hague. Neuroscience is his side passion.',
     tagline: 'Not only a trainer, but purposely an educator.'
   };
 
-  // Membership for people who train with the app. Prices are placeholders until Frank and Victor
-  // decide. paymentLink: any checkout link (Paddle, PayPal, or Stripe if the business is registered
-  // in a Stripe country; Stripe doesn't accept Aruba). Frank's own clients don't pay here.
-  // See docs/ACCOUNTS-AND-PAYMENTS.md.
+  // Membership for people who train with the app, in euro (Frank sells from the Netherlands).
+  // Prices are placeholders until Frank and Victor decide. paymentLink: any checkout link
+  // (Mollie, Stripe, Paddle). Frank's own clients don't pay here. See docs/ACCOUNTS-AND-PAYMENTS.md.
   var BILLING = {
     trialDays: 7, paymentLink: '',
     plans: [
-      { id: 'year', name: 'Yearly', price: '$59.99', per: 'year', perWeek: '$1.15', best: true },
-      { id: 'month', name: 'Monthly', price: '$9.99', per: 'month', perWeek: '$2.31' }
+      { id: 'year', name: 'Yearly', price: '€119.99', per: 'year', perWeek: '€2.31', best: true },
+      { id: 'month', name: 'Monthly', price: '€14.99', per: 'month', perWeek: '€3.46' }
     ]
   };
 

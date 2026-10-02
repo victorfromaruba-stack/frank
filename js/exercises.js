@@ -97,6 +97,7 @@
       mistakes: ['Hips dropping toward the floor.', 'Shoulder creeping up to your ear.'],
       why: 'Side planks train the muscles that stop you bending sideways: the ones that keep your pelvis level each time you stand on one leg.',
       focus: { j: 'hip', label: 'Hips high', at: 'tr' },
+      cam: { yaw: 40, pitch: 18 },           // from the head end, so the forearm on the floor shows
       anim: (function () {
         var P = { v: 'f', p: [-6.26, 18.87], t: 107.7, aN: [72.3, 132.3, 1, 0.3], aF: [107.7, 107.7], lN: [-5, -5], lF: [-5, -5] };
         return { k: breathe(P, 0.5), d: [1.8, 2.2] };
@@ -224,7 +225,7 @@
       steps: ['Reach your hips back and down until you lightly touch the seat.', 'Don\'t rest: touch and go.', 'Push the floor away to stand.'],
       mistakes: ['Dropping onto the seat.', 'Knees caving inward.'],
       why: 'A target teaches depth and control. Lower it over time and your squat grows with you.',
-      focus: { j: 'hip', label: 'Hips', at: 'tr' },
+      focus: { j: 'hip', label: 'Hips', at: 'tl' },          // the hips sit behind: from the left the arrow stays off the body
       props: [{ k: 'box', x: -32, w: 21, h: 21 }],
       anim: { k: [squatTop, stand({ p: [-12, 26.5], t: 146, lN: { ik: [2, 2.5] }, lF: { ik: [-1, 2.5] }, aN: [80, 82], aF: [76, 78] })], d: [1.4, 1.1], h: [0.3, 0.2] },
       alts: ['squat']
@@ -236,7 +237,7 @@
       steps: ['Bend hips and knees together and sit down between your heels.', 'Go as low as you can with your heels down and back long.', 'Drive up through the whole foot.'],
       mistakes: ['Heels lifting.', 'Knees caving inward.'],
       why: 'You squat every time you sit and stand. Training it keeps your knees and hips strong for life.',
-      focus: { j: 'hip', label: 'Hips', at: 'tr' },
+      focus: { j: 'hip', label: 'Hips', at: 'tl' },
       anim: { k: [squatTop, squatBot], d: [1.3, 1.1], h: [0.3, 0.2] },
       alts: ['box-squat']
     },
@@ -260,10 +261,12 @@
       steps: ['Sit down between your heels, keeping the weight on your chest.', 'Let your elbows brush the inside of your knees at the bottom.', 'Stand up tall.'],
       mistakes: ['The weight drifting away from the body.', 'Rounding the upper back.'],
       why: 'Holding the weight in front pulls your torso upright, which makes a clean squat almost automatic.',
-      focus: { j: 'hip', label: 'Hips', at: 'tr' },
-      hold: { db: 'near' },
-      anim: { k: [stand({ lN: { ik: [2, 2.5] }, lF: { ik: [-1, 2.5] }, aN: [18, 162], aF: [16, 164] }),
-                  stand({ p: [-10.5, 22.6], t: 146, lN: { ik: [2, 2.5] }, lF: { ik: [-1, 2.5] }, aN: [30, 168], aF: [28, 170] })], d: [1.4, 1.1], h: [0.3, 0.2] },
+      focus: { j: 'hip', label: 'Hips', at: 'tl' },
+      hold: { db: 'goblet' },
+      // hands in front of the chest, below the chin
+      anim: { k: [stand({ lN: { ik: [2, 2.5] }, lF: { ik: [-1, 2.5] }, aN: { ik: [9, 72.3], b: [0.3, -1] }, aF: { ik: [9, 72.3], b: [0.3, -1] } }),
+                  stand({ p: [-10.5, 22.6], t: 146, lN: { ik: [2, 2.5] }, lF: { ik: [-1, 2.5] }, aN: { ik: [9.8, 36.6], b: [0.3, -1] }, aF: { ik: [9.8, 36.6], b: [0.3, -1] } })],
+              d: [1.4, 1.1], h: [0.3, 0.2], handsZ: 3 },
       alts: ['squat']
     },
     'wall-sit': {
@@ -314,8 +317,9 @@
       focus: { j: 'knee', label: 'Front knee', at: 'tr' },
       anim: (function () {
         var K0 = stand({ lN: { ik: [1.5, 2.5] }, lF: { ik: [-1.5, 2.5] } });
-        var K1 = stand({ p: [-2, 46.5], t: 176, lN: { ik: [1.5, 2.5] }, lF: { ik: [-12, 11], b: [0.3, -1] }, fF: 60 });
-        var K2 = stand({ p: [-5, 26], t: 174, lN: { ik: [1.5, 2.5] }, lF: { ik: [-23, 5], b: [0.3, -1] }, fF: 55 });
+        // a long step back: at the bottom the front knee sits over the foot, as in the split squat
+        var K1 = stand({ p: [-7, 44], t: 176, lN: { ik: [1.5, 2.5] }, lF: { ik: [-20, 10], b: [0.3, -1] }, fF: 60 });
+        var K2 = stand({ p: [-15.5, 26], t: 175, lN: { ik: [1.5, 2.5] }, lF: { ik: [-32.5, 5], b: [0.3, -1] }, fF: 55 });
         return { k: [K0, K1, K2, K1], d: [0.5, 0.6, 0.6, 0.5], h: [0.3, 0, 0.2, 0] };
       })(),
       alts: ['split-squat']
@@ -441,7 +445,8 @@
       mistakes: ['Hips sagging or piking up.', 'Head dropping toward the floor.'],
       why: 'A push-up is a moving plank. Your shoulder blades should glide around the ribs, which keeps the shoulder joint healthy.',
       focus: { j: 'shoulder', label: 'Scapula', at: 'tr' },
-      anim: { k: [extend(hiTop, HANDS), extend(hiBot, HANDS)], d: [1.2, 1], h: [0.2, 0.2] },
+      // hands a little wider than the shoulders, elbows about 45 degrees out
+      anim: { k: [extend(hiTop, HANDS), extend(hiBot, HANDS)], d: [1.2, 1], h: [0.2, 0.2], handsZ: 13, elbowsZ: 19 },
       alts: ['knee-push-up']
     },
     'decline-push-up': {

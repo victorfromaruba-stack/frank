@@ -26,6 +26,7 @@ Read `README.md` first. Everything a person enters is stored in their browser
 | `js/figure.js` | 2D pose engine: pose format, forward kinematics, two-bone IK, keyframes. Every pose is solved here first |
 | `js/figure3d.js` | the 3D coach: a rigged human (male or female) posed on the 2D engine's joints, contact with floor, box, table and wall, the Demo/Muscle/map shading, muscle-map pictures, coach portraits |
 | `assets/coach-m.glb`, `assets/coach-f.glb` | the two coaches, built by `tools/coach/build_coach.py` from Quaternius' Universal Base Characters (CC0, `assets/CREDITS.txt`) |
+| `assets/hd/` | 2048 px texture copies of the coaches (`build_coach.py --hd`), only for screenshots and marketing renders: the app never loads them |
 | `js/exercises.js` | the 80 exercises: text, doses, kit, swaps, METs, muscles (`MUS`), joint stress (`STRESS`), animation keyframes |
 | `js/media.js` | Frank's own clips, by exercise id. A clip replaces the 3D coach in the Video tab, the player and lists |
 | `js/programs.js` | Frank's details, `BILLING`, body parts, kit, workouts, the 28-day plan, safety (`avoidFor`, `safe`), the session builder, kcal |
@@ -38,6 +39,7 @@ Read `README.md` first. Everything a person enters is stored in their browser
 | `tools/check-plans.cjs` | counts what every plan type trains per week; must pass |
 | `tools/sheet3d.html` | contact sheet of 3D key poses: `?ids=a,b`, `from`, `to`, `keys`, `mode=muscle|map`, `coach=f`, `yaw`, `pitch` |
 | `tools/media/process.sh`, `docs/FILMING-GUIDE.md` | Frank's clips: how to film them, and how to turn one into app files |
+| `.claude/skills/frank-showcase/` | store screenshots, Instagram posts, previews and portfolio images of the app. It sets `window.WBF_SHOT` (screenshot mode in `js/figure3d.js`) and uses `WBF.app.sheet()`; keep both working |
 
 ## Adding or changing an exercise
 
