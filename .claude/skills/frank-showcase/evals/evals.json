@@ -1,0 +1,48 @@
+{
+ "skill_name": "frank-showcase",
+ "evals": [
+  {
+   "id": 1,
+   "prompt": "make the app store screenshots for frank's app, iphone size, with short captions. use the woman coach",
+   "expected_output": "A set of App Store screenshots of Frank's app at an accepted iPhone 6.9-inch size (1320x2868), PNG without alpha, each with a short truthful caption, the female 3D coach sharp in the screens, no prices or promotional claims, plus an overview for review.",
+   "files": [],
+   "assertions": [
+    "All delivered images are at an accepted App Store iPhone size (1320x2868, 1290x2796, 1260x2736, 1284x2778 or 1242x2688)",
+    "No delivered image has an alpha channel",
+    "Between 3 and 10 screenshots are delivered",
+    "Every screenshot carries a short caption (8 words or fewer in the headline)",
+    "The female coach is the one shown in the app screens",
+    "No caption mentions a price, \"free\", \"best\", \"#1\", \"new\" or \"download\"",
+    "The screens look like a real phone at full resolution: status bar present, UI crisp at 100% zoom, no upscaling blur"
+   ]
+  },
+  {
+   "id": 2,
+   "prompt": "i need 2 instagram posts for frank's page showing the 3d coach doing a lunge and a push-up. super sharp please",
+   "expected_output": "Two Instagram feed posts (1080 wide, 3:4 or 4:5) in Frank's brand, each with a large, sharp render of the 3D coach mid-exercise (a lunge and a push-up), a short caption true to the app's coaching cues, and the brand mark or handle.",
+   "files": [],
+   "assertions": [
+    "Exactly two posts are delivered",
+    "Each post is 1080 px wide at an Instagram feed ratio (3:4 or 4:5)",
+    "One post shows the coach in a lunge, the other in a push-up",
+    "The coach is large: the figure spans at least about half the image height or width",
+    "Each post carries Frank's brand (Wellness by Frank or @wellnessbyfrank)",
+    "Captions stay true to the app: no promised results or claims",
+    "The 3D coach is sharp at 100% zoom (clean edges, readable face and hands)"
+   ]
+  },
+  {
+   "id": 3,
+   "prompt": "can you make me a preview i can send frank on whatsapp of how the workout part of the app looks now",
+   "expected_output": "One or more preview images showing the workout flow of the app (workout overview, exercise page, the player, rest or finish), labelled, sharp and readable on a phone screen, plus a short note on what each screen is.",
+   "files": [],
+   "assertions": [
+    "Shows at least three screens of the workout flow (workout overview, exercise page, player, rest or finish)",
+    "Each screen is labelled",
+    "The images are readable on a phone: long side at least 1600 px and the app text legible when zoomed",
+    "notes.md includes a short message ready to paste into WhatsApp",
+    "The screens are real captures of the current app, not mock-ups"
+   ]
+  }
+ ]
+}

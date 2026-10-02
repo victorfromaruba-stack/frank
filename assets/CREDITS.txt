@@ -1,0 +1,4 @@
+The 3D coach (coach-m.glb) is built by tools/coach/build_coach.py from
+"Universal Base Characters" by Quaternius, released under CC0 1.0 (public domain):
+https://quaternius.itch.io/universal-base-characters
+Credit is not required; it is given here as thanks.

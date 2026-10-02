@@ -1,0 +1,51 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Exercise contact sheet</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gilda+Display&family=Nunito:wght@400;700;900&display=swap">
+<style>
+:root{--ground:#012D12;--sky:#7CC4EE;--sky-hi:#A6DAF8;--sky-lo:#3E7FB0;--line:rgba(124,196,238,.28)}
+body{background:var(--ground);color:#cfe3d5;font:12px Nunito,sans-serif;margin:10px}
+.grid{display:grid;grid-template-columns:repeat(5,200px);gap:8px}
+.cell{border:1px solid var(--line);padding:4px}
+.cell b{display:block;color:var(--sky);font-weight:700;margin-bottom:2px}
+.fig{width:100%;height:150px;display:block}
+.fg-floor{stroke:var(--line);stroke-width:.8;fill:none}
+.fg-shadow{fill:rgba(0,0,0,.28)}
+.fg-bone,.fg-spine{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.fg-near{stroke:var(--sky);stroke-width:4.4}
+.fg-far{stroke:var(--sky-lo);stroke-width:4}
+.fg-girdle{stroke:var(--sky);stroke-width:3}
+.fg-spine{stroke:var(--sky);stroke-width:6}
+.fg-foot{stroke-width:3.4}
+.fg-head{fill:var(--sky)}
+.fg-eye{fill:var(--ground)}
+.fg-joints circle{fill:var(--ground);stroke:var(--sky-hi);stroke-width:1}
+.fg-db{fill:var(--sky-lo);stroke:var(--sky);stroke-width:1}
+.fg-ring{fill:none;stroke:var(--sky-hi);stroke-width:1.4}
+.fg-strap{stroke:var(--sky-lo);stroke-width:1.6;fill:none}
+.fp-solid{fill:#0B4426;stroke:var(--sky-lo);stroke-width:1}
+.fp-soft{fill:#0B4426;stroke:var(--sky);stroke-width:1}
+.fp-line{stroke:var(--sky-lo);stroke-width:1.4;fill:none}
+.fp-hatch{stroke:var(--sky-lo);stroke-width:.8}
+.fg-note-line{fill:none;stroke:var(--sky-hi);stroke-width:.9;stroke-linecap:round}
+.fg-note-text{fill:var(--sky-hi);font:7.5px 'Gilda Display',serif}
+.fg-ghost path,.fg-ghost circle{fill:none;stroke:var(--sky);stroke-opacity:.18;stroke-width:3;stroke-linecap:round}
+</style></head><body>
+<div class="grid" id="g"></div>
+<script src="../js/figure.js"></script>
+<script src="../js/exercises.js"></script>
+<script>
+var F = WBF.fig, g = document.getElementById('g');
+var q = new URLSearchParams(location.search);
+var ids = Object.keys(WBF.EX).slice(+(q.get('from')||0), +(q.get('to')||999));
+ids.forEach(function (id) {
+  var ex = WBF.EX[id], an = ex.anim;
+  var keys = an.k.map(function(_, i){return i;}).slice(0, an.wrap ? an.k.length - 1 : 4);
+  keys.forEach(function (ki) {
+    var c = document.createElement('div'); c.className = 'cell';
+    c.innerHTML = '<b>' + ex.name + ' · ' + ki + '</b><div class="h"></div>';
+    g.appendChild(c);
+    var fig = new F.Figure(an, { aspect: 4/3, note: true, minW: 70, minH: 52 });
+    fig.mount(c.querySelector('.h'));
+    fig.still(ki);
+  });
+});
+</script></body></html>

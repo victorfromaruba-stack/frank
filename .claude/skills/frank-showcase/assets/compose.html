@@ -1,0 +1,327 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>compose</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+/* Layouts for Frank's showcase images. One unit (--u) is 1% of the image width, so every size scales. */
+:root { --u: 10px; --ink: #fff; --ink2: #A9DCF8; --accent: #7CC4EE; --kick: #7CC4EE; }
+* { box-sizing: border-box; }
+html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; -webkit-font-smoothing: antialiased; }
+body { position: relative; font-family: Nunito, sans-serif; color: var(--ink); }
+.bg { position: absolute; inset: 0; z-index: 0; }
+.forest .bg { background: radial-gradient(130% 75% at 50% 16%, #17673d 0%, #0a4423 38%, #032f15 70%, #012D12 100%); }
+.paper .bg { background: radial-gradient(130% 85% at 50% 8%, #ffffff 0%, #f2f6f3 50%, #e2e9e5 100%); }
+.sky .bg { background: linear-gradient(165deg, #c4e8fb 0%, #8fcdf1 45%, #4c9fd8 100%); }
+.paper { --ink: #0E2A1A; --ink2: #4A6455; --accent: #3E7FB0; --kick: #3E7FB0; }
+.sky { --ink: #012D12; --ink2: #0b4a27; --accent: #ffffff; --kick: #012D12; }
+/* a whisper of grain so big gradients don't band in 8-bit PNG */
+.grain { position: absolute; inset: 0; z-index: 1; opacity: .05; mix-blend-mode: overlay; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E"); }
+.glow { position: absolute; z-index: 1; border-radius: 50%; filter: blur(calc(var(--u) * 6)); pointer-events: none; }
+.forest .glow { background: radial-gradient(closest-side, rgba(124,196,238,.32), rgba(124,196,238,0)); }
+.paper .glow { background: radial-gradient(closest-side, rgba(124,196,238,.35), rgba(124,196,238,0)); }
+.sky .glow { background: radial-gradient(closest-side, rgba(255,255,255,.55), rgba(255,255,255,0)); }
+.layer { position: absolute; inset: 0; z-index: 2; }
+
+/* type */
+.kicker { font: 800 calc(var(--u) * 2.5)/1 Nunito; letter-spacing: .2em; text-transform: uppercase; color: var(--kick); margin: 0; }
+.title { font: 900 calc(var(--u) * 8.4)/1.02 Nunito; text-transform: uppercase; letter-spacing: -.005em; margin: 0; color: var(--ink); text-wrap: balance; }
+.title em { font-style: normal; color: var(--accent); }
+.note { font: 400 calc(var(--u) * 4.4)/1.25 'Gilda Display', serif; margin: 0; color: var(--ink2); text-wrap: balance; }
+.mark { font: 800 calc(var(--u) * 2.2)/1 Nunito; letter-spacing: .22em; text-transform: uppercase; color: var(--kick); opacity: .9; }
+.handle { font: 400 calc(var(--u) * 2.6)/1 'Gilda Display', serif; color: var(--ink2); }
+.label { font: 800 calc(var(--u) * 2.2)/1.2 Nunito; letter-spacing: .14em; text-transform: uppercase; color: var(--ink2); text-align: center; }
+.text { position: absolute; display: flex; flex-direction: column; gap: calc(var(--u) * 2.2); align-items: center; text-align: center; }
+.text.left { align-items: flex-start; text-align: left; }
+
+/* a generic phone, drawn here: no manufacturer artwork, nothing that copies a real model
+   (Apple's marketing rules ask for Apple's own bezels when showing an iPhone) */
+.dev { position: absolute; border-radius: var(--r); padding: var(--b);
+  background: linear-gradient(150deg, #3a403d 0%, #121614 22%, #0b0e0d 60%, #262b28 100%);
+  box-shadow: 0 calc(var(--u) * 3) calc(var(--u) * 7) rgba(0,0,0,.42), 0 calc(var(--u) * .6) calc(var(--u) * 1.4) rgba(0,0,0,.3),
+              inset 0 0 0 calc(var(--b) * .16) rgba(255,255,255,.16); }
+.paper .dev, .sky .dev { box-shadow: 0 calc(var(--u) * 3) calc(var(--u) * 7) rgba(1,45,18,.28), 0 calc(var(--u) * .6) calc(var(--u) * 1.4) rgba(1,45,18,.18),
+              inset 0 0 0 calc(var(--b) * .16) rgba(255,255,255,.16); }
+.dev .scr { position: relative; border-radius: calc(var(--r) - var(--b)); overflow: hidden; background: #000; }
+.dev .scr img { display: block; width: 100%; height: auto; }
+.dev .cam { position: absolute; left: 50%; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(circle at 35% 35%, #2c3a44, #05080a 60%); z-index: 2; }
+.card { position: absolute; overflow: hidden; background: #000; box-shadow: 0 calc(var(--u) * 2.4) calc(var(--u) * 6) rgba(0,0,0,.4), 0 calc(var(--u) * .5) calc(var(--u) * 1.2) rgba(0,0,0,.25); }
+.paper .card, .sky .card { box-shadow: 0 calc(var(--u) * 2.4) calc(var(--u) * 6) rgba(1,45,18,.26), 0 calc(var(--u) * .5) calc(var(--u) * 1.2) rgba(1,45,18,.16); }
+.card img { display: block; width: 100%; height: auto; }
+.dev .btn { position: absolute; width: calc(var(--b) * .55); border-radius: calc(var(--b) * .3); background: linear-gradient(90deg, #2b302d, #4a504c); }
+.coach { position: absolute; z-index: 2; display: block; }
+</style></head>
+<body><div class="bg"></div><div class="grain"></div><div class="layer" id="L"></div>
+<script>
+// build(spec): spec = { size: [W, H], layout: phone|band|phones|hero|coach|feature, theme: forest|paper|sky,
+//   kicker, title (*word* = accent colour), note, mark, handle, shots: [dataURL], labels: [], ratio,
+//   frame: phone|none, bleed, coach: dataURL, coachScale, top, gap, phoneWidth, lines }
+const $ = (h) => { const t = document.createElement('template'); t.innerHTML = h.trim(); return t.content.firstChild; };
+const esc = (s) => String(s || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const pic = (src, cls) => { const i = document.createElement('img'); if (cls) i.className = cls; i.src = src; return i; };
+const rich = (s) => esc(s).replace(/\*([^*]+)\*/g, '<em>$1</em>').replace(/\n/g, '<br>');
+
+// a phone: screen width sw px, screenshot data URL. kind 'phone' (generic frame) or 'none' (the screen
+// alone, rounded, with a shadow: for Google Play, which asks for no device imagery)
+function phone(src, sw, ratio, kind) {
+  const sh = sw * ratio;
+  if (kind === 'none') {
+    const el = $('<div class="card"><img></div>');
+    el.style.width = sw + 'px'; el.style.borderRadius = sw * 0.06 + 'px';
+    el.querySelector('img').src = src;
+    return { el, w: sw, h: sh };
+  }
+  const b = sw * 0.032, r = sw * 0.11 + b;
+  const el = $('<div class="dev"><div class="scr"><img></div></div>');
+  el.style.setProperty('--r', r + 'px'); el.style.setProperty('--b', b + 'px');
+  el.style.width = (sw + 2 * b) + 'px';
+  el.querySelector('img').src = src;
+  const d = sw * 0.03, cam = $('<div class="cam"></div>');
+  cam.style.top = (b + sw * 0.024) + 'px'; cam.style.width = d + 'px'; cam.style.height = d + 'px';
+  el.appendChild(cam);
+  for (const [right, top, len] of [[0, 0.2, 0.08], [0, 0.31, 0.08], [1, 0.25, 0.13]]) {
+    const k = $('<div class="btn"></div>');
+    k.style.top = (b + sh * top) + 'px'; k.style.height = sh * len + 'px';
+    k.style[right ? 'right' : 'left'] = (-b * 0.42) + 'px';
+    el.appendChild(k);
+  }
+  return { el, w: sw + 2 * b, h: sh + 2 * b };
+}
+
+// how many lines a text block wraps to (counted from the line boxes, whatever the line height)
+function lineCount(el) {
+  const r = document.createRange();
+  r.selectNodeContents(el);
+  const tops = [...r.getClientRects()].filter((b) => b.width > 0.5 && b.height > 0.5).map((b) => b.top).sort((a, b) => a - b);
+  const gap = parseFloat(getComputedStyle(el).fontSize) * 0.5;
+  let n = 0, last = -Infinity;
+  for (const t of tops) if (t - last > gap) { n++; last = t; }
+  return n;
+}
+
+// shrink a text block's font until it fits maxLines (or maxHeight)
+function fit(el, maxLines, maxH) {
+  const cs = () => parseFloat(getComputedStyle(el).fontSize);
+  for (let i = 0; i < 60; i++) {
+    const tooTall = (maxLines && lineCount(el) > maxLines) || (maxH && el.scrollHeight > maxH);
+    const tooWide = el.scrollWidth > el.clientWidth + 1;
+    if (!tooTall && !tooWide) return;
+    el.style.fontSize = cs() * 0.95 + 'px';
+  }
+}
+
+function textBlock(s, u, width, left) {
+  const t = $('<div class="text' + (left ? ' left' : '') + '"></div>');
+  t.style.width = width + 'px';
+  if (s.kicker) t.appendChild($('<p class="kicker">' + esc(s.kicker) + '</p>'));
+  let title = null, note = null;
+  if (s.title) { title = $('<h1 class="title">' + rich(s.title) + '</h1>'); title.style.width = '100%'; t.appendChild(title); }
+  if (s.note) { note = $('<p class="note">' + rich(s.note) + '</p>'); note.style.width = '100%'; t.appendChild(note); }
+  if (s.titleSize && title) title.style.fontSize = s.titleSize * u + 'px';
+  return { t, title, note };
+}
+
+// where a transparent render actually has something (alpha above ~10%), in its own pixels
+function inkBox(img) {
+  const W0 = img.naturalWidth, H0 = img.naturalHeight, k = Math.min(1, 600 / Math.max(W0, H0));
+  const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(W0 * k)); c.height = Math.max(1, Math.round(H0 * k));
+  const x = c.getContext('2d'); x.drawImage(img, 0, 0, c.width, c.height);
+  const d = x.getImageData(0, 0, c.width, c.height).data;
+  let x0 = c.width, y0 = c.height, x1 = -1, y1 = -1;
+  for (let y = 0; y < c.height; y++) for (let i = 0; i < c.width; i++) {
+    if (d[(y * c.width + i) * 4 + 3] > 26) { if (i < x0) x0 = i; if (i > x1) x1 = i; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  }
+  if (x1 < 0) return { x: 0, y: 0, w: W0, h: H0 };
+  return { x: x0 / k, y: y0 / k, w: (x1 - x0 + 1) / k, h: (y1 - y0 + 1) / k };
+}
+
+function glow(x, y, d) {
+  const g = $('<div class="glow"></div>');
+  g.style.left = (x - d / 2) + 'px'; g.style.top = (y - d / 2) + 'px'; g.style.width = d + 'px'; g.style.height = d + 'px';
+  document.body.appendChild(g);
+}
+
+// Frank's fonts must be in before any text is measured, or fit() sizes it with a wider fallback font
+async function fontsIn() {
+  await Promise.all(['900 50px Nunito', '800 50px Nunito', '400 50px "Gilda Display"'].map((f) => document.fonts.load(f).catch(() => null)));
+  await document.fonts.ready;
+}
+
+async function loaded() {
+  await document.fonts.ready;
+  await Promise.all([...document.images].map((i) => i.decode().catch(() => null)));
+}
+
+window.build = async function (s) {
+  await fontsIn();
+  const [W, H] = s.size, u = W / 100;
+  document.documentElement.style.setProperty('--u', u + 'px');
+  document.body.className = s.theme || 'forest';
+  const L = document.getElementById('L');
+  const ratio = s.ratio || 2868 / 1320;               // screenshot height / width
+  const kind = s.frame || 'phone';
+
+  if (s.layout === 'phone') {
+    // caption on top, one phone below, running off the bottom edge when bleed is on
+    const { t, title, note } = textBlock(s, u, W * 0.86);
+    t.style.left = W * 0.07 + 'px'; t.style.top = (s.top != null ? s.top : 6.5) * u + 'px';
+    L.appendChild(t);
+    if (title) fit(title, s.lines || 3);
+    if (note) fit(note, 2);
+    const gap = (s.gap != null ? s.gap : 6) * u;
+    // every image of a set puts its phone at the same height (phoneTop) and centres the caption in the space
+    // above it; only a caption too long for that space pushes the phone down
+    if (s.phoneTop != null && s.top == null) {
+      const room = s.phoneTop * u - gap - 3 * u;
+      t.style.top = Math.max(3 * u, 3 * u + (room - t.offsetHeight) / 2) + 'px';
+    }
+    const textBottom = t.offsetTop + t.offsetHeight;
+    const top = Math.max(textBottom + gap, (s.phoneTop != null ? s.phoneTop : 0) * u);
+    const hide = s.bleed === true ? 0.1 : +s.bleed || 0;  // bleed: how much of the phone runs off the bottom (true = a tenth)
+    const sw = hide
+      ? Math.min(W * 0.86, (H - top) / (1 - hide) / (ratio + 0.07))
+      : Math.min((s.phoneWidth || 70) * u, (H - top - 5 * u) / (ratio + 0.07)); // whole phone visible
+    const p = phone(s.shots[0], sw, ratio, kind);
+    p.el.style.left = (W - p.w) / 2 + 'px';
+    p.el.style.top = top + 'px';
+    glow(W / 2, top + p.h * 0.35, W * 1.1);
+    L.appendChild(p.el);
+  } else if (s.layout === 'band') {
+    // Google Play: the caption stays inside the top 20% of the image, the screen fills the rest, no device
+    const band = H * 0.19;
+    const { t, title } = textBlock({ title: s.title }, u, W * 0.86);
+    t.style.left = W * 0.07 + 'px';
+    L.appendChild(t);
+    if (title) { title.style.fontSize = 7.2 * u + 'px'; fit(title, 2, band - 6 * u); }
+    t.style.top = Math.max(2 * u, (band - t.offsetHeight) / 2 + u) + 'px';
+    const room = H - band - 4 * u;
+    const sw = Math.min(W * 0.84, room / ratio);
+    const p = phone(s.shots[0], sw, ratio, 'none');
+    p.el.style.left = (W - p.w) / 2 + 'px'; p.el.style.top = band + 'px';
+    glow(W / 2, band + p.h * 0.4, W);
+    L.appendChild(p.el);
+  } else if (s.layout === 'phones') {
+    // 2 or 3 phones in a row with labels; title above (optional)
+    let top = 5 * u;
+    if (s.title || s.kicker) {
+      const { t, title, note } = textBlock(s, u, W * 0.8);
+      t.style.left = W * 0.1 + 'px'; t.style.top = top + 'px';
+      L.appendChild(t);
+      if (title) { title.style.fontSize = (s.titleSize || 4.6) * u + 'px'; fit(title, s.lines || 2); }
+      if (note) { note.style.fontSize = 2.4 * u + 'px'; fit(note, 1); }
+      top = t.offsetTop + t.offsetHeight + 4 * u;
+    }
+    const n = s.shots.length, gap = (s.gapPhones || 4) * u, labelH = s.labels ? 6 * u : 0;
+    const roomH = H - top - 4 * u - labelH, roomW = W - 8 * u - gap * (n - 1);
+    const sw = Math.min(roomW / n / 1.07, roomH / (ratio + 0.07));
+    const pw = sw * 1.068, total = pw * n + gap * (n - 1);
+    glow(W / 2, top + roomH * 0.45, W * 0.9);
+    s.shots.forEach((src, i) => {
+      const p = phone(src, sw, ratio, kind);
+      const x = (W - total) / 2 + i * (pw + gap);
+      p.el.style.left = x + 'px'; p.el.style.top = top + 'px';
+      L.appendChild(p.el);
+      if (s.labels && s.labels[i]) {
+        const lab = $('<div class="label">' + esc(s.labels[i]) + '</div>');
+        lab.style.position = 'absolute'; lab.style.left = x + 'px'; lab.style.width = p.w + 'px'; lab.style.top = (top + p.h + 2.2 * u) + 'px';
+        lab.style.whiteSpace = 'nowrap'; lab.style.overflow = 'hidden';
+        L.appendChild(lab);
+        fit(lab, 1);                                 // a long label shrinks to one line
+      }
+    });
+  } else if (s.layout === 'hero') {
+    // portfolio: words on the left, three phones on the right (middle one in front)
+    const { t, title, note } = textBlock(s, u, W * 0.36, true);
+    t.style.left = W * 0.06 + 'px';
+    L.appendChild(t);
+    if (title) { title.style.fontSize = 5.6 * u + 'px'; fit(title, s.lines || 3); }
+    if (note) { note.style.fontSize = 2.6 * u + 'px'; fit(note, 3); }
+    if (s.mark) t.appendChild($('<p class="mark" style="margin-top:' + 2 * u + 'px;font-size:' + 1.5 * u + 'px">' + esc(s.mark) + '</p>'));
+    t.style.top = (H - t.offsetHeight) / 2 + 'px';
+    const sw = Math.min(H * 0.78 / (ratio + 0.07), W * 0.17);
+    const cx = W * 0.71;
+    glow(cx, H * 0.5, H * 1.2);
+    const order = [[0, -1], [2, 1], [1, 0]];              // back phones first, the middle one last (in front)
+    for (const [i, side] of order) {
+      if (!s.shots[i]) continue;
+      const k = side === 0 ? 1 : 0.86;
+      const p = phone(s.shots[i], sw * k, ratio, kind);
+      p.el.style.left = (cx - p.w / 2 + side * sw * 0.98) + 'px';
+      p.el.style.top = (H - p.h) / 2 + (side === 0 ? 0 : H * 0.04) + 'px';
+      L.appendChild(p.el);
+    }
+  } else if (s.layout === 'coach') {
+    // the 3D coach big, caption on top, brand at the bottom
+    const { t, title, note } = textBlock(s, u, W * 0.86);
+    t.style.left = W * 0.07 + 'px'; t.style.top = (s.top != null ? s.top : 6.5) * u + 'px';
+    L.appendChild(t);
+    if (title) fit(title, s.lines || 2);
+    if (note) fit(note, 2);
+    const top = t.offsetTop + t.offsetHeight + 2 * u, bottom = H - 9 * u;
+    const img = pic(s.coach, 'coach');
+    await img.decode().catch(() => null);
+    if (!img.naturalWidth) throw new Error('the coach render did not load');
+    // fit and centre the figure and its shadow, not the render's empty margins; never scale up
+    const box = inkBox(img);
+    const k = Math.min(1, (W * (s.coachScale || 0.9)) / box.w, (bottom - top) / box.h);
+    const w = img.naturalWidth * k, h = img.naturalHeight * k;
+    img.style.width = w + 'px'; img.style.height = h + 'px';
+    img.style.left = (W / 2 - (box.x + box.w / 2) * k) + 'px';
+    img.style.top = (top + (bottom - top) / 2 - (box.y + box.h / 2) * k) + 'px';
+    glow(W / 2, top + (bottom - top) * 0.55, W * 0.95);
+    L.appendChild(img);
+    const foot = $('<div class="text" style="flex-direction:row;justify-content:space-between;align-items:baseline"></div>');
+    foot.style.left = 7 * u + 'px'; foot.style.width = W - 14 * u + 'px'; foot.style.top = H - 6.5 * u + 'px';
+    foot.appendChild($('<span class="mark">' + esc(s.mark || 'Wellness by Frank') + '</span>'));
+    if (s.handle !== false) foot.appendChild($('<span class="handle">' + esc(s.handle || '@wellnessbyfrank') + '</span>'));
+    L.appendChild(foot);
+  } else if (s.layout === 'feature') {
+    // Google Play feature graphic: words left, the 3D coach right, no devices, key content away from the edges
+    const { t, title, note } = textBlock(s, u, W * 0.5, true);
+    t.style.left = W * 0.08 + 'px';
+    L.appendChild(t);
+    if (title) { title.style.fontSize = 5.6 * u + 'px'; fit(title, s.lines || 2); }
+    if (note) { note.style.fontSize = 2.9 * u + 'px'; fit(note, 2); }
+    t.style.top = (H - t.offsetHeight) / 2 + 'px';
+    if (s.coach) {
+      const img = pic(s.coach, 'coach');
+      await img.decode().catch(() => null);
+      if (!img.naturalWidth) throw new Error('the coach render did not load');
+      const k = Math.min(W * 0.36 / img.naturalWidth, H * 0.9 / img.naturalHeight);
+      const w = img.naturalWidth * k, h = img.naturalHeight * k;
+      img.style.width = w + 'px'; img.style.height = h + 'px';
+      img.style.left = W * 0.77 - w / 2 + 'px'; img.style.top = (H - h) / 2 + 'px';
+      glow(W * 0.77, H * 0.55, H * 1.3);
+      L.appendChild(img);
+    }
+  } else if (s.layout === 'sheet') {
+    // a review sheet: every finished image side by side with its name and size (for checking, not for posting)
+    document.body.className = 'paper';
+    const imgs = s.images, pad = 3 * u, gap = 2.4 * u, labelH = 3.4 * u;
+    const rows = imgs.length > 6 ? 2 : 1, per = Math.ceil(imgs.length / rows);
+    const rowH = (H - 2 * pad - (rows - 1) * gap) / rows - labelH;
+    imgs.forEach((im, i) => {
+      const r = Math.floor(i / per), row = imgs.slice(r * per, r * per + per);
+      const widths = row.map((x) => rowH * x.w / x.h), k = Math.min(1, (W - 2 * pad - gap * (row.length - 1)) / widths.reduce((a, b) => a + b, 0));
+      const x0 = (W - (widths.reduce((a, b) => a + b, 0) * k + gap * (row.length - 1))) / 2;
+      const j = i - r * per, x = x0 + widths.slice(0, j).reduce((a, b) => a + b, 0) * k + gap * j;
+      const el = pic(im.src);
+      el.style.cssText = 'position:absolute;box-shadow:0 2px 14px rgba(1,45,18,.18);border-radius:6px';
+      el.style.left = x + 'px'; el.style.top = pad + r * (rowH + labelH + gap) + 'px';
+      el.style.width = widths[j] * k + 'px'; el.style.height = rowH * k + 'px';
+      L.appendChild(el);
+      const lab = $('<div class="label" style="position:absolute;letter-spacing:.02em;text-transform:none;line-height:1.25;font-size:' + 0.85 * u + 'px">' + esc(im.name) + '<br>' + im.w + ' x ' + im.h + '</div>');
+      lab.style.left = x + 'px'; lab.style.width = widths[j] * k + 'px'; lab.style.top = pad + r * (rowH + labelH + gap) + rowH * k + 0.8 * u + 'px';
+      L.appendChild(lab);
+    });
+  } else {
+    throw new Error('unknown layout ' + s.layout);
+  }
+  await loaded();
+  // anything that ended up outside the image (other than a bleeding phone)?
+  const out = [...L.querySelectorAll('.text, .label')].filter((e) => {
+    const r = e.getBoundingClientRect(); return r.left < -1 || r.top < -1 || r.right > W + 1 || r.bottom > H + 1;
+  }).length;
+  document.title = 'built ' + out;
+};
+</script>
+</body></html>
