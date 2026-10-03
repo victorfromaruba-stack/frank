@@ -130,7 +130,9 @@ node tools/build.mjs
 
 - Present calorie numbers as exact: they are MET estimates and say "est.".
 - Give diet advice to someone who ticked pregnant, under 18 or a medical
-  condition: the food card only refers them to a dietitian or doctor.
+  condition: the food card only refers them to a dietitian or doctor, and
+  `atRisk()` also takes away the water card, the food and drink lessons and
+  the weight target.
 - Show made-up social proof: no invented reviews, user counts or "X people
   joined today".
 - Add a GPL dependency (for example mannequin.js): the app is sold. Models and

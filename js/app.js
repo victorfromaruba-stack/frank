@@ -693,9 +693,9 @@
       // without the onboarding's bookkeeping: phones that used Change before saved it in the profile
       var d = JSON.parse(JSON.stringify(p));
       delete d.only; delete d.edit; delete d.soreDone;
-      // a saved profile has answered them all: a question left out was a No
+      // the health answers as saved, none made up: older versions showed No as picked and saved only the questions
+      // tapped, so a question missing there was never answered. The health step waits for it (healthSig reads it as No)
       d.health = d.health || {};
-      HQ.forEach(function (k) { d.health[k] = !!d.health[k]; });
       // the weight step starts from the last weight logged, not the one from the first onboarding
       d.kg = lastWeight() || d.kg;
       return d;
@@ -1206,10 +1206,12 @@
       '<button class="btn two small" data-act="open-coach" data-id="' + sp.i + '" aria-label="Details">' + ic('info') + '</button></div>' +
       (S.inbox.length > 1 ? '<button class="link" data-act="inbox">All sessions from Frank (' + S.inbox.length + ')</button>' : '') + '</div></div>';
   }
+  // a lesson a day, in turn. No lesson about food or drink for anyone at risk, or before a plan says who it is for
   function lessonCard() {
+    var risk = atRisk(), list = WBF.LESSONS.filter(function (x) { return !(risk && x.food); });
     var n = Math.floor((Date.now() - new Date(2026, 0, 1).getTime()) / 864e5);
-    var L = WBF.LESSONS[((n % WBF.LESSONS.length) + WBF.LESSONS.length) % WBF.LESSONS.length];
-    return '<div class="card lesson"><p class="label">Frank\'s lesson of the day</p><p class="note">' + esc(L) + '</p>' +
+    var L = list[((n % list.length) + list.length) % list.length];
+    return '<div class="card lesson"><p class="label">Frank\'s lesson of the day</p><p class="note">' + esc(L.t || L) + '</p>' +
       '<svg class="doodle" viewBox="0 0 40 40" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M8 34c10-3 19-12 22-24"/><path d="M24 12l6-3 2 6"/></svg></div>';
   }
   function quickRail() {
@@ -1689,7 +1691,9 @@
       [10, 20, 30].map(function (m) { return '<button class="toggle" data-act="walk" data-m="' + m + '">+' + m + ' min</button>'; }).join('') +
       (todayWalk ? '<button class="toggle" data-act="walk" data-m="0">Clear</button>' : '') + '</div></section>';
   }
+  // 8 glasses is a drinking goal: food and drink advice, so none for anyone at risk (the food card refers them on)
   function waterCard() {
+    if (atRisk()) return '';
     var fd = foodDay(iso()), glasses = '';
     for (var g = 1; g <= 8; g++) glasses += '<button class="glass" data-act="water" data-n="' + g + '" aria-pressed="' + (fd.water >= g) + '" aria-label="' + g + ' glass' + (g > 1 ? 'es' : '') + '">' + ic('glass') + '</button>';
     return '<section class="card"><div class="between"><p class="label">Water</p><p class="meta num">' + fd.water + ' of 8 glasses</p></div><div class="glasses">' + glasses + '</div></section>';

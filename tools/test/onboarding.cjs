@@ -22,6 +22,16 @@ const popsIn = (p, ms = 600) => p.evaluate((w) => new Promise((r) => {
 const bookkeeping = (pr) => Object.keys(pr || {}).filter((k) => ['only', 'edit', 'soreDone'].includes(k));
 // the eight health questions (PAR-Q+ and pregnancy)
 const healthKeys = (p) => p.evaluate(() => WBF.PARQ.map((q) => q[0]).concat(['pregnant']));
+const HQ = ['heart', 'chest', 'dizzy', 'chronic', 'meds', 'joint', 'supervised', 'pregnant'];
+// health as this version saves it: every question answered (yes: the Yes ones), confirmed a month ago. Older versions
+// saved only the questions tapped (No looked picked already), so their profiles hold some of the questions or none
+const confirmedHealth = (yes) => Object.assign(Object.fromEntries(HQ.map((k) => [k, (yes || []).includes(k)])), { confirmed: L.isoDay(-30) });
+// on the health step: each question's answer as shown ('Yes', 'No', or '-' for none), and the ones with none
+const shownHealth = (p) => p.evaluate((ks) => ks.map((k) => { const b = document.querySelector('[data-act="ob-health"][data-k="' + k + '"][aria-pressed="true"]'); return b ? b.textContent : '-'; }), HQ);
+const openHealth = async (p) => (await shownHealth(p)).map((a, i) => (a === '-' ? HQ[i] : null)).filter(Boolean);
+const healthNextOff = (p) => p.locator('.ob-cta [data-act="ob-next"]').isDisabled();
+// an object with its keys in order, to compare saved objects whatever order the answers came in
+const sorted = (o) => Object.fromEntries(Object.entries(o || {}).sort(([a], [b]) => (a < b ? -1 : 1)));
 // the real length of the saved plan's sessions, in seconds: every training day, or one week
 const realSecs = (p, week) => p.evaluate((wk) => {
   const pr = WBF.app.state().profile;
@@ -35,7 +45,8 @@ function ticked(over, pOver) {
   return L.member(Object.assign({ start: L.isoDay(-2), kit: ['chair', 'table', 'db'] }, pOver || {}), Object.assign({ sessions: [rec], done: { 1: 'h1' } }, over || {}));
 }
 // Me > Edit tapped through like a person: the saved answer on every step, then "Build my plan". on(question) may change
-// something first; it returns true when its tap already moved on to the next step.
+// something first; it returns true when its tap already moved on to the next step. A health question an older profile
+// never answered waits for an answer: it gets No, as from someone with nothing new to report.
 async function editAll(p, on) {
   await app.tap(p, '.tab[data-tab="me"]');
   await app.tap(p, '[data-act="ob-edit"]');
@@ -45,6 +56,7 @@ async function editAll(p, on) {
     const q = await question(p);
     seen.push(q);
     if (on && await on(q)) continue;
+    if (/Before you/i.test(q)) for (const k of await openHealth(p)) await app.tap(p, '[data-act="ob-health"][data-k="' + k + '"][data-v="0"]');
     if (await p.locator('[data-act="ob-build"]').count()) { await app.tap(p, '[data-act="ob-build"]'); return seen; }
     if (await p.locator('.ob-cta [data-act="ob-next"]').count()) await next(p);
     else await app.tap(p, '[data-act="ob-pick"][aria-pressed="true"]');
@@ -284,7 +296,7 @@ const IMPERIAL = {
 
 module.exports = {
   name: 'onboarding',
-  about: 'the whole onboarding by tapping, in cm/kg and in ft/lb, to a built plan, with real session lengths; Me: change sore spots, Edit and Back, Edit after an old Change, Edit keeps the health answers, Edit all the way, Edit keeps weights and ticks, a new goal or new days ask first; the name step across a coach load',
+  about: 'the whole onboarding by tapping, in cm/kg and in ft/lb, to a built plan, with real session lengths; Me: change sore spots, Edit and Back, Edit after an old Change, Edit keeps the health answers and leaves an older profile\'s unanswered ones open, Edit all the way, Edit keeps weights and ticks, a new goal or new days ask first; the name step across a coach load',
   async run(t) {
     await t.flow('metric (cm, kg)', async () => {
       const o = METRIC;
@@ -397,17 +409,23 @@ module.exports = {
     });
 
     await t.flow('Me: Edit keeps the health answers; the minutes step gives real lengths', async () => {
-      // a beginner who picked 45 minutes; one PAR-Q yes (cleared by a doctor) and an older profile that never stored a No
+      // a beginner who picked 45 minutes; one PAR-Q yes (cleared by a doctor), saved by an older version: it stored only
+      // the questions tapped, so the other seven were never answered, and Edit must not answer them No by itself
       const p = await t.page({ state: L.member({ level: 'b', push: 0, goal: 'fat', days: 4, minutes: 45, focus: ['full'], health: { joint: true, cleared: true } }) });
       await app.tap(p, '.tab[data-tab="me"]');
       await app.tap(p, '[data-act="ob-edit"]');
       await expectStep(t, p, 'main goal');
       await p.evaluate(() => WBF.app.go('onboard', { step: 'health' }));
       await expectStep(t, p, 'Before you');
-      const keys = await healthKeys(p);
-      const shown = await p.evaluate((ks) => ks.map((k) => { const b = document.querySelector('[data-act="ob-health"][data-k="' + k + '"][aria-pressed="true"]'); return b ? b.textContent : '-'; }), keys);
-      t.equal(shown, keys.map((k) => (k === 'joint' ? 'Yes' : 'No')), 'saved answers on the health step (' + keys.join(', ') + ')');
-      t.check(await p.locator('.ob-cta [data-act="ob-next"]').isEnabled(), 'health: Next is off although every answer is saved');
+      t.equal(await healthKeys(p), HQ, 'the health questions (HQ in this file)');
+      t.equal(await shownHealth(p), HQ.map((k) => (k === 'joint' ? 'Yes' : '-')), 'older profile: answers on the health step (' + HQ.join(', ') + '; - is none)');
+      t.check(await healthNextOff(p), 'older profile: Next works with seven questions never answered');
+      t.equal(await p.locator('[data-act="ob-health-none"]').getAttribute('aria-pressed'), 'false', 'older profile: "None of these apply to me" marked');
+      for (const k of HQ.filter((x) => x !== 'joint').slice(0, -1)) await app.tap(p, '[data-act="ob-health"][data-k="' + k + '"][data-v="0"]');
+      t.check(await healthNextOff(p), 'older profile: Next works with one question (pregnant) still open');
+      await app.tap(p, '[data-act="ob-health"][data-k="pregnant"][data-v="0"]');
+      t.check(!(await healthNextOff(p)), 'older profile: Next is off once every question is answered');
+      await t.look(p, 'Edit: health step of an older profile, answered');
       t.step('minutes');
       await p.evaluate(() => WBF.app.go('onboard', { step: 'minutes' }));
       await expectStep(t, p, 'How long');
@@ -416,12 +434,24 @@ module.exports = {
       t.has(await p.locator('#min-real').innerText().catch(() => 'nothing'), 'Your first sessions take ' + range + '.', 'minutes step for a beginner at 45 minutes');
       t.check(Math.max(...wk1) <= 42, 'control: a beginner\'s first week should run well under 45 minutes (got ' + wk1.join(', ') + ')');
       await t.look(p, 'minutes step with real lengths');
+      await p.context().close();
+      t.step('confirmed answers');
+      // saved by this version: every answer stored, so Edit shows them all, No included, and Next is on
+      const c = await t.page({ state: L.member({ health: Object.assign(confirmedHealth(['joint']), { cleared: true }) }) });
+      await app.tap(c, '.tab[data-tab="me"]');
+      await app.tap(c, '[data-act="ob-edit"]');
+      await expectStep(t, c, 'main goal');
+      await c.evaluate(() => WBF.app.go('onboard', { step: 'health' }));
+      await expectStep(t, c, 'Before you');
+      t.equal(await shownHealth(c), HQ.map((k) => (k === 'joint' ? 'Yes' : 'No')), 'confirmed: answers on the health step (' + HQ.join(', ') + ')');
+      t.check(!(await healthNextOff(c)), 'confirmed: Next is off although every answer is saved');
     });
 
     await t.flow('Me: Edit, all the way', async () => {
-      // every step shows the saved answer; Next through all of them, change the days, build: the plan follows
-      const before = L.profile();
-      const p = await t.page({ state: L.member() });
+      // every step shows the saved answer (health too: a profile this version saved); Next through all of them, change
+      // the days, build: the plan follows
+      const before = L.profile({ health: confirmedHealth() });
+      const p = await t.page({ state: L.member({ health: before.health }) });
       await app.tap(p, '.tab[data-tab="me"]');
       await app.tap(p, '[data-act="ob-edit"]');
       await expectStep(t, p, 'main goal');
@@ -456,8 +486,9 @@ module.exports = {
     });
 
     await t.flow('Me: Edit with no changes keeps the weights and the ticks', async () => {
-      // 76.4 kg logged by hand today; the onboarding said 80. Tapping through Edit changes nothing at all
-      const st = ticked({ weights: [{ date: L.isoDay(-7), kg: 80 }, { date: L.TODAY, kg: 76.4 }] });
+      // 76.4 kg logged by hand today; the onboarding said 80. Tapping through Edit changes nothing but the date the
+      // health answers were confirmed, which doesn't count as a change (healthSig)
+      const st = ticked({ weights: [{ date: L.isoDay(-7), kg: 80 }, { date: L.TODAY, kg: 76.4 }] }, { health: confirmedHealth() });
       const p = await t.page({ state: st });
       let ruler = null;
       await editAll(p, async (q) => { if (/current weight/i.test(q)) ruler = await p.locator('#rv-w').innerText(); });
@@ -466,15 +497,37 @@ module.exports = {
       t.equal(await app.toast(p), 'Saved', 'toast after an Edit with no changes');
       const s = await app.stored(p);
       t.equal([s.weights, s.profile.start, s.done], [st.weights, st.profile.start, st.done], 'after an Edit with no changes [weights, plan start, ticks]');
+      t.equal(sorted(s.profile.health), sorted(Object.assign({}, st.profile.health, { confirmed: L.TODAY })), 'saved health answers after an Edit with no changes');
       t.equal(await p.locator('.wk-days button.dd.done').count(), 1, 'days ticked on the 28-day grid after an Edit with no changes');
     });
 
-    await t.flow('Me: Edit with the kit reordered, a No tapped again and new minutes keeps the ticks', async () => {
-      // an older profile that never stored its No answers; the last weight is from yesterday
+    await t.flow('Me: Edit of an older profile: its open health questions answered No keep the plan', async () => {
+      // saved by an older version: a PAR-Q yes, cleared by a doctor, and no No stored. Edit asks the seven open
+      // questions; answered No, the plan is the same one, so the ticks and the plan start stay and the toast says
+      // "Saved" (finishProfile compares the answers with healthSig: a missing one is a No)
+      const st = ticked({}, { health: { joint: true, cleared: true } });
+      const p = await t.page({ state: st });
+      let open = null, off = null;
+      await editAll(p, async (q) => {
+        if (/Before you/i.test(q)) { open = await openHealth(p); off = await healthNextOff(p); }
+        return false;
+      });
+      t.equal(open, HQ.filter((k) => k !== 'joint'), 'open questions on the health step');
+      t.equal(off, true, 'Next disabled on the health step with open questions');
+      await app.waitTitle(p, 'Plan');
+      t.equal(await app.overlay(p), '', 'a question after an Edit that changes nothing');
+      t.equal(await app.toast(p), 'Saved', 'toast after an Edit that changes nothing');
+      const s = await app.stored(p);
+      t.equal([s.done, s.profile.start, s.profile.round], [st.done, st.profile.start, st.profile.round], 'after the Edit [ticks, plan start, round]');
+      t.equal(sorted(s.profile.health), sorted(Object.assign(confirmedHealth(['joint']), { cleared: true, confirmed: L.TODAY })), 'saved health answers');
+      t.equal(await p.locator('.wk-days button.dd.done').count(), 1, 'days ticked on the 28-day grid after the Edit');
+    });
+
+    await t.flow('Me: Edit with the kit reordered, the open health questions answered and new minutes keeps the ticks', async () => {
+      // an older profile that never stored its No answers (editAll answers them); the last weight is from yesterday
       const st = ticked({ weights: [{ date: L.isoDay(-1), kg: 79 }] }, { health: {} });
       const p = await t.page({ state: st });
       await editAll(p, async (q) => {
-        if (/Before you/i.test(q)) await app.tap(p, '[data-act="ob-health"][data-k="heart"][data-v="0"]');
         if (/at home/i.test(q)) { await app.tap(p, '[data-act="ob-multi"][data-k="kit"][data-v="chair"]'); await app.tap(p, '[data-act="ob-multi"][data-k="kit"][data-v="chair"]'); }
         if (/How long/i.test(q)) await app.tap(p, '[data-act="ob-pick-stay"][data-k="minutes"][data-v="30"]');
         return false;

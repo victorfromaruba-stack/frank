@@ -12,7 +12,7 @@ Checked 2 October 2026.
 
 | Rule | In the code |
 |---|---|
-| Adults: 150 to 300 min moderate or 75 to 150 min vigorous activity a week [1, 2]. | `movingCard()` in `js/app.js`: goal 150 min, 250 for fat loss (more activity helps weight loss [23]). Walks count. |
+| Adults: 150 to 300 min moderate or 75 to 150 min vigorous activity a week [1, 2]. | `movingCard()` in `js/app.js`: goal 150 min, 250 for fat loss (more activity helps weight loss [23]), but 150 for anyone `atRisk()` (pregnant, maybe under 18, a medical condition). Walks count. |
 | Strength work for all major muscles on 2+ days a week [1, 3]; each muscle twice a week [5, 6]. | `ROTATION` in `js/programs.js`: every goal x days x level x kit trains lower body, upper body and core on 2+ days a week. `node tools/check-plans.cjs` counts it; run it after any change to workouts or rotations. |
 | 48 h before training the same muscles hard again [3]. | `WEEK` (training days) with `ROTATION` (alternating body parts). |
 | About 10+ hard sets per muscle a week; gains flatten near 18 to 20 [5, 7, 8]. | Rounds per level (below) times twice a week. The focus block adds sets for the parts a person picked. |
@@ -41,7 +41,7 @@ Checked 2 October 2026.
 |---|---|
 | Intervals and steady cardio do about the same for fat loss; intervals take less time [20, 21]. | Fat-loss plans keep at least two strength days and at most two interval (cardio) days (`tools/check-plans.cjs`). |
 | Exercise alone: about 1.5 to 3.5 kg; with diet, more. Strength work keeps muscle [23]. | Onboarding and Today copy. No promises of numbers. |
-| Pace 0.5 to 1% of body weight a week; ~1.6 g protein per kg [24, 25]. "7,700 kcal = 1 kg" overstates [36]. | `targetBox()` and `weightChart()` in `js/app.js`: dates at 0.5 to 1%, chart at 0.75%. Warns when the target is below BMI 18.5. |
+| Pace 0.5 to 1% of body weight a week; ~1.6 g protein per kg [24, 25]. "7,700 kcal = 1 kg" overstates [36]. | `targetBox()` and `weightChart()` in `js/app.js`: dates at 0.5 to 1%, chart at 0.75%. Warns when the target is below BMI 18.5. No target for anyone `atRisk()`: the onboarding skips the step. |
 | Viana 2019 (HIIT and fat loss) was retracted. | Not used anywhere. |
 
 ## Safety
@@ -65,8 +65,13 @@ Checked 2 October 2026.
 
 - Habits only: water, a meal journal, protein and vegetables. No calorie targets.
 - Pregnant, under 18, or a medical condition that affects food: the food card
-  only refers to a dietitian or doctor (`foodCard()` in `js/app.js`).
-- Frank is a sports nutritionist; personal food plans come from him, not the app.
+  only refers to a dietitian or doctor (`foodCard()` in `js/app.js`). No water
+  card either (`waterCard()`: its 8 glasses are a goal), and no lesson of the
+  day about food or drink (`food: true` in `LESSONS`, `lessonCard()`).
+  `atRisk()` decides: pregnant, maybe under 18 (born 18 years ago or later, or
+  no profile yet), a PAR-Q heart, chronic, medicine or supervised yes, or the
+  food card's own switches.
+- Frank is trained in sports nutrition; personal food plans come from him, not the app.
 
 ## Not settled by the evidence (don't present as fact)
 

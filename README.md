@@ -24,11 +24,13 @@ Two kinds of users:
 
 - **Onboarding** in three parts, like the reference app. Goal and focus: goal,
   body parts to focus on (shown on a muscle map), what you want most. Your body:
-  who demonstrates (the male or female coach), year of birth, height and weight
-  on sliding rulers with BMI, target weight with a realistic date range, the
-  PAR-Q+ health questions and pregnancy, sore spots. Fitness: how active you
-  are, a push-up test that sets the level, days a week, minutes, kit at home.
-  Then Frank, your name, the plan being built, and a summary.
+  who demonstrates (the male or female coach), year of birth, the PAR-Q+
+  health questions and pregnancy (each answered on purpose), height and weight
+  on sliding rulers with BMI, target weight with a realistic date range, sore
+  spots. No BMI verdict while growing up or pregnant, and no target weight for
+  anyone pregnant, maybe under 18 or with a medical condition. Fitness: how
+  active you are, a push-up test that sets the level, days a week, minutes, kit
+  at home. Then Frank, your name, the plan being built, and a summary.
 - **The plan**: 28 days in four weeks (Foundation, Build, Push, Peak) on a
   day grid, with this week's sessions listed. Every muscle is trained twice a
   week, the focus areas get extra work, and "Too easy / Just right / Too hard"
@@ -41,15 +43,16 @@ Two kinds of users:
 - **Every exercise** has a Video tab (a moving 3D coach, or Frank's own clip
   once he films it), a Muscle tab (an anatomy view that turns slowly, the
   muscles the move works in red), and a How-to tab (slow motion, or Frank
-  explaining it), plus steps, cues, common mistakes, "why it works" and easier
+  explaining it), plus steps, cues, common mistakes, "why it works" and other
   options. Drag the coach to turn it.
 - **The player**: get-ready countdown, timers or rep counts, rest with +20 s and
   skip, switching sides, pause, How-to mid-workout, voice coach, beeps,
   vibration, and the screen stays on.
 - **Today**: the week, active minutes, moving minutes toward the WHO 150
   (250 for fat loss), walks, water, and a simple food journal. If someone is
-  pregnant, under 18 or has a medical condition that affects food, the food
-  card only refers them to a dietitian or doctor.
+  pregnant, may be under 18 or has a medical condition, the food card only
+  refers them to a dietitian or doctor, and there is no water card (8 glasses
+  is a goal), no lesson about food or drink and no 250 minutes.
 - **Me**: workouts, minutes, streak, minutes per week, weight trend with the
   goal, a calendar, history, dumbbell weights, settings, health switches,
   membership, the science, delete my data.

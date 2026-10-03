@@ -54,17 +54,26 @@ const Y = +L.TODAY.slice(0, 4);                                  // the tests' y
 const question = (p) => p.evaluate(() => { const q = document.querySelector('.ob-q, .part'); return q ? q.innerText.replace(/\s+/g, ' ').trim() : ''; });
 const next = (p) => app.tap(p, '.ob-cta [data-act="ob-next"]');
 const weights = (kg) => [{ date: L.isoDay(-7), kg: kg + 1 }, { date: L.TODAY, kg }];
-// Me > Edit, then the saved answer on every step to "Build my plan". Returns the steps it showed and the BMI box
+// the health questions on the health step with no answer (neither button pressed)
+const openHealth = (p) => p.evaluate(() => WBF.PARQ.map((q) => q[0]).concat(['pregnant'])
+  .filter((k) => !document.querySelector('[data-act="ob-health"][data-k="' + k + '"][aria-pressed="true"]')));
+// Me > Edit, then the saved answer on every step to "Build my plan". A health question the profile never answered
+// (older versions saved only the questions tapped) waits for an answer: it gets No. Returns the steps it showed, the
+// questions it found open and the BMI box
 async function editThrough(p) {
   await app.tap(p, '.tab[data-tab="me"]');
   await app.tap(p, '[data-act="ob-edit"]');
   const seen = [];
-  let bmi = null;
+  let bmi = null, open = null;
   for (let i = 0; i < 30; i++) {
     const q = await question(p);
     seen.push(q);
     if (/current weight/i.test(q)) bmi = await p.locator('#bmi-box').innerText();
-    if (await p.locator('[data-act="ob-build"]').count()) { await app.tap(p, '[data-act="ob-build"]'); return { seen, bmi }; }
+    if (/Before you/i.test(q)) {
+      open = await openHealth(p);
+      for (const k of open) await app.tap(p, '[data-act="ob-health"][data-k="' + k + '"][data-v="0"]');
+    }
+    if (await p.locator('[data-act="ob-build"]').count()) { await app.tap(p, '[data-act="ob-build"]'); return { seen, bmi, open }; }
     if (await p.locator('.ob-cta [data-act="ob-next"]').count()) await next(p);
     else await app.tap(p, '[data-act="ob-pick"][aria-pressed="true"]');
   }
@@ -73,7 +82,7 @@ async function editThrough(p) {
 
 module.exports = {
   name: 'safety',
-  about: 'no diet advice or weight target when pregnant, maybe under 18 or with a medical condition (onboarding, Edit, Me, Today, older saved data); every health question answered on purpose; pregnancy, PAR-Q, 60+ and sore-spot rules in every plan and in the sheet\'s other options; no fake social proof',
+  about: 'no diet advice, food or drink lesson, water goal or weight target when pregnant, maybe under 18 or with a medical condition (onboarding, Edit, Me, Today, Plan, older saved data); every health question answered on purpose, in Edit too; pregnancy, PAR-Q, 60+ and sore-spot rules in every plan and in the sheet\'s other options; no fake social proof',
   async run(t) {
     await t.flow('food card', async () => {
       const adult = await t.page({ state: L.member() });
@@ -131,6 +140,31 @@ module.exports = {
       t.check(f.refers && !f.tracker && !f.habits, 'no profile (Look around first): the food card gives the journal or diet habits');
       t.has(await app.text(p), 'The food journal comes with your plan', 'food card without a profile');
       await t.look(p, 'today without a profile');
+    });
+
+    await t.flow('food and drink: no lesson or water goal when at risk', async () => {
+      // on the 22nd the lesson of the day is "Start the day with a full glass of water." for anyone it may go to
+      const day = L.isoDay(8), at = { now: L.NOW + 8 * 864e5, threeD: false };
+      const foodLesson = /full glass of water|protein in every meal/i;
+      const c = await t.page(Object.assign({ state: L.member() }, at));
+      await app.tap(c, '.tab[data-tab="today"]');
+      t.has(await c.locator('.lesson .note').innerText(), 'full glass of water', 'control: an adult with no health yes, ' + day + ': the lesson of the day');
+      t.equal(await c.locator('[data-act="water"]').count(), 8, 'control: an adult with no health yes: glasses on the water card');
+      await c.context().close();
+      const who = [['pregnant', L.member({ sex: 'f', health: { pregnant: true } })], ['under 18', L.member({ birthYear: Y - 15 })],
+        ['PAR-Q chronic yes', L.member({ health: { chronic: true } })], ['the medical switch', L.member({}, { flags: { manual: { medical: true } } })], ['no profile', null]];
+      for (const [label, st] of who) {
+        const p = await t.page(Object.assign(st ? { state: st } : {}, at));
+        if (!st) await app.tap(p, '[data-act="browse"]');
+        for (const tb of ['today', 'plan']) {
+          await app.tap(p, '.tab[data-tab="' + tb + '"]');
+          const lesson = await p.locator('.lesson .note').innerText().catch(() => '');
+          t.lacks(lesson, foodLesson, label + ', ' + day + ': ' + tb + ': the lesson of the day');
+          t.check(/\w/.test(lesson), label + ', ' + day + ': ' + tb + ': no lesson of the day at all');
+          if (tb === 'today') t.equal(await p.locator('[data-act="water"]').count(), 0, label + ': glasses on the water card (8 is a drinking goal)');
+        }
+        await p.context().close();
+      }
     });
 
     await t.flow('under 18: onboarding gives no weight target or food advice', async () => {
@@ -244,8 +278,11 @@ module.exports = {
       const e = await editThrough(p);
       t.check(!e.seen.some((q) => /target/i.test(q)), () => 'Edit shows the target weight to a pregnant member: ' + e.seen.join(' › '));
       t.equal((e.bmi || '').trim(), '', 'weight step BMI box, pregnant');
+      // saved by an older version, which kept only the yes: Edit leaves the other seven open, never answered for her
+      t.equal([(e.open || []).length, (e.open || []).includes('pregnant')], [7, false], 'Edit: health questions open [how many, pregnancy among them]');
       await app.waitTitle(p, 'Plan');
-      t.equal((await app.stored(p)).profile.targetKg, null, 'saved target weight after an Edit, pregnant');
+      const pr = (await app.stored(p)).profile;
+      t.equal([pr.targetKg, pr.health.pregnant], [null, true], 'saved after an Edit, pregnant [target weight, pregnancy answer]');
       const f = await foodRefers(p);
       t.check(f.refers && !f.tracker && !f.habits, 'pregnant after an Edit: the food card gives the journal or diet habits');
       t.equal(await flagSwitch(p, 'pregnant'), 'on, locked', 'the "Pregnant or breastfeeding" switch');
@@ -266,8 +303,10 @@ module.exports = {
       t.check(!e.seen.some((q) => /target/i.test(q)), () => 'Edit shows the target weight with a PAR-Q chronic yes: ' + e.seen.join(' › '));
       t.has(e.bmi || '', 'Ask your doctor', 'weight step BMI box, PAR-Q chronic yes');
       t.lacks(e.bmi || '', 'your food', 'weight step BMI box, PAR-Q chronic yes');
+      t.equal([(e.open || []).length, (e.open || []).includes('chronic')], [7, false], 'Edit: health questions open [how many, chronic among them]');
       await app.waitTitle(p, 'Plan');
-      t.equal((await app.stored(p)).profile.targetKg, null, 'saved target weight after an Edit, PAR-Q chronic yes');
+      const pr = (await app.stored(p)).profile;
+      t.equal([pr.targetKg, pr.health.chronic], [null, true], 'saved after an Edit, PAR-Q chronic yes [target weight, chronic answer]');
       // control: the same person without the yes gets the journal, the target and the food advice back
       const c = await t.page({ state: L.member({ goal: 'fat', kg: 95, targetKg: 85 }, { weights: weights(95) }) });
       t.check((await foodRefers(c)).tracker, 'control: an adult with no health yes should get the food journal');
@@ -313,6 +352,7 @@ module.exports = {
         await p.evaluate((e) => WBF.app.sheet(e), id);
         t.equal(await p.locator('#overlay [data-act="ex"][data-id="' + out + '"]').count(), 0, label + ': ' + id + ' offers ' + out);
         await t.look(p, 'sheet options, ' + label);
+        await p.context().close();                     // every sheet drew a coach: let the next phone load on its own
       }
       // control: with nothing ruled out, Squat to a target offers Squat
       const c = await t.page({ state: L.member() });

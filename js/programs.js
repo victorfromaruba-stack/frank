@@ -470,6 +470,8 @@
   }
 
   // ---- Lessons: one short teaching line a day ----------------------------------
+  // { t, food: true }: about food or drink, so left out for anyone pregnant, maybe under 18 or with a medical
+  // condition (lessonCard in js/app.js), like the food journal
   var LESSONS = [
     'Breathe out on the hard part of every rep. A firm breath out braces your trunk.',
     'Your hips are the engine. Most lifts go better when the movement starts there.',
@@ -479,8 +481,8 @@
     'Lower slowly. Two to three seconds on the way down builds control.',
     'Sleep is part of training. Muscle repairs at night, not during the session.',
     'A ten-minute walk after a meal is one of the simplest habits there is.',
-    'Start the day with a full glass of water.',
-    'Some protein in every meal helps your body recover from the work you do here.',
+    { t: 'Start the day with a full glass of water.', food: true },
+    { t: 'Some protein in every meal helps your body recover from the work you do here.', food: true },
     'Consistency beats intensity. Three sessions a week for a year beats seven for a month.',
     'On one-leg moves, start with your weaker side.',
     'Soft knees, not locked knees. Locking a joint hands the load to the ligaments.',

@@ -15,7 +15,7 @@
           { text: 'From 65: add balance and strength work on at least three days a week.', src: [1] },
           { text: 'Every bout counts, however short. Short bursts of vigorous effort during the day are linked to lower mortality, though those studies are observational.', src: [1, 34] }
         ],
-        app: 'The moving-minutes card counts your workouts and walks toward 150 minutes a week (250 if you want to lose fat). Plans train every muscle at least twice a week.' },
+        app: 'The moving-minutes card counts your workouts and walks toward 150 minutes a week, or 250 if you want to lose fat. If you\'re pregnant, may be under 18 or have a medical condition, it stays at 150. Plans train every muscle at least twice a week.' },
       { title: 'How much strength work',
         rules: [
           { text: 'Any resistance training beats none. Train each major muscle at least twice a week.', src: [5, 6] },
@@ -53,7 +53,7 @@
           { text: 'A realistic pace is about 0.5 to 1% of body weight a week; slower keeps more muscle. Around 1.6 g of protein per kg a day helps keep it.', src: [24, 25] },
           { text: 'The "7,700 kcal is a kilo" rule overstates long-term loss.', src: [36] }
         ],
-        app: 'Fat-loss plans keep at least two strength days and at most two interval days, and count walks toward 250 minutes. Target-weight dates use 0.5 to 1% a week.' },
+        app: 'Fat-loss plans keep at least two strength days and at most two interval days, and count walks toward 250 minutes. Target-weight dates use 0.5 to 1% a week. If you\'re pregnant, may be under 18 or have a medical condition, there is no target weight and no 250-minute goal.' },
       { title: 'Balance and getting older',
         rules: [
           { text: 'Exercise cuts falls in older adults by about a quarter; balance plus strength work by about a third. Walking alone doesn\'t prevent falls.', src: [26] },
