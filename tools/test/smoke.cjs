@@ -5,7 +5,7 @@ const { app } = L;
 
 module.exports = {
   name: 'smoke',
-  about: 'every tab, the exercise sheet, a workout, the player starts, logging walks, water, meals and weight, delete my data, other options in the sheet, Back after a tab switch, the activity slider, the Personal prototype',
+  about: 'every tab, the exercise sheet, a workout, the player starts, logging walks, water, meals and weight, delete my data, a phone that can\'t save, other options in the sheet, Back after a tab switch, the activity slider, the Personal prototype',
   async run(t) {
     await t.flow('first visit', async () => {
       const p = await t.page();
@@ -138,6 +138,39 @@ module.exports = {
       await app.waitTitle(p, 'Wellness by Frank');
       const left = await p.evaluate((k) => localStorage.getItem(k), L.KEY);
       t.check(!left || !JSON.parse(left).profile, 'a profile is still stored after "Delete everything"');
+    });
+
+    await t.flow('storage full: the phone says so', async () => {
+      // every save refused (a full phone, or storage blocked in private browsing): the app says so once, Me keeps
+      // saying it, and nothing claims "Saved"
+      const fail = "This phone isn't saving your progress. Storage is full or blocked.";
+      const p = await t.page({ state: L.member(), speed: 50 });
+      await p.evaluate(() => { Storage.prototype.setItem = function () { throw new DOMException('The quota has been exceeded.', 'QuotaExceededError'); }; });
+      await app.tap(p, '.tab[data-tab="today"]');
+      await app.tap(p, '[data-act="water"][data-n="2"]');
+      t.equal(await app.toast(p), fail, 'toast after a save that failed');
+      await app.tap(p, '[data-act="walk"][data-m="10"]');
+      t.equal((await app.toasts(p)).filter((x) => x === fail).length, 1, 'warnings after two saves that failed (the first one only)');
+      await app.tap(p, '.tab[data-tab="me"]');
+      t.equal(await p.locator('#save-fail').innerText().catch(() => 'nothing'), fail, 'Me after a save that failed');
+      await p.fill('#w-in', '79');
+      await p.press('#w-in', 'Enter');
+      await p.waitForTimeout(150);
+      t.equal((await app.toasts(p)).filter((x) => x === 'Logged').length, 0, '"Logged" toasts after a weight that could not be saved');
+      await t.look(p, 'me when nothing can be saved');
+      t.step('a workout ended early');
+      await app.tap(p, '.tab[data-tab="plan"]');
+      await app.tap(p, '[data-act="start-day"]');
+      await app.waitTitle(p, 'Workout');
+      // the countdowns run 50 times faster: a move with reps waits for Done, a timed one ends by itself
+      await p.waitForFunction(() => document.querySelector('[data-act="pl-done"]') || document.querySelectorAll('.pl-segs i.on').length > 0);
+      if (await p.locator('[data-act="pl-done"]').count()) await app.tap(p, '[data-act="pl-done"]');
+      await p.waitForFunction(() => document.querySelectorAll('.pl-segs i.on').length > 0);
+      await app.tap(p, '[data-act="quit"]');
+      await app.tap(p, '[data-act="modal-yes"]');
+      await app.waitTitle(p, 'Workout complete');
+      const label = await p.locator('#app .label').first().innerText();
+      t.check(/^\d+ of \d+ moves$/i.test(label.trim()), 'finish screen when nothing could be saved: "' + label + '" (expected "N of M moves", no "Saved")');
     });
 
     await t.flow('other options in the sheet', async () => {

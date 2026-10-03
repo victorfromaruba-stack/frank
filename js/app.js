@@ -121,7 +121,41 @@
     return d;
   }
   var S = load();
-  function save() { try { W.localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* storage blocked */ } }
+  // The phone's storage can be full, or blocked (private browsing): save() says whether it worked. The first time it
+  // doesn't, a toast says so (after the one the action shows); Me says it for as long as it lasts.
+  var SAVE_FAIL = 'This phone isn\'t saving your progress. Storage is full or blocked.';
+  var savedOk = true, saveWarned = false;
+  function save() {
+    try { W.localStorage.setItem(KEY, JSON.stringify(S)); savedOk = true; } catch (e) { savedOk = false; }
+    if (!savedOk && !saveWarned) { saveWarned = true; setTimeout(function () { toast(SAVE_FAIL); }, 0); }
+    return savedOk;
+  }
+  // Other windows share the phone's copy: the installed app, a browser tab, WhatsApp's browser. Before this window
+  // saves over what one of them saved, it takes it in (on their storage events; a workout at its finish). The newer
+  // side is the base: the phone's copy, unless this window couldn't save what it holds. What only the other side has
+  // is added: sessions by id, Frank's sessions by i, weights by date, the ticks of the sessions added, and access.
+  function catchUp() {
+    var raw = null;
+    try { raw = W.localStorage.getItem(KEY); } catch (e) { /* blocked: nothing to take in */ }
+    if (!raw) return;
+    var got = load(), base = savedOk ? got : S, more = savedOk ? S : got;
+    var missing = function (list, key) {
+      var have = {};
+      base[list].forEach(function (x) { have[x[key]] = 1; });
+      return (more[list] || []).filter(function (x) { return x && !have[x[key]]; });
+    };
+    var order = function (key) { return function (a, b) { var x = a[key] || '', y = b[key] || ''; return x < y ? -1 : x > y ? 1 : 0; }; };
+    var ses = missing('sessions', 'id'), inb = missing('inbox', 'i'), wts = missing('weights', 'date');
+    if (ses.length) base.sessions = base.sessions.concat(ses).sort(order('at'));
+    if (inb.length) base.inbox = base.inbox.concat(inb);
+    if (wts.length) base.weights = base.weights.concat(wts).sort(order('date'));
+    ses.forEach(function (r) {
+      if (r.day && more.done[r.day] === r.id && !base.done[r.day]) base.done[r.day] = r.id;
+      if (r.coach && more.inboxDone[r.coach] === r.id && !base.inboxDone[r.coach]) base.inboxDone[r.coach] = r.id;
+    });
+    if (more.access) base.access = Object.assign({}, more.access, base.access || {});
+    S = base;
+  }
 
   // units
   function kgShow(kg) {
@@ -426,6 +460,24 @@
     mountFigures(app);
     W.scrollTo(0, top ? 0 : (c.scroll || 0));
   }
+  // The screen drawn again where it is, for a change the person didn't make on it (another window saved): what they
+  // are typing, the cursor and the scroll stay.
+  function refresh() {
+    var typed = $$('input[id], textarea[id]', app).filter(function (el) { return el.type !== 'range'; }).map(function (el) {
+      var o = { id: el.id, v: el.value, on: el === document.activeElement, a: null, b: null };
+      try { o.a = el.selectionStart; o.b = el.selectionEnd; } catch (e) { /* this kind has no cursor */ }
+      return o;
+    });
+    var y = W.scrollY;
+    render(false);
+    typed.forEach(function (o) {
+      var el = document.getElementById(o.id);
+      if (!el) return;
+      if (el.value !== o.v) { el.value = o.v; el.dispatchEvent(new Event('input', { bubbles: true })); }   // a search shows its results again
+      if (o.on) try { el.focus({ preventScroll: true }); if (o.a != null) el.setSelectionRange(o.a, o.b); } catch (e) { /* ignore */ }
+    });
+    W.scrollTo(0, y);
+  }
 
   function toast(text) {
     toastEl.textContent = text;
@@ -639,9 +691,11 @@
       // a saved profile has answered them all: a question left out was a No
       d.health = d.health || {};
       HQ.forEach(function (k) { d.health[k] = !!d.health[k]; });
+      // the weight step starts from the last weight logged, not the one from the first onboarding
+      d.kg = lastWeight() || d.kg;
       return d;
     }
-    return { goal: null, focus: [], want: [], sex: null, birthYear: null, cm: null, kg: null, targetKg: null, health: {}, injuries: [],
+    return { goal: null, focus: [], want: [], sex: null, birthYear: null, cm: null, kg: lastWeight(), targetKg: null, health: {}, injuries: [],
              active: 1, push: null, level: null, days: 3, minutes: 20, kit: WBF.DEFAULT_KIT.slice(), name: '' };
   }
   function obNext(from) {
@@ -1040,7 +1094,9 @@
     if (!d) return;
     if (id === 'h') { d.cm = S.settings.hunits === 'ft' ? v * 2.54 : v; }
     if (id === 'w') {
-      d.kg = S.settings.units === 'lb' ? v / 2.20462 : v;
+      // the ruler shows the weight at its nearest mark: the weight changes only when the ruler moves off that mark
+      var mark = d.kg && (S.settings.units === 'lb' ? Math.round(d.kg * 2.20462) : Math.round(d.kg * 2) / 2);
+      if (mark !== v) d.kg = S.settings.units === 'lb' ? v / 2.20462 : v;
       var bx = $('#bmi-box'); if (bx) bx.innerHTML = bmiBox(d.kg, d.cm, d);
     }
     if (id === 't') {
@@ -1495,6 +1551,7 @@
     if (!PL) return;
     clearInterval(timer); timer = null;
     SND.awake(false);
+    catchUp();                // what other windows saved while the workout ran
     var s = PL.s, didN = Object.keys(PL.did).length;
     var mainTotal = s.steps.filter(function (x) { return x.block === 'main'; }).length;
     var mainDid = s.steps.filter(function (x, i) { return x.block === 'main' && PL.did[i]; }).length;
@@ -1541,7 +1598,7 @@
       }).join('');
       var full = rec.moves >= rec.total;
       return '<div class="screen bare"><div class="rowx" style="justify-content:center;padding-top:10px"><div class="badge" aria-hidden="true">' + ic('trophy') + '</div></div>' +
-        '<div class="stack tight" style="text-align:center"><p class="label">' + (full ? 'Workout complete' : 'Saved: ' + rec.moves + ' of ' + rec.total + ' moves') + '</p><h1 class="display xl">' + esc(rec.title) + '</h1>' +
+        '<div class="stack tight" style="text-align:center"><p class="label">' + (full ? 'Workout complete' : (savedOk ? 'Saved: ' : '') + rec.moves + ' of ' + rec.total + ' moves') + '</p><h1 class="display xl">' + esc(rec.title) + '</h1>' +
         (rec.day ? '<p class="meta">Day ' + rec.day + (S.done[rec.day] === rec.id ? ' is ticked off your plan.' : ' stays open: finish half the main moves to tick it off.') + '</p>' : '') +
         (rec.coach ? '<p class="meta">' + (S.inboxDone[rec.coach] === rec.id ? 'Ticked off. Frank\'s next session will show up on your plan.' : 'Finish half the main moves to tick it off.') + '</p>' : '') + '</div>' +
         '<div class="stats"><div><b>' + mmss(rec.sec) + '</b><span>Time</span></div><div><b>' + rec.moves + '</b><span>Moves</span></div>' +
@@ -1562,7 +1619,7 @@
           if (!rec) return;
           var kg = toKg(inp.value);
           if (kg) rec.loads[inp.getAttribute('data-load')] = kg; else delete rec.loads[inp.getAttribute('data-load')];
-          save(); toast('Saved');
+          if (save()) toast('Saved');
         });
       });
     }
@@ -1798,7 +1855,7 @@
       membershipCard() + install +
       '<section class="card"><p class="label">The science</p><p class="small">How the plans follow the research on strength, cardio, balance and safety, with every source.</p>' +
       '<button class="btn two block" data-act="science">Why the plans work</button></section>' +
-      '<section class="card quiet"><p class="label">Your data</p><p class="small">Everything you enter stays on this phone. Nothing is sent to Frank or anyone else. Clearing your browser data clears it too.</p>' +
+      '<section class="card quiet"><p class="label">Your data</p>' + (savedOk ? '' : '<p class="warnbox" id="save-fail">' + esc(SAVE_FAIL) + '</p>') + '<p class="small">Everything you enter stays on this phone. Nothing is sent to Frank or anyone else. Clearing your browser data clears it too.</p>' +
       '<button class="link" data-act="reset">Delete my data and start over</button></section>';
   }
   function membershipCard() {
@@ -1998,7 +2055,11 @@
     var n = $('#ob-name');
     if (n && draft) draft.name = n.value.trim().slice(0, 40);
   }
-  function finishProfile() {
+  // The draft becomes the profile; then(updated) runs once it is saved (updated: the sessions change).
+  // A new goal or new training days make a new plan: with days ticked off, the person chooses between a fresh
+  // 28 days and keeping their progress (the new plan then starts with the next session). Level, minutes, kit,
+  // sore spots and health only change the sessions to come.
+  function finishProfile(then) {
     readObInputs();
     var old = S.profile, d = draft;
     d.level = d.level || levelFromTest(d);
@@ -2006,18 +2067,30 @@
     d.minutes = +d.minutes || 20;
     if (!d.focus || !d.focus.length) d.focus = ['full'];
     if (atRisk(d)) d.targetKg = null;                 // no weight target for anyone at risk
-    var changed = !old || ['goal', 'level', 'days', 'minutes'].some(function (k) { return String(old[k]) !== String(d[k]); }) ||
-      String(old.kit) !== String(d.kit) || String(old.injuries) !== String(d.injuries) || healthSig(old.health) !== healthSig(d.health);
-    if (changed) { d.start = iso(); d.round = old ? (old.round || 1) : 1; S.done = {}; }
-    if (d.kg && (!S.weights.length || Math.abs(S.weights[S.weights.length - 1].kg - d.kg) > 0.01)) {
-      S.weights = S.weights.filter(function (w) { return w.date !== iso(); });
-      S.weights.push({ date: iso(), kg: Math.round(d.kg * 10) / 10 });
-    }
+    var set = function (a) { return (a || []).slice().sort().join(); };
+    var renew = !old || old.goal !== d.goal || +old.days !== d.days;
+    var updated = renew || String(old.level) !== String(d.level) || +old.minutes !== d.minutes || set(old.kit) !== set(d.kit) ||
+      set(old.injuries) !== set(d.injuries) || healthSig(old.health) !== healthSig(d.health);
     delete d.edit; delete d.soreDone; delete d.only;
-    S.profile = d;
-    save();
-    setCoachFigure();
-    return changed;
+    function commit(fresh) {
+      if (fresh) { d.start = iso(); d.round = old ? (old.round || 1) : 1; S.done = {}; }
+      // the weight is logged for today when the ruler moved from the last one (or none is logged yet), but never
+      // over a weight the person logged by hand today: the ones the plan logs say from: 'plan'
+      var w0 = lastWeight(), t = iso();
+      if (d.kg && (w0 == null || Math.abs(d.kg - w0) > 0.05) && !S.weights.some(function (w) { return w.date === t && w.from !== 'plan'; })) {
+        S.weights = S.weights.filter(function (w) { return w.date !== t; });
+        S.weights.push({ date: t, kg: Math.round(d.kg * 10) / 10, from: 'plan' });
+      }
+      S.profile = d;
+      save();
+      setCoachFigure();
+      if (then) then(updated);
+    }
+    if (renew && old && Object.keys(S.done).length) {
+      // the answer runs after the box has closed, also when the phone's Back closed it (popstate puts its entry back first)
+      var answer = function (fresh) { return function () { setTimeout(function () { commit(fresh); }, 0); }; };
+      confirmBox('Restart your 28 days?', 'Restart', answer(true), { no: 'Keep my progress', onNo: answer(false) });
+    } else commit(renew);
   }
 
   var deferredInstall = null;
@@ -2060,14 +2133,14 @@
         if (!healthDone(draft)) return;                         // every question needs an answer (Next is off until then)
         draft.health.confirmed = iso();
       }
-      if (draft.only) { if (finishProfile()) toast('Your plan was updated'); back(); return; }
+      if (draft.only) { finishProfile(function (updated) { if (updated) toast('Your plan was updated'); back(); }); return; }
       obGo(obNext(id));
     },
     'ob-pick': function (el) {
       var k = el.getAttribute('data-k'), v = el.getAttribute('data-v');
       draft[k] = v;
       if (k === 'sex') setCoachFigure();
-      if (draft.only) { finishProfile(); back(); return; }
+      if (draft.only) { finishProfile(function () { back(); }); return; }
       obGo(obNext(cur().params.step));
     },
     'ob-pick-stay': function (el) {
@@ -2097,16 +2170,20 @@
     'ob-level': function (el) { draft.level = el.getAttribute('data-v'); var y = W.scrollY; obGo('pushups'); W.scrollTo(0, y); },
     'ob-build': function () {
       readObInputs();
-      if (draft.edit) { if (finishProfile()) toast('Your plan was updated'); else toast('Saved'); tab('plan'); return; }
+      if (draft.edit) {
+        finishProfile(function (updated) { if (updated) toast('Your plan was updated'); else if (savedOk) toast('Saved'); tab('plan'); });
+        return;
+      }
       obGo('build');
     },
     'ob-finish': function () {
-      finishProfile();
-      var st = status();
-      if (st === 'client' || st === 'member' || st === 'trial') { tab('plan'); return; }
-      stack = [{ name: 'plan', params: {} }, { name: 'pay', params: { fromOb: true } }];
-      pushState();
-      render(true);
+      finishProfile(function () {
+        var st = status();
+        if (st === 'client' || st === 'member' || st === 'trial') { tab('plan'); return; }
+        stack = [{ name: 'plan', params: {} }, { name: 'pay', params: { fromOb: true } }];
+        pushState();
+        render(true);
+      });
     },
     units: function (el) {
       S.settings.units = el.getAttribute('data-v'); save();
@@ -2175,7 +2252,7 @@
     'c-set': function (el) { var k = el.getAttribute('data-k'), v = el.getAttribute('data-v'); cdraft[k] = k === 'rs' ? +v : v; render(false); },
     'c-rounds': function (el) { cdraft.r = Math.max(1, Math.min(8, cdraft.r + +el.getAttribute('data-d'))); render(false); },
     'c-toggle': function (el) { var k = el.getAttribute('data-k'); cdraft[k] = cdraft[k] ? 0 : 1; el.setAttribute('aria-checked', String(!!cdraft[k])); },
-    'c-save': function () { if (saveDraft()) toast('Saved'); },
+    'c-save': function () { if (saveDraft() && savedOk) toast('Saved'); },
     'c-send': function () { var sp = saveDraft(); if (sp) sendSheet(sp); },
     'next-round': function () {
       S.profile.round = (S.profile.round || 1) + 1; S.profile.start = iso(); S.done = {}; save();
@@ -2325,7 +2402,7 @@
       S.weights = S.weights.filter(function (w) { return w.date !== iso(); });
       S.weights.push({ date: iso(), kg: Math.round(kg * 10) / 10 });
       S.weights.sort(function (a, b) { return a.date < b.date ? -1 : 1; });
-      save(); render(false); toast('Logged');
+      var ok = save(); render(false); if (ok) toast('Logged');
     }
   });
   document.addEventListener('keydown', function (e) {
@@ -2341,6 +2418,13 @@
   document.addEventListener('visibilitychange', function () {
     if (document.hidden && PL && !PL.paused) { PL.paused = true; SND.hush(); paintPlayer(); }
   });
+  // another window saved (catchUp): take it in and show it. A workout runs on undisturbed and catches up at its finish
+  W.addEventListener('storage', function (e) {
+    if (e.key !== KEY && e.key !== null) return;
+    if (cur().name === 'player') return;
+    if (e.newValue == null) S = load(); else catchUp();       // deleted there: deleted here too
+    refresh();
+  });
   $$('.tab', tabsEl).forEach(function (t) { t.addEventListener('click', function () { tab(t.getAttribute('data-tab')); }); });
 
   // offline support when the app is hosted on its own
@@ -2349,11 +2433,22 @@
   }
 
   if (useHistory) { try { W.history.replaceState({ wbf: 1 }, ''); } catch (e) { useHistory = false; } }
+  // The 3D coach is in (or the other coach loaded): the figures swap in place. A full render would wipe what the
+  // person is typing (a client code, their name) and close the keyboard.
   function upgrade3d() {
     if (!WBF.fig3d || !WBF.fig3d.init()) return;
     setCoachFigure();
-    if (cur().name === 'player') paintPlayer(); else render(false);
-    if (!overlay.hidden) mountFigures(overlay);
+    var swap = function (root) {
+      $$('[data-fig]', root).forEach(function (el) { if (el._fig && el._fig.pause) el._fig.pause(); el.textContent = ''; });
+      mountFigures(root);
+    };
+    if (cur().name === 'player') paintPlayer();
+    else {
+      // the body-part buttons (Workouts) show muscle maps once the coach is in
+      $$('.body-btn .bi', app).forEach(function (bi) { var b = WBF.BODY_BY_ID[bi.parentNode.getAttribute('data-v')]; if (b) bi.outerHTML = bodyIcon(b); });
+      swap(app);
+    }
+    if (!overlay.hidden) swap(overlay);
   }
   W.addEventListener('wbf-three', upgrade3d);
   function fromLink() {

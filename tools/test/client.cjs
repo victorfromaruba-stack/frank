@@ -5,10 +5,19 @@ const L = require('./lib.cjs');
 const { app } = L;
 
 const submit = (p) => app.tap(p, 'form[data-form="join"] button[type="submit"]', { wait: 500 });
+// a second window on the same phone (the installed app, a browser tab, WhatsApp's browser share the storage) that
+// opens Frank's link; the first window stays the one a failure shows
+async function otherWindow(t, a, sp) {
+  const b = t.watch(await a.context().newPage());
+  await b.goto(a.srv.home + 'index.html#frank.' + L.pack(sp));
+  await app.waitHeading(b, sp.t);
+  t.lastPage = a;
+  return b;
+}
 
 module.exports = {
   name: 'client',
-  about: 'client codes, session links (opened and pasted, broken and hostile ones), Coach tools: build, send, open the link on a fresh phone, Back',
+  about: 'client codes (also typed while a coach loads), session links (opened and pasted, broken and hostile ones, opened in a second window), Coach tools: build, send, open the link on a fresh phone, Back',
   async run(t) {
     await t.flow('client codes', async () => {
       const p = await t.page();
@@ -26,6 +35,23 @@ module.exports = {
       t.check((((await app.stored(p)) || {}).access || {}).client, 'a client code typed with capitals and spaces gave no access');
       t.has(await app.toast(p), 'The whole app is open to you', 'code accepted');
       await app.waitTitle(p, 'Your plan');                    // no profile yet: onboarding starts
+    });
+
+    await t.flow('code typed while a coach loads', async () => {
+      // 'wbf-three' fires each time a coach finishes loading: what the client is typing stays, and the keyboard with it
+      const p = await t.page();
+      await app.tap(p, '[data-act="join"]');
+      await app.waitTitle(p, "Frank's clients");
+      await app.addCode(p);
+      await p.locator('#join-in').click();
+      for (const ch of L.QA_CODE) {
+        await p.keyboard.type(ch, { delay: 30 });
+        await p.evaluate(() => window.dispatchEvent(new Event('wbf-three')));
+      }
+      t.equal(await p.locator('#join-in').inputValue(), L.QA_CODE, 'code typed while a coach loads');
+      t.equal(await p.evaluate(() => document.activeElement && document.activeElement.id), 'join-in', 'keyboard focus after a coach load');
+      await submit(p);
+      t.check((((await app.stored(p)) || {}).access || {}).client, 'the code typed while a coach loads gave no access');
     });
 
     await t.flow('code after the trial ended', async () => {
@@ -70,6 +96,41 @@ module.exports = {
       t.has(inbox, 'Lower body, week 2', 'inbox');
       t.has(inbox, 'Upper body, week 2', 'inbox');
       await t.look(p, 'sessions from Frank');
+    });
+
+    await t.flow('two windows: a link opened in the other one stays', async () => {
+      const a = await t.page({ state: L.member() });
+      await otherWindow(t, a, L.spec({ i: 'qa-two', t: 'Lower body, week 2' }));
+      await app.waitText(a, 'Lower body, week 2');                // the first window shows it without a reload
+      await app.tap(a, '.tab[data-tab="today"]');
+      await app.tap(a, '[data-act="water"][data-n="2"]');
+      const s = await app.stored(a);
+      t.equal([s.inbox.map((x) => x.i), (s.access || {}).client, (s.food[L.TODAY] || {}).water], [['qa-two'], true, 2],
+        'saved after a water tap in the first window [sessions from Frank, client, water]');
+      await app.tap(a, '.tab[data-tab="plan"]');
+      t.has(await app.text(a), 'Lower body, week 2', 'plan in the first window');
+      await t.look(a, 'plan with a link from the other window');
+    });
+
+    await t.flow('two windows: a link opened during a workout in the other one stays', async () => {
+      // the workout runs on undisturbed; its finish takes in what the other window saved before it saves
+      const a = await t.page({ state: L.member(), speed: 50 });
+      await app.tap(a, '[data-act="start-day"]');
+      await app.waitTitle(a, 'Workout');
+      await otherWindow(t, a, L.spec({ i: 'qa-mid', t: 'Upper body, week 2' }));
+      t.equal(await app.title(a), 'Workout', 'the first window while the other opened the link');
+      // the countdowns run 50 times faster: a move with reps waits for Done, a timed one ends by itself
+      await a.waitForFunction(() => document.querySelector('[data-act="pl-done"]') || document.querySelectorAll('.pl-segs i.on').length > 0);
+      if (await a.locator('[data-act="pl-done"]').count()) await app.tap(a, '[data-act="pl-done"]');
+      await a.waitForFunction(() => document.querySelectorAll('.pl-segs i.on').length > 0);
+      await app.tap(a, '[data-act="quit"]');
+      await app.tap(a, '[data-act="modal-yes"]');
+      await app.waitTitle(a, 'Workout complete');
+      const s = await app.stored(a);
+      t.equal([s.inbox.map((x) => x.i), (s.access || {}).client, s.sessions.length], [['qa-mid'], true, 1], 'saved by the workout\'s finish [sessions from Frank, client, workouts]');
+      await app.tap(a, '.dock [data-act="tab"][data-tab="plan"]');
+      await app.waitTitle(a, 'Plan');
+      t.has(await app.text(a), 'Upper body, week 2', 'plan after the workout');
     });
 
     await t.flow('session link pasted', async () => {
