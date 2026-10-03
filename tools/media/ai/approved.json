@@ -1,0 +1,4 @@
+{
+  "about": "Takes approved for the app. tools/media/ai/approve.mjs adds them; process.mjs reads them. Each names its run and its sha256, so only that exact file is processed. To take one back, delete its entry.",
+  "approved": []
+}

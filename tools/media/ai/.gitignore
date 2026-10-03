@@ -1,0 +1,3 @@
+# Runs: raw takes, start poses, coach looks and review sheets. On GitHub they are the workflow artifact.
+# Commit only the picks (coaches/, keyframes/) and approved.json. The app files go in media/ (process.mjs).
+out/

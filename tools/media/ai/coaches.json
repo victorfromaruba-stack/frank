@@ -1,0 +1,19 @@
+{
+  "about": "The brief for the two made-up AI coaches and their studio (tools/media/ai/, .claude/skills/frank-coach-video/). Change the look here, then make new looks with the design step. Describe made-up people only: never a real person's name or photo (not Frank, not a client). Plain trainers: the model gets toes wrong more often than shoes.",
+  "studio": "a clean, bright, minimal photo studio: a plain off-white backdrop that curves smoothly into a light grey floor with a faint green-grey tint, with no corners, edges, windows, furniture or decorations in view",
+  "light": "soft, even, diffused light from the front and both sides, true-to-life colours, and a soft natural contact shadow on the floor under the person",
+  "coaches": {
+    "f": {
+      "label": "woman",
+      "person": "a made-up woman of about 30: fit but realistic, an everyday athletic build with natural muscle tone, not a fitness model; natural skin texture and no heavy make-up; dark brown hair tied back in a neat low ponytail; a calm, friendly, focused face",
+      "outfit": "a fitted short-sleeved training T-shirt in deep forest green (close to #104A2A), black training shorts to mid-thigh, and plain grey training shoes with white soles; no logos, no text, no jewellery",
+      "wears": "a deep forest-green T-shirt and black shorts"
+    },
+    "m": {
+      "label": "man",
+      "person": "a made-up man of about 35: fit but realistic, an everyday athletic build with natural muscle tone, not a bodybuilder; natural skin texture; short dark hair and a short, neat beard; a calm, friendly, focused face",
+      "outfit": "a fitted short-sleeved training T-shirt in deep forest green (close to #104A2A), black training shorts to just above the knee, and plain grey training shoes with white soles; no logos, no text, no jewellery",
+      "wears": "a deep forest-green T-shirt and black shorts"
+    }
+  }
+}

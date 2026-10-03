@@ -1,0 +1,9 @@
+{
+  "about": "Pilot, part 3: one 8 s clip per picked start pose, and the review sheet.",
+  "steps": ["clip", "review"],
+  "coaches": ["f", "m"],
+  "moves": ["squat", "push-up", "plank"],
+  "takes": 1,
+  "resolution": "720p",
+  "budget": 5
+}

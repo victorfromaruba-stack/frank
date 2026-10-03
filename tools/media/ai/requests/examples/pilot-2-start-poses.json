@@ -1,0 +1,8 @@
+{
+  "about": "Pilot, part 2: two start poses per move for each picked coach. Pick one per move and coach with pick.mjs start.",
+  "steps": ["keyframe"],
+  "coaches": ["f", "m"],
+  "moves": ["squat", "push-up", "plank"],
+  "candidates": 2,
+  "budget": 5
+}

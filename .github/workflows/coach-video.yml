@@ -1,0 +1,84 @@
+# AI exercise demos for Wellness by Frank: tools/media/ai/, how-to in .claude/skills/frank-coach-video/SKILL.md.
+# Runs the request files in tools/media/ai/requests/ that a push to the coach-video branch adds or changes, or one
+# request by hand (Actions > Coach video > Run workflow, on the coach-video branch). Never on app: app is the live site.
+# The key is the repository secret GEMINI_API_KEY; the scripts never print it. Each request prints its estimated cost
+# first and stops before going past its budget. What it makes (coach looks, start poses, raw takes, the review sheet)
+# is the run's artifact: nothing is committed, so the repo stays small.
+name: Coach video
+
+on:
+  push:
+    branches: [coach-video]
+    paths: ['tools/media/ai/requests/*.json']
+  workflow_dispatch:
+    inputs:
+      request:
+        description: 'Request file, like tools/media/ai/requests/pilot-1-coaches.json'
+        required: true
+        type: string
+      dry_run:
+        description: 'Dry run: write the request bodies only (no key needed, nothing spent)'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# one run at a time, so two pushes can't spend in parallel; a second one waits
+concurrency:
+  group: coach-video
+  cancel-in-progress: false
+
+jobs:
+  make:
+    # every branch but coach-video is refused, also for a run started by hand
+    if: github.ref == 'refs/heads/coach-video'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0              # to see which request files the push added or changed
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          package-manager-cache: false
+
+      # fails here, before anything is sent, when the key is missing or a request is over its budget
+      - name: Check the requests, the cost and the key
+        id: check
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          REQUEST: ${{ inputs.request }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: node tools/media/ai/batch.mjs --github --check
+
+      - name: Install ffmpeg (for the review sheet)
+        if: steps.check.outputs.ffmpeg == 'true'
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends ffmpeg
+
+      - name: Make the pictures and clips
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          REQUEST: ${{ inputs.request }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: node tools/media/ai/batch.mjs --github
+
+      # also after a failure: a clip Veo is still making has its operation name in there (fetch it within 2 days)
+      - name: Keep what was made (the artifact)
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: coach-video-${{ github.run_id }}-${{ github.run_attempt }}
+          path: tools/media/ai/out/
+          if-no-files-found: ignore
+          retention-days: 90          # approved takes are processed from here: keep them until then
