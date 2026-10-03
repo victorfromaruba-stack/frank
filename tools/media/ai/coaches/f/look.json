@@ -1,0 +1,22 @@
+{
+  "coach": "f",
+  "look": 1,
+  "run": "gh-37156327256-1-pilot-1-coaches",
+  "picked": "2026-10-03",
+  "by": "Victor",
+  "files": {
+    "45": {
+      "file": "45.jpg",
+      "sha256": "920bc8f5f77a0c52766f7191a54bf2d24d2ef9d7cd548cda69a644dbf35eb789"
+    },
+    "front": {
+      "file": "front.jpg",
+      "sha256": "77c832773d4746a353a57186dd98f0df23dc21280757cd7cebd5f68638264ed1"
+    },
+    "side": {
+      "file": "side.jpg",
+      "sha256": "7efc7f67ee51580ebf721d347b277f707505c9fc6fc48e96011837bbdbd28575"
+    }
+  },
+  "prompt": "A photorealistic full-length photo of a made-up woman of about 30: fit but realistic, an everyday athletic build with natural muscle tone, not a fitness model; natural skin texture and no heavy make-up; dark brown hair tied back in a neat low ponytail; a calm, friendly, focused face.\nClothes: a fitted short-sleeved training T-shirt in deep forest green (close to #104A2A), black training shorts to mid-thigh, and plain grey training shoes with white soles; no logos, no text, no jewellery.\nThey stand relaxed and upright in a neutral pose: arms loosely by the sides, feet hip-width apart, weight even, looking into the camera.\nCamera: straight from the front, level at hip height, about 3.5 metres away, with a natural 35 mm lens. The whole body is in the frame, with space above the head and below the feet.\nPlace: a clean, bright, minimal photo studio: a plain off-white backdrop that curves smoothly into a light grey floor with a faint green-grey tint, with no corners, edges, windows, furniture or decorations in view. Light: soft, even, diffused light from the front and both sides, true-to-life colours, and a soft natural contact shadow on the floor under the person.\nThis photo is the reference for a fitness app's demonstration coach, so the face, body and clothes are clear and sharp.\nIt must look like a real photo of a real person, not a 3D render, a game character or an illustration: natural skin, natural fabric folds, correct anatomy (two arms, two legs, five fingers on each hand, natural joints), and hands and feet in full, flat contact with the floor where they rest on it. No text, no logos, no watermark, no mirror, no other people."
+}
