@@ -36,7 +36,7 @@ function contactSheet(t) {
 
 module.exports = {
   name: 'screens',
-  about: 'a screenshot of every screen and main state at 390x844 (and an index.html contact sheet) for visual review',
+  about: 'a screenshot of every screen and main state at 390x844 (and an index.html contact sheet) for visual review, with an iPhone status bar, toasts, the BMI bar and long titles',
   timeout: 900,
   async run(t) {
     fs.rmSync(t.out, { recursive: true, force: true });
@@ -242,6 +242,43 @@ module.exports = {
       await p.evaluate(() => { for (let i = 0; i < 2; i++) navigator.serviceWorker.dispatchEvent(new Event('controllerchange')); });
       t.equal(await p.locator('#update-bar').count(), 1, 'update bars on Plan after a new version');
       await snap(p, 'plan with a new version', { full: false });
+    });
+
+    await t.flow('status bar, toasts, BMI bar, long titles', async () => {
+      // the light screens on an iPhone's home screen: a 47 px notch (Chromium has none), a dark band behind the clock
+      let p = await t.page();
+      await p.evaluate(() => document.documentElement.style.setProperty('--safe-t', '47px'));
+      await snap(p, 'welcome with an iPhone status bar', { full: false });
+      await app.tap(p, '[data-act="ob-start"]'); await app.tap(p, '.part .btn');
+      await snap(p, 'onboarding with an iPhone status bar', { full: false });
+      // toasts without the tab bar sit above the main button
+      p = await t.page();
+      await app.tap(p, '[data-act="join"]');
+      await app.addCode(p);
+      await p.fill('#join-in', L.QA_CODE);
+      await app.tap(p, 'form[data-form="join"] button[type="submit"]', { wait: 300 });
+      await snap(p, 'onboarding after a client code, with its toast', { full: false });
+      p = await t.page({ state: L.member() });
+      await go(p, 'workout', { day: 1 });
+      await app.tap(p, '[data-act="swap"]');
+      await app.tap(p, '#overlay [data-act="do-swap"]', { wait: 300 });
+      await snap(p, 'workout after a swap, with its toast', { full: false });
+      // BMI 27.2, Overweight: the marker in the yellow band, the numbers under the bar where the colours change
+      p = await t.page({ state: L.member({ cm: 170, kg: 78.6, targetKg: 78.6 }, { weights: [{ date: L.TODAY, kg: 78.6 }] }) });
+      await tab(p, 'me');
+      await snap(p, 'me with an overweight BMI', { full: false });
+      await app.tap(p, '[data-act="ob-edit"]');
+      await go(p, 'onboard', { step: 'weight' });
+      await snap(p, 'onboarding weight with an overweight BMI');
+      // a title Frank writes as one long Dutch word
+      const title = 'Bovenlichaamskrachttraining';
+      p = await t.page({ hash: 'frank.' + L.pack(L.spec({ i: 'long', t: title, c: 'Maximiliaan' })), speed: 50 });
+      await app.waitHeading(p, title);
+      await snap(p, 'session with a long Dutch title');
+      await app.tap(p, '[data-act="start-coach"]');
+      await app.waitTitle(p, 'Workout');
+      await app.runWorkout(p);
+      await snap(p, 'finish screen with a long Dutch title');
     });
 
     await t.flow('Edit and saving', async () => {

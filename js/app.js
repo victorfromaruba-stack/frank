@@ -70,7 +70,7 @@
     bars: '<path d="M6 19v-5M12 19V9M18 19V5"/>',
     target: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".8" fill="currentColor"/>',
     db: '<path d="M7 12h10"/><rect x="3" y="8.5" width="4" height="7" rx="1.2"/><rect x="17" y="8.5" width="4" height="7" rx="1.2"/>',
-    gear: '<circle cx="12" cy="12" r="3"/><path d="M12 3.5v2.2M12 18.3v2.2M3.5 12h2.2M18.3 12h2.2M6 6l1.6 1.6M16.4 16.4 18 18M6 18l1.6-1.6M16.4 7.6 18 6"/>',
+    sliders: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
     search: '<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/>',
     bolt: '<path d="M13 3 5 13.5h6L10 21l8-10.5h-6z"/>',
     moon: '<path d="M19 14.5A7.5 7.5 0 1 1 9.5 5a6 6 0 0 0 9.5 9.5z"/>',
@@ -433,6 +433,7 @@
   function pushState() { if (!useHistory) return; try { W.history.pushState({ wbf: stack.length }, ''); depth++; } catch (e) { useHistory = false; } }
   function go(name, params) {
     cur().scroll = W.scrollY;
+    cur().focus = focusKey(app);      // Back puts the focus on the control that opened the next screen
     stack.push({ name: name, params: params || {} });
     pushState();
     render(true);
@@ -465,8 +466,37 @@
     pop();
   });
 
+  // ---- focus, for a keyboard or a screen reader ----------------------------------------------------------------------
+  // The control that has the focus, as a selector that finds it again once the screen is drawn anew
+  var KEYS = ['data-act', 'data-k', 'data-v', 'data-i', 'data-d', 'data-id', 'data-day', 'data-tab', 'data-from', 'data-m', 'data-n', 'data-area', 'data-step'];
+  function focusKey(root) {
+    var el = document.activeElement;
+    if (!el || el === document.body || !root.contains(el)) return null;
+    if (el.id) return '#' + (W.CSS && CSS.escape ? CSS.escape(el.id) : el.id);
+    if (!el.hasAttribute('data-act')) return null;
+    return KEYS.filter(function (a) { return el.hasAttribute(a); }).map(function (a) {
+      return '[' + a + '="' + el.getAttribute(a).replace(/["\\]/g, '\\$&') + '"]';
+    }).join('');
+  }
+  function focusOn(el) {
+    if (!el) return false;
+    try { el.focus({ preventScroll: true }); } catch (e) { return false; }
+    return document.activeElement === el;
+  }
+  // a screen that has just opened: the focus goes to its heading (or its title bar, or its first label)
+  function focusScreen(root) {
+    var h = null;
+    ['h1', '.top-bar .title', 'h2', '.label'].some(function (s) { return (h = $(s, root)); });
+    if (!h) return false;
+    if (!h.hasAttribute('tabindex')) h.setAttribute('tabindex', '-1');
+    return focusOn(h);
+  }
+
+  var drawn = '';                     // the screen on display (its name and onboarding step): drawn again, it keeps the focus
   function render(top) {
-    var c = cur(), scr = SCREENS[c.name];
+    var c = cur(), scr = SCREENS[c.name], key = focusKey(app), here = c.name + '/' + ((c.params || {}).step || '');
+    var same = drawn === here, first = !drawn;
+    drawn = here;
     document.body.classList.toggle('light', !!LIGHT[c.name]);
     var meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', LIGHT[c.name] ? '#F2F6F3' : '#012D12');
@@ -474,6 +504,7 @@
     updateBar();
     var isTab = TABS.indexOf(c.name) !== -1;
     tabsEl.hidden = !isTab;
+    document.body.classList.toggle('notabs', !isTab);
     $$('.tab', tabsEl).forEach(function (t) {
       if (t.getAttribute('data-tab') === c.name) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
     });
@@ -481,6 +512,11 @@
     if (scr.mount) scr.mount(c.params || {});
     mountFigures(app);
     W.scrollTo(0, top ? 0 : (c.scroll || 0));
+    if (toastEl.classList.contains('on')) toastEl.style.bottom = toastLift();     // a toast still showing: above this screen's buttons
+    // The focus: on the same control when the screen is drawn again (an answer on the onboarding), on the control that
+    // opened the next screen after Back, else on the new screen's heading. Not on the first screen, nor under a sheet
+    if (first || !overlay.hidden) return;
+    if (same) { if (key && !focusOn($(key, app))) focusScreen(app); } else if (!(c.focus && focusOn($(c.focus, app)))) focusScreen(app);
   }
   // The screen drawn again where it is, for a change the person didn't make on it (another window saved): what they
   // are typing, the cursor and the scroll stay.
@@ -501,19 +537,52 @@
     W.scrollTo(0, y);
   }
 
+  // Above the tab bar; without it (the onboarding, a workout, the finish screen), above the screen's main buttons at the
+  // bottom: a dock, the onboarding's buttons, or a big button low on the screen. Never over the button needed next
+  function toastLift() {
+    if (!tabsEl.hidden && overlay.hidden) return '';
+    var h = W.innerHeight, top = h;
+    $$('.dock, .ob-cta, .xs-foot, .btn', overlay.hidden ? app : overlay).forEach(function (el) {
+      var r = el.getBoundingClientRect();
+      if (r.height && r.top < h && r.bottom > h * 0.55) top = Math.min(top, r.top);
+    });
+    return top < h ? Math.round(h - top + 12) + 'px' : '';
+  }
   function toast(text) {
     toastEl.textContent = text;
+    toastEl.style.bottom = toastLift();
     toastEl.classList.add('on');
     clearTimeout(toast.t);
     toast.t = setTimeout(function () { toastEl.classList.remove('on'); }, 2400);
   }
 
   // ---- overlays: sheets and confirm boxes -------------------------------------------------
-  var onOverlayClose = null;
-  function openSheet(html, onClose, full) {
-    closeOverlay();
-    overlay.innerHTML = '<div class="sheet-wrap" data-act="sheet-bg"><div class="sheet' + (full ? ' full' : '') + '" role="dialog" aria-modal="true"><div class="grab"></div>' + html + '</div></div>';
+  // While one is open, the screen and the tab bar under it are out of reach (inert): Tab stays on it and a screen reader
+  // reads only it. When it closes, the focus goes back to the control that opened it.
+  var onOverlayClose = null, opener = null;
+  function openerNow() {
+    if (!overlay.hidden) return opener;           // one sheet in place of another: the first one's opener
+    var el = document.activeElement;
+    return el && el !== document.body && app.contains(el) ? { el: el, key: focusKey(app) } : null;
+  }
+  function overlayOn(from) {
     overlay.hidden = false;
+    app.inert = true; tabsEl.inert = true;
+    opener = from;
+  }
+  // a sheet or a box is named by its heading
+  function nameDialog(d) {
+    var h = d && $('h2, .h2', d);
+    if (!h) return;
+    if (!h.id) h.id = 'dlg-title';
+    d.setAttribute('aria-labelledby', h.id);
+  }
+  function openSheet(html, onClose, full) {
+    var from = openerNow();
+    closeOverlay(true);
+    overlay.innerHTML = '<div class="sheet-wrap" data-act="sheet-bg"><div class="sheet' + (full ? ' full' : '') + '" role="dialog" aria-modal="true"><div class="grab"></div>' + html + '</div></div>';
+    overlayOn(from);
+    nameDialog($('.sheet', overlay));
     onOverlayClose = onClose || null;
     document.body.style.overflow = 'hidden';
     mountFigures(overlay);
@@ -522,23 +591,29 @@
   }
   function confirmBox(text, yes, onYes, opts) {
     opts = opts || {};
-    closeOverlay();
-    overlay.innerHTML = '<div class="modal-wrap"><div class="modal" role="alertdialog" aria-modal="true">' +
-      '<p class="h2">' + esc(text) + '</p>' + (opts.body ? '<p class="lead">' + esc(opts.body) + '</p>' : '') +
+    var from = openerNow();
+    closeOverlay(true);
+    overlay.innerHTML = '<div class="modal-wrap"><div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="dlg-title"' + (opts.body ? ' aria-describedby="dlg-text"' : '') + '>' +
+      '<p class="h2" id="dlg-title">' + esc(text) + '</p>' + (opts.body ? '<p class="lead" id="dlg-text">' + esc(opts.body) + '</p>' : '') +
       '<div class="rowx wrap">' + (opts.extra ? '<button class="btn two small" data-act="modal-extra">' + esc(opts.extra) + '</button>' : '') +
       '<button class="btn two small" data-act="modal-no">' + esc(opts.no || 'Cancel') + '</button>' +
       '<button class="btn small" data-act="modal-yes">' + esc(yes) + '</button></div></div></div>';
-    overlay.hidden = false;
+    overlayOn(from);
     overlay._yes = onYes; overlay._extra = opts.onExtra || null; overlay._no = opts.onNo || null;
     try { $('[data-act="modal-yes"]', overlay).focus(); } catch (e) { /* ignore */ }
   }
-  function closeOverlay() {
+  // swap: another sheet or box opens in its place, which takes the focus itself
+  function closeOverlay(swap) {
     if (overlay.hidden) return false;
     overlay.hidden = true;
     overlay.innerHTML = '';
     document.body.style.overflow = '';
+    app.inert = false; tabsEl.inert = false;
+    var back = opener; opener = null;
     var cb = onOverlayClose; onOverlayClose = null;
     if (cb) cb();
+    // the opener, or the control in its place if the screen was drawn again meanwhile
+    if (back && !swap && overlay.hidden) focusOn(back.el.isConnected ? back.el : back.key && $(back.key, app));
     return true;
   }
 
@@ -591,8 +666,8 @@
       '<div class="media" id="xs-media">' + tabFig +
       '<div class="tags-on">' + (m && m.video && XS.tab === 'video' ? '<span class="tag">Frank</span>' : '') + (XS.tab === 'howto' && !(m && m.howto) ? '<span class="tag">Slow motion</span>' : '') + '</div>' +
       '<button class="icon-btn glass turn" data-act="turn" data-turn="1" aria-label="Turn the figure" hidden>' + ic('turn') + '</button></div>' +
-      '<div class="tabs3" role="tablist">' + [['video', 'Video'], ['muscle', 'Muscle'], ['howto', 'How-to']].map(function (t) {
-        return '<button role="tab" data-act="xs-tab" data-v="' + t[0] + '" aria-pressed="' + (XS.tab === t[0]) + '">' + t[1] + '</button>';
+      '<div class="tabs3" role="group" aria-label="View">' + [['video', 'Video'], ['muscle', 'Muscle'], ['howto', 'How-to']].map(function (t) {
+        return '<button data-act="xs-tab" data-v="' + t[0] + '" aria-pressed="' + (XS.tab === t[0]) + '">' + t[1] + '</button>';
       }).join('') + '</div>' +
       (m && m.howto && /youtu/.test(m.howto) && XS.tab === 'howto' ? '<a class="btn two block" href="' + esc(m.howto) + '" target="_blank" rel="noopener">Watch Frank explain it</a>' : '') +
       '<div class="xs-dose"><span class="label">' + (ex.type === 'time' ? 'Duration' : 'Reps') + (ex.each ? ' · each side' : '') + '</span><b>' + (ex.type === 'time' ? mmss(dose) : '× ' + dose) + '</b></div>' +
@@ -613,10 +688,13 @@
       var mine = XS;
       openSheet(html, function () { var cb = mine.onClose; if (XS === mine) XS = null; if (cb) cb(); }, true);
     } else {
-      var sheet = $('.sheet', overlay);
+      var sheet = $('.sheet', overlay), key = focusKey(overlay);
       sheet.innerHTML = '<div class="grab"></div>' + html;
+      nameDialog(sheet);
       mountFigures(sheet);
       sheet.scrollTop = 0;
+      // a tab or the pager tapped with the keyboard keeps the focus (the last move's Next is off: the heading then)
+      if (key && !focusOn($(key, sheet))) focusScreen(sheet);
     }
   }
   // swap only the demo when the tab changes
@@ -751,9 +829,12 @@
   function cta(label, act, disabled) { return '<div class="ob-cta"><button class="btn dark block" data-act="' + (act || 'ob-next') + '"' + (disabled ? ' disabled' : '') + '>' + (label || 'Next') + '</button></div>'; }
   // fmt 'ftin': the value is in inches, shown as feet and inches (5 ft 10 in)
   function ftIn(v) { return Math.floor(v / 12) + '<small>ft</small> ' + (v % 12) + '<small>in</small>'; }
+  // a ruler as a screen reader says it: its name, and the value with its unit
+  var RULER = { h: 'Height', w: 'Weight', t: 'Target weight' }, UNIT_SAID = { cm: 'centimetres', kg: 'kilograms', lb: 'pounds' };
+  function rulerSaid(v, unit, fmt) { return fmt === 'ftin' ? Math.floor(v / 12) + ' feet ' + (v % 12) + ' inches' : v + ' ' + (UNIT_SAID[unit] || unit); }
   function ruler(id, val, min, max, step, unit, fmt) {
     return '<div class="ruler-wrap"><div class="big-val num" id="rv-' + id + '">' + (fmt === 'ftin' ? ftIn(val) : val + '<small>' + unit + '</small>') + '</div>' +
-      '<div class="ruler" id="rl-' + id + '"' + (fmt ? ' data-fmt="' + fmt + '"' : '') + ' data-min="' + min + '" data-max="' + max + '" data-step="' + step + '" data-val="' + val + '" aria-label="Slide to set" role="slider" aria-valuemin="' + min + '" aria-valuemax="' + max + '" aria-valuenow="' + val + '" tabindex="0"><canvas></canvas></div><div class="ruler-needle"></div></div>';
+      '<div class="ruler" id="rl-' + id + '"' + (fmt ? ' data-fmt="' + fmt + '"' : '') + ' data-unit="' + unit + '" data-min="' + min + '" data-max="' + max + '" data-step="' + step + '" data-val="' + val + '" aria-label="' + RULER[id] + '" role="slider" aria-valuemin="' + min + '" aria-valuemax="' + max + '" aria-valuenow="' + val + '" aria-valuetext="' + rulerSaid(val, unit, fmt) + '" tabindex="0"><canvas></canvas></div><div class="ruler-needle"></div></div>';
   }
   // p: the person. No verdict while growing up or pregnant, and no food or weight-loss advice for anyone at risk
   function bmiBox(kg, cm, p) {
@@ -763,8 +844,10 @@
     var say = word === 'Healthy' ? 'A healthy range. Training keeps it there and builds strength.' : atRisk(p) ? 'Ask your doctor which weight is right for you.'
       : word === 'Underweight' ? 'Below the healthy range. Strength training and enough food matter more than burning calories.'
       : 'A little training most days, plus your food, will move this. Small losses already lower blood pressure and diabetes risk.';
-    return '<div class="infobox"><p class="label" style="color:var(--sky-lo)">Your BMI</p><div class="between"><b class="big num">' + b.toFixed(1) + '</b><b>' + word + '</b></div>' +
-      '<div class="bmi-bar"><i style="left:' + pct + '%"></i></div><div class="bmi-scale"><span>15</span><span>18.5</span><span>25</span><span>30</span><span>40</span></div><p>' + say + ' BMI is a rough guide: it can\'t tell muscle from fat.</p></div>';
+    // the numbers under the bar sit where its colours change (15 to 40: 18.5 at 14%, 25 at 40%, 30 at 60%)
+    var scale = [15, 18.5, 25, 30, 40].map(function (n) { return '<span style="left:' + (n - 15) / 25 * 100 + '%">' + n + '</span>'; }).join('');
+    return '<div class="infobox"><p class="label" style="color:var(--sky-ink)">Your BMI</p><div class="between"><b class="big num">' + b.toFixed(1) + '</b><b>' + word + '</b></div>' +
+      '<div class="bmi-bar"><i style="left:' + pct + '%"></i></div><div class="bmi-scale">' + scale + '</div><p>' + say + ' BMI is a rough guide: it can\'t tell muscle from fat.</p></div>';
   }
   function targetBox(d) {
     var cur = d.kg, tgt = d.targetKg;
@@ -813,7 +896,7 @@
       var id = p.step || 'p1', d = draft, st = OB[OB_I[id]] || OB[0];
       if (st.intro) {
         var P = PARTS[st.part];
-        return '<div class="part" data-act="ob-next" role="button" tabindex="0" aria-label="Continue"><p>' + P[0] + '</p><h1>' + P[1] + '</h1><p class="sub">' + P[2] + '</p>' +
+        return '<div class="part" data-act="ob-next"><p>' + P[0] + '</p><h1>' + P[1] + '</h1><p class="sub">' + P[2] + '</p>' +
           '<div style="margin-top:22px"><button class="btn block" data-act="ob-next">Continue</button></div></div>';
       }
       var body = '', foot = cta(), q = '', sub = '';
@@ -918,7 +1001,7 @@
         }).join('') + '</div>';
         if (d.push != null) {
           var L = d.level || levelFromTest(d);
-          body += '<div class="infobox"><p class="label" style="color:var(--sky-lo)">Your starting level</p><span class="unit-seg" role="group" aria-label="Level">' + ['b', 'i', 'a'].map(function (l) {
+          body += '<div class="infobox"><p class="label" style="color:var(--sky-ink)">Your starting level</p><span class="unit-seg" role="group" aria-label="Level">' + ['b', 'i', 'a'].map(function (l) {
             return '<button data-act="ob-level" data-v="' + l + '" aria-pressed="' + (L === l) + '">' + WBF.LEVELS[l] + '</button>';
           }).join('') + '</span><p>' + (L === 'b' ? 'Two rounds, 8 to 15 reps, easier versions of each move.' : L === 'i' ? 'Two to three rounds and the standard versions.' : 'Three to four rounds and the hardest versions.') + ' Every set stops with two or three reps left.</p></div>';
         }
@@ -954,7 +1037,7 @@
         foot = cta('Build my plan', 'ob-build');
       } else if (id === 'build') {
         return '<div class="ob"><div class="building"><div class="build-ring"><svg viewBox="0 0 200 200"><circle class="tr" cx="100" cy="100" r="88"/><circle class="fl" id="b-ring" cx="100" cy="100" r="88" stroke-dasharray="553" stroke-dashoffset="553"/></svg><b id="b-pct">0%</b></div>' +
-          '<p class="ob-q" style="text-align:center;font-size:24px">Building your plan</p><ul class="build-steps" id="b-steps">' + buildSteps(d).map(function (t) { return '<li>' + ic('check') + esc(t) + '</li>'; }).join('') + '</ul></div></div>';
+          '<h1 class="ob-q" style="text-align:center;font-size:24px">Building your plan</h1><ul class="build-steps" id="b-steps">' + buildSteps(d).map(function (t) { return '<li>' + ic('check') + esc(t) + '</li>'; }).join('') + '</ul></div></div>';
       } else if (id === 'ready') {
         return readyHtml();
       }
@@ -1056,7 +1139,7 @@
     // the 28 days' real total: every session as the plan builds it, not days x the minutes picked
     var minutes = Math.round(planSecs(d).reduce(function (x, y) { return x + y; }, 0) / 60);
     var target = d.kg && d.targetKg && Math.abs(d.targetKg - d.kg) >= 0.5 ? (d.targetKg < d.kg ? '−' : '+') + kgShow(Math.abs(d.targetKg - d.kg)) + ' ' + wUnit() : 'Keep';
-    return '<div class="ob"><div class="between"><div><p class="label" style="color:var(--sky-lo)">Done' + (d.name ? ', ' + esc(d.name) : '') + '</p><h1 class="ob-q">Your plan is ready</h1></div></div>' +
+    return '<div class="ob"><div class="between"><div><p class="label" style="color:var(--sky-ink)">Done' + (d.name ? ', ' + esc(d.name) : '') + '</p><h1 class="ob-q">Your plan is ready</h1></div></div>' +
       '<div class="summary"><p class="label" style="color:var(--ink-d2)">About you</p><div class="trio"><div><b>' + (d.cm ? heightShow(d.cm).replace(' cm', '') : '–') + '</b><span>' + (S.settings.hunits === 'ft' ? 'Height' : 'Height, cm') + '</span></div>' +
       '<div><b>' + (d.kg ? kgShow(d.kg) : '–') + '</b><span>Weight, ' + wUnit() + '</span></div><div><b>' + (a || '–') + '</b><span>Age</span></div></div>' +
       (b ? '<div><div class="between"><span style="font-weight:800">BMI ' + b.toFixed(1) + '</span><span class="tag" style="color:var(--ink-d2);border-color:var(--paper-3)">' + bmiWord(b) + '</span></div><div class="bmi-bar"><i style="left:' + clamp((b - 15) / 25 * 100, 0, 100) + '%"></i></div></div>' : '') +
@@ -1081,7 +1164,7 @@
     cv.width = Math.min(16000, full * dpr); cv.height = 86 * dpr; cv.style.width = full + 'px';
     var c = cv.getContext('2d');
     c.scale(dpr, dpr);
-    c.font = '700 12px Nunito, system-ui, sans-serif'; c.textAlign = 'center'; c.fillStyle = '#7A9183';
+    c.font = '700 12px Nunito, system-ui, sans-serif'; c.textAlign = 'center'; c.fillStyle = '#607468';       // --ink-d3
     var ftin = el.getAttribute('data-fmt') === 'ftin', per = ftin ? 12 : 10;
     for (var i = 0; i <= n; i++) {
       var x = w / 2 + i * px, v = min + i * step, major = i % per === 0, half = i % (per / 2) === 0;
@@ -1096,7 +1179,7 @@
       v = Math.round(v * 10) / 10;
       if (out) out.innerHTML = ftin ? ftIn(v) : v + '<small>' + out.querySelector('small').textContent + '</small>';
       el.setAttribute('aria-valuenow', v);
-      if (ftin) el.setAttribute('aria-valuetext', Math.floor(v / 12) + ' feet ' + (v % 12) + ' inches');
+      el.setAttribute('aria-valuetext', rulerSaid(v, el.getAttribute('data-unit'), ftin ? 'ftin' : ''));
       rulerSet(id, v);
     }
     el.addEventListener('scroll', function () { read(); clearTimeout(t); t = setTimeout(function () { el.scrollTo({ left: Math.round(el.scrollLeft / px) * px, behavior: 'smooth' }); }, 140); });
@@ -1399,7 +1482,7 @@
       var label = p.coach ? 'From Frank' : day ? 'Day ' + day.day + ' · Week ' + day.week : w.kind === 'program' ? 'Frank\'s program' : w.kind === 'quick' ? 'Short session' : (WBF.BODY_BY_ID[w.area] || {}).name || '';
       var hero = w.img ? '<img src="' + img(w.img) + '" alt="' + esc(w.phrase) + '">' : figHtml(firstMove(s), { deco: true, note: false, cls: 'is3d' });
       return '<div class="screen bare"><div class="wd-media">' + hero + '<div class="top-bar"><button class="icon-btn glass" data-act="back" aria-label="Back">' + ic('back') + '</button>' +
-        '<button class="icon-btn glass" data-act="settings" aria-label="Workout settings">' + ic('gear') + '</button></div></div>' +
+        '<button class="icon-btn glass" data-act="settings" aria-label="Workout settings">' + ic('sliders') + '</button></div></div>' +
         '<div class="stack"><p class="label">' + esc(label) + '</p><h1 class="wd-title">' + esc(s.title) + '</h1>' +
         '<div class="facts"><span>' + ic('clock') + mins(s.estSec) + '</span>' + (kc ? '<span>' + ic('flame') + kc + ' kcal est.</span>' : '') + '<span>' + ic('bars') + WBF.LEVELS[s.level] + '</span></div>' +
         (w.blurb ? '<p class="lead">' + esc(w.blurb) + '</p>' : '') +
@@ -1535,9 +1618,12 @@
   }
   function paintPlayer() {
     if (!PL || cur().name !== 'player') return;
+    var a = document.activeElement, had = a && a !== document.body && app.contains(a), key = focusKey(app);
     app.innerHTML = SCREENS.player.html();
     mountFigures(app);
     live();
+    // the next step on screen: the focus stays on the same control, or goes to the step's heading
+    if (had && overlay.hidden && !focusOn(key && $(key, app))) focusScreen(app);
   }
   SCREENS.player = {
     title: function () { return 'Workout'; },
@@ -1546,7 +1632,7 @@
       var s = PL.s, st = s.steps[PL.i], ex = EX[st.ex];
       var top = '<div class="pl-top"><button class="icon-btn" data-act="quit" aria-label="End workout">' + ic('close') + '</button>' +
         '<div class="pl-segs" aria-hidden="true">' + segs() + '</div><span class="pl-clock" id="pl-clock">' + mmss(PL.elapsed) + '</span>' +
-        '<button class="icon-btn" data-act="settings" aria-label="Workout settings">' + ic('gear') + '</button></div>';
+        '<button class="icon-btn" data-act="settings" aria-label="Workout settings">' + ic('sliders') + '</button></div>';
       if (PL.phase === 'ready' || PL.phase === 'rest' || PL.phase === 'switch') {
         var nx = PL.phase === 'ready' ? st : s.steps[PL.i + 1];
         var nxi = PL.phase === 'ready' ? 0 : PL.i + 1;
@@ -1635,7 +1721,7 @@
       }).join('');
       var full = rec.moves >= rec.total;
       return '<div class="screen bare"><div class="rowx" style="justify-content:center;padding-top:10px"><div class="badge" aria-hidden="true">' + ic('trophy') + '</div></div>' +
-        '<div class="stack tight" style="text-align:center"><p class="label">' + (full ? 'Workout complete' : (savedOk ? 'Saved: ' : '') + rec.moves + ' of ' + rec.total + ' moves') + '</p><h1 class="display xl">' + esc(rec.title) + '</h1>' +
+        '<div class="stack tight" style="text-align:center"><p class="label">' + (full ? 'Workout complete' : (savedOk ? 'Saved: ' : '') + rec.moves + ' of ' + rec.total + ' moves') + '</p><h1 class="display xl done-title">' + esc(rec.title) + '</h1>' +
         (rec.day && S.profile ? '<p class="meta">Day ' + rec.day + (S.done[rec.day] === rec.id ? ' is ticked off your plan.' : ' stays open: finish half the main moves to tick it off.') + '</p>' : '') +
         (rec.coach ? '<p class="meta">' + (S.inboxDone[rec.coach] === rec.id ? 'Ticked off. Frank\'s next session will show up on your plan.' : 'Finish half the main moves to tick it off.') + '</p>' : '') + '</div>' +
         '<div class="stats"><div><b>' + mmss(rec.sec) + '</b><span>Time</span></div><div><b>' + rec.moves + '</b><span>Moves</span></div>' +
@@ -1773,7 +1859,7 @@
     title: function () { return 'Me'; },
     html: function (p) {
       var pr = S.profile, all = S.sessions, totalSec = all.reduce(function (a, r) { return a + r.sec; }, 0);
-      var head = '<div class="profile-head"><span class="avatar">' + esc(((pr && pr.name) || 'F').charAt(0).toUpperCase()) + '</span><div class="grow"><p class="h2">' + esc((pr && pr.name) || 'Welcome') + '</p>' +
+      var head = '<div class="profile-head"><span class="avatar">' + esc(((pr && pr.name) || 'F').charAt(0).toUpperCase()) + '</span><div class="grow"><h1 class="h2">' + esc((pr && pr.name) || 'Welcome') + '</h1>' +
         '<p class="meta">' + (pr ? esc(WBF.GOALS[pr.goal].name + ' · ' + WBF.LEVELS[WBF.plan.levelFor(pr)] + ' · ' + pr.days + ' days a week') : 'No plan yet') + '</p></div>' +
         (pr ? '<button class="btn two small" data-act="ob-edit">Edit</button>' : '<button class="btn small" data-act="ob-start">Get my plan</button>') + '</div>';
       var tiles = '<div class="stats"><div><b>' + all.length + '</b><span>Workouts</span></div><div><b>' + Math.round(totalSec / 60) + '</b><span>Minutes</span></div>' +
@@ -1890,7 +1976,7 @@
       (pr ? '<section class="card"><p class="label">Health</p>' +
         (parq ? '<div class="set-row"><div><b>Cleared by a doctor</b><span class="meta">You answered yes to a health question. Switch this on once a doctor or qualified professional says vigorous exercise is fine.</span></div><button class="switch" role="switch" data-act="health" data-k="cleared" aria-checked="' + !!h.cleared + '" aria-label="Cleared by a doctor"></button></div>' : '') +
         '<div class="set-row"><div><b>Pregnancy mode</b><span class="meta">No lying flat, no jumping, no balance pad or rings</span></div><button class="switch" role="switch" data-act="health" data-k="pregnant" aria-checked="' + !!h.pregnant + '" aria-label="Pregnancy mode"></button></div>' +
-        '<p class="small">Sore spots: ' + ((pr.injuries || []).length ? pr.injuries.map(soreName).join(', ') : 'none') + '. <button class="link" data-act="ob-edit-step" data-step="sore" style="min-height:0;padding:0">Change</button></p></section>' : '') +
+        '<p class="small">Sore spots: ' + ((pr.injuries || []).length ? pr.injuries.map(soreName).join(', ') : 'none') + '. <button class="link" data-act="ob-edit-step" data-step="sore">Change</button></p></section>' : '') +
       membershipCard() + install +
       '<section class="card"><p class="label">The science</p><p class="small">How the plans follow the research on strength, cardio, balance and safety, with every source.</p>' +
       '<button class="btn two block" data-act="science">Why the plans work</button></section>' +
@@ -2484,7 +2570,9 @@
     if (e.key === 'Escape' && !overlay.hidden) {
       var f = overlay._no; if ($('.modal', overlay)) { closeOverlay(); if (f) f(); } else closeOverlay();
     }
-    if (cur().name === 'player' && PL && overlay.hidden && (e.key === ' ' || e.key === 'Enter') && e.target === document.body) {
+    // Space or Enter on the player: on no control (the page, or the step's heading, which takes the focus), it acts
+    var onNothing = e.target === document.body || (e.target.getAttribute && e.target.getAttribute('tabindex') === '-1');
+    if (cur().name === 'player' && PL && overlay.hidden && (e.key === ' ' || e.key === 'Enter') && onNothing) {
       e.preventDefault();
       if (PL.phase === 'move') { if (timed(PL.s.steps[PL.i])) A['pl-pause'](); else afterMove(); } else A['pl-skip']();
     }

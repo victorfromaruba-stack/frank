@@ -187,6 +187,247 @@ async function blankFigures(page) {
   }).map((c) => { const h = c.closest('[data-fig],[data-thumb]'); return h ? (h.getAttribute('data-fig') || h.getAttribute('data-thumb')) : 'figure'; }));
 }
 
+// ---- accessibility: what someone with low vision, a screen reader or big fingers needs (WCAG 2.2 AA) -----------------
+// Runs in the page. While a sheet or a box is open (#overlay), only what is on it counts: the rest is behind its scrim.
+//  contrast: every piece of text at least 4.5:1 against what is behind it, 3:1 when large (24 px, or 18.66 px bold).
+//    The background is worked out from the element and its parents: colours, see-through layers, opacity, and a
+//    gradient's colour at the text's own spot. Disabled controls and text without a letter or a digit don't count.
+//  targets: every control at least 24 x 24 px (links inside running text excepted, WCAG 2.5.8 without its spacing
+//    exception); a choice (aria-pressed, aria-checked, a switch, a checkbox) at least 44 px tall, like the onboarding's
+//    Yes and No.
+//  markup: no control inside another control, and aria-pressed, aria-checked or aria-selected only on roles that take them.
+function a11yScan() {
+  const CONTROL = 'a[href], button, input:not([type="hidden"]), select, textarea, summary, [role="button"], [role="link"], [role="checkbox"], [role="switch"], [role="radio"], [role="slider"], [role="tab"], [role="option"], [role="menuitem"], [tabindex]:not([tabindex="-1"])';
+  const open = document.querySelector('#overlay:not([hidden])');
+  const counts = (el) => !el.closest('[inert]') && (!open || open.contains(el));
+  const seen = (el) => el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true, opacityProperty: true, visibilityProperty: true });
+  const say = (el) => {
+    const t = (el.getAttribute('aria-label') || el.textContent || el.getAttribute('placeholder') || '').replace(/\s+/g, ' ').trim();
+    return t ? '"' + t.slice(0, 32) + '"' : '<' + el.tagName.toLowerCase() + (el.className && typeof el.className === 'string' ? ' class="' + el.className + '"' : '') + '>';
+  };
+  // ---- colours
+  const rgba = (s) => {
+    const m = /rgba?\(([^)]*)\)/.exec(s || '');
+    if (!m) return null;
+    const v = m[1].split(/[\s,/]+/).filter(Boolean).map(parseFloat);
+    return { r: v[0], g: v[1], b: v[2], a: v.length > 3 ? v[3] : 1 };
+  };
+  const over = (top, bot) => ({ r: top.r * top.a + bot.r * (1 - top.a), g: top.g * top.a + bot.g * (1 - top.a), b: top.b * top.a + bot.b * (1 - top.a), a: 1 });
+  const mix = (x, y, k) => ({ r: x.r * k + y.r * (1 - k), g: x.g * k + y.g * (1 - k), b: x.b * k + y.b * (1 - k), a: 1 });
+  const lin = (v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+  const lum = (c) => 0.2126 * lin(c.r) + 0.7152 * lin(c.g) + 0.0722 * lin(c.b);
+  const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  const hex = (c) => '#' + [c.r, c.g, c.b].map((v) => Math.round(v).toString(16).padStart(2, '0')).join('');
+  // commas outside brackets
+  const split = (s) => {
+    const out = []; let depth = 0, cur = '';
+    for (const ch of s) { if (ch === '(') depth++; if (ch === ')') depth--; if (ch === ',' && !depth) { out.push(cur.trim()); cur = ''; } else cur += ch; }
+    if (cur.trim()) out.push(cur.trim());
+    return out;
+  };
+  // A gradient's colour at the point (x, y), from its computed value. null: not a gradient (a picture: can't tell)
+  function gradientAt(layer, box, x, y) {
+    const m = /^(?:repeating-)?(linear|radial)-gradient\((.*)\)$/.exec(layer);
+    if (!m) return null;
+    const args = split(m[2]);
+    let t, len;
+    if (m[1] === 'linear') {
+      let ang = 180;
+      const a = /^(-?[\d.]+)(deg|turn|rad)$/.exec(args[0]);
+      const TO = { 'to top': 0, 'to right': 90, 'to bottom': 180, 'to left': 270 };     // a corner: as 'to bottom'
+      if (a) { ang = +a[1] * (a[2] === 'turn' ? 360 : a[2] === 'rad' ? 180 / Math.PI : 1); args.shift(); } else if (/^to /.test(args[0])) {
+        const w = args.shift();
+        if (TO[w] != null) ang = TO[w];
+      }
+      const th = ang * Math.PI / 180, dx = Math.sin(th), dy = -Math.cos(th);
+      len = Math.abs(box.width * dx) + Math.abs(box.height * dy) || 1;
+      t = ((x - box.left - box.width / 2) * dx + (y - box.top - box.height / 2) * dy) / len + 0.5;
+    } else {
+      // "<rx> <ry> at <x> <y>" (the studio light behind the coach); other shapes: as far as the farthest corner
+      let cx = box.left + box.width / 2, cy = box.top + box.height / 2, rx = 0, ry = 0;
+      if (!rgba(args[0])) {
+        const shape = args.shift(), at = shape.split(' at ');
+        const size = (at[0] || '').trim().split(/\s+/), pos = (at[1] || '').trim().split(/\s+/);
+        const px = (v, full) => (/%$/.test(v) ? parseFloat(v) / 100 * full : parseFloat(v));
+        if (pos.length === 2) { cx = box.left + px(pos[0], box.width); cy = box.top + px(pos[1], box.height); }
+        if (size.length === 2 && !isNaN(parseFloat(size[0]))) { rx = px(size[0], box.width); ry = px(size[1], box.height); }
+      }
+      if (!rx || !ry) {
+        rx = Math.max(cx - box.left, box.right - cx) * Math.SQRT2;
+        ry = Math.max(cy - box.top, box.bottom - cy) * Math.SQRT2;
+      }
+      len = rx;
+      t = Math.hypot((x - cx) / rx, (y - cy) / ry);
+    }
+    // colour stops: "rgb(..) 40%", "rgba(..) 22px", "rgb(..)" or "rgb(..) 0px 18%"
+    const stops = [];
+    for (const s of args) {
+      const c = rgba(s);
+      if (!c) continue;
+      const at = s.slice(s.lastIndexOf(')') + 1).trim().split(/\s+/).filter(Boolean)
+        .map((v) => (/%$/.test(v) ? parseFloat(v) / 100 : parseFloat(v) / len));
+      if (!at.length) stops.push({ c, p: null });
+      for (const p of at) stops.push({ c, p });
+    }
+    if (!stops.length) return null;
+    if (stops[0].p == null) stops[0].p = 0;
+    if (stops[stops.length - 1].p == null) stops[stops.length - 1].p = 1;
+    for (let i = 1; i < stops.length; i++) {
+      if (stops[i].p == null) {
+        let j = i; while (stops[j].p == null) j++;
+        for (let k = i; k < j; k++) stops[k].p = stops[i - 1].p + (stops[j].p - stops[i - 1].p) * (k - i + 1) / (j - i + 1);
+      }
+      stops[i].p = Math.max(stops[i].p, stops[i - 1].p);
+    }
+    if (t <= stops[0].p) return stops[0].c;
+    for (let i = 1; i < stops.length; i++) {
+      if (t <= stops[i].p) {
+        const a = stops[i - 1], b = stops[i], f = b.p > a.p ? (t - a.p) / (b.p - a.p) : 1, al = a.c.a * (1 - f) + b.c.a * f;
+        if (!al) return { r: 0, g: 0, b: 0, a: 0 };
+        const ch = (k) => (a.c[k] * a.c.a * (1 - f) + b.c[k] * b.c.a * f) / al;
+        return { r: ch('r'), g: ch('g'), b: ch('b'), a: al };
+      }
+    }
+    return stops[stops.length - 1].c;
+  }
+  // The text's colour and the colour behind it at (x, y): every background from the page down to the element, and the
+  // opacity of each group it sits in. null: a picture behind it
+  const style = new Map();
+  const cs = (el) => { if (!style.has(el)) style.set(el, getComputedStyle(el)); return style.get(el); };
+  function colours(el, fg, x, y) {
+    const chain = [];
+    for (let e = el; e && e.nodeType === 1; e = e.parentElement) chain.unshift(e);
+    let c = { r: 255, g: 255, b: 255, a: 1 };
+    const fades = [];
+    for (const e of chain) {
+      const s = cs(e), o = parseFloat(s.opacity);
+      if (o < 1) fades.push([o, c]);
+      const bg = rgba(s.backgroundColor);
+      if (bg && bg.a) c = over(bg, c);
+      if (s.backgroundImage && s.backgroundImage !== 'none') {
+        const box = e.getBoundingClientRect(), layers = split(s.backgroundImage).reverse();
+        for (const l of layers) {
+          const g = gradientAt(l, box, x, y);
+          if (!g) return null;
+          c = over(g, c);
+        }
+      }
+    }
+    let text = over(fg, c), back = c;
+    for (let k = fades.length - 1; k >= 0; k--) { text = mix(text, fades[k][1], fades[k][0]); back = mix(back, fades[k][1], fades[k][0]); }
+    return { text, back };
+  }
+  // text that is fading or sliding in or out (a toast leaving, a sheet coming up) counts once it has settled
+  const moving = new Set(document.getAnimations().filter((a) => a.playState === 'running' && a.effect && a.effect.target).map((a) => a.effect.target));
+  const settled = (el) => { for (let e = el; e; e = e.parentElement) if (moving.has(e)) return false; return true; };
+  const contrast = new Map();
+  const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+    const el = n.parentElement;
+    if (!el || !/[\p{L}\p{N}]/u.test(n.nodeValue) || /^(SCRIPT|STYLE|NOSCRIPT|TEMPLATE|TITLE|OPTION|TEXTAREA)$/.test(el.tagName)) continue;
+    if (!counts(el) || !seen(el) || !settled(el) || el.closest('button:disabled, input:disabled, select:disabled, fieldset:disabled, [aria-disabled="true"]')) continue;
+    let clipped = false;
+    for (let e = el; e && e !== document.body; e = e.parentElement) {
+      const s = cs(e), r = e.getBoundingClientRect();
+      if ((s.clip && s.clip !== 'auto') || (s.overflow !== 'visible' && (r.width <= 1 || r.height <= 1))) { clipped = true; break; }
+    }
+    if (clipped) continue;
+    const range = document.createRange();
+    range.selectNodeContents(n);
+    const rects = [...range.getClientRects()].filter((r) => r.width > 1 && r.height > 1);
+    if (!rects.length) continue;
+    const s = cs(el), svg = el instanceof SVGElement;
+    const fg = rgba(svg ? s.fill : s.color);
+    if (!fg) continue;
+    if (svg) fg.a *= parseFloat(s.fillOpacity || '1');
+    const size = parseFloat(s.fontSize), large = size >= 24 || (size >= 18.66 && (parseInt(s.fontWeight, 10) || 400) >= 700);
+    const need = large ? 3 : 4.5;
+    let worst = null;
+    for (const r of rects) {
+      const y = r.top + r.height / 2;
+      for (const x of [r.left + 2, r.left + r.width / 2, r.right - 2]) {
+        const c = colours(el, fg, x, y);
+        if (!c) { worst = null; break; }
+        const k = ratio(c.text, c.back);
+        if (!worst || k < worst.k) worst = { k, c };
+      }
+      if (!worst) break;
+    }
+    if (!worst || worst.k >= need) continue;
+    const key = hex(worst.c.text) + ' on ' + hex(worst.c.back) + ', ' + need + ' needed';
+    if (!contrast.has(key)) contrast.set(key, { k: worst.k, texts: [] });
+    const g = contrast.get(key);
+    g.k = Math.min(g.k, worst.k);
+    const words = n.nodeValue.replace(/\s+/g, ' ').trim().slice(0, 28);
+    if (g.texts.length < 2 && !g.texts.includes(words)) g.texts.push(words);
+  }
+  // ---- controls
+  const small = [], low = [], nested = [], states = [];
+  const ROLES = { 'aria-pressed': /^button$/, 'aria-checked': /^(checkbox|switch|radio|menuitemcheckbox|menuitemradio|option|treeitem)$/, 'aria-selected': /^(tab|option|row|gridcell|treeitem|columnheader|rowheader)$/ };
+  const roleOf = (el) => el.getAttribute('role') || (el.tagName === 'BUTTON' ? 'button' : el.tagName === 'A' && el.hasAttribute('href') ? 'link' : el.tagName === 'INPUT' ? el.type : el.tagName.toLowerCase());
+  for (const el of document.querySelectorAll(CONTROL)) {
+    if (!counts(el) || !seen(el)) continue;
+    const inner = el.querySelector(CONTROL);
+    if (inner && seen(inner)) nested.push(say(el) + ' holds ' + say(inner));
+    for (const a in ROLES) if (el.hasAttribute(a) && !ROLES[a].test(roleOf(el))) states.push(a + ' on a ' + roleOf(el) + ' ' + say(el));
+    if (el.disabled) continue;
+    let r = el.getBoundingClientRect();
+    if (r.width < 1 || r.height < 1) continue;
+    // an input's label is part of its target: tapping the label ticks the box
+    for (const lb of el.labels || []) {
+      const q = lb.getBoundingClientRect();
+      if (q.width <= 1 || q.height <= 1) continue;               // a label only screen readers get
+      const left = Math.min(r.left, q.left), top = Math.min(r.top, q.top), right = Math.max(r.right, q.right), bottom = Math.max(r.bottom, q.bottom);
+      r = { left, top, right, bottom, width: right - left, height: bottom - top };
+    }
+    // a link in running text: its size follows the lines of text around it
+    if (el.tagName === 'A' && (cs(el).display === 'inline' || [...el.parentElement.childNodes].some((x) => x.nodeType === 3 && x.nodeValue.trim()))) continue;
+    if (r.width < 24 || r.height < 24) small.push(say(el) + ' ' + Math.round(r.width) + 'x' + Math.round(r.height));
+    const choice = el.hasAttribute('aria-pressed') || el.hasAttribute('aria-checked') || /^(switch|checkbox|radio)$/.test(el.getAttribute('role') || '') ||
+      (el.tagName === 'INPUT' && /^(checkbox|radio)$/.test(el.type));
+    if (choice && r.height < 44) low.push(say(el) + ' ' + Math.round(r.height) + ' px');
+  }
+  const list = (a, n = 4) => [...new Set(a)].slice(0, n).join(', ') + (new Set(a).size > n ? ' (+' + (new Set(a).size - n) + ' more)' : '');
+  const out = [];
+  if (contrast.size) out.push('low contrast: ' + [...contrast].slice(0, 5).map(([k, g]) => g.texts.map((x) => '"' + x + '"').join(', ') + ' ' + g.k.toFixed(2) + ':1 (' + k + ')').join('; ') + (contrast.size > 5 ? ' (+' + (contrast.size - 5) + ' more)' : ''));
+  if (small.length) out.push('tap targets under 24 x 24 px: ' + list(small));
+  if (low.length) out.push('choice buttons under 44 px tall: ' + list(low));
+  if (nested.length) out.push('a control inside a control: ' + list(nested, 3));
+  if (states.length) out.push('ARIA states on roles that do not take them: ' + list(states, 3));
+  return out;
+}
+// Controls, dialogs and pictures without a name a screen reader can say, from Chromium's own accessibility tree
+async function nameProblems(page) {
+  let cdp;
+  try { cdp = await page.context().newCDPSession(page); } catch (e) { return []; }      // not Chromium
+  try {
+    const NEED = new Set(['button', 'link', 'checkbox', 'switch', 'radio', 'slider', 'spinbutton', 'textbox', 'searchbox', 'combobox', 'listbox',
+      'tab', 'menuitem', 'option', 'dialog', 'alertdialog', 'image', 'img', 'progressbar', 'meter']);
+    const { nodes } = await cdp.send('Accessibility.getFullAXTree');
+    const bad = [];
+    for (const n of nodes) {
+      const role = n.role && n.role.value;
+      if (n.ignored || !NEED.has(role) || (n.name && String(n.name.value || '').trim())) continue;
+      let what = role;
+      if (n.backendDOMNodeId) {
+        const d = await cdp.send('DOM.describeNode', { backendNodeId: n.backendDOMNodeId, depth: 0 }).catch(() => null);
+        if (d && d.node) {
+          const at = {};
+          for (let i = 0; i < (d.node.attributes || []).length; i += 2) at[d.node.attributes[i]] = d.node.attributes[i + 1];
+          what = role + ' <' + d.node.localName + Object.keys(at).filter((k) => /^(class|data-act|data-k|data-v|id|role)$/.test(k)).map((k) => ' ' + k + '="' + at[k] + '"').join('') + '>';
+        }
+      }
+      bad.push(what);
+    }
+    const u = [...new Set(bad)];
+    return u.length ? ['without an accessible name: ' + u.slice(0, 4).join(', ') + (u.length > 4 ? ' (+' + (u.length - 4) + ' more)' : '')] : [];
+  } catch (e) {
+    return ['accessible names could not be read: ' + short(e)];
+  } finally {
+    await cdp.detach().catch(() => null);
+  }
+}
+
 // What every screen must get right. Returns the list of problems (empty when fine).
 async function screenProblems(page, { kcal = true, figures = true } = {}) {
   const out = [];
@@ -219,6 +460,7 @@ async function screenProblems(page, { kcal = true, figures = true } = {}) {
     const blank = await blankFigures(page);
     if (blank.length) out.push('blank 3D coach: ' + blank.join(', '));
   }
+  out.push(...await page.evaluate(a11yScan), ...await nameProblems(page));
   return out;
 }
 
@@ -576,6 +818,6 @@ async function main(suites) {
 }
 
 module.exports = {
-  REPO, KEY, TODAY, NOW, TZ, SITE, playwright, launch, serve, fetchSite, viaNode, settle, blankFigures, screenProblems,
+  REPO, KEY, TODAY, NOW, TZ, SITE, playwright, launch, serve, fetchSite, viaNode, settle, blankFigures, screenProblems, a11yScan, nameProblems,
   isoDay, profile, state, member, spec, pack, unpack, QA_CODE, QA_COACH, codeHash, coachHash, app, Env, Test, short, parseArgs, options, runSuites, main, loadKnown
 };

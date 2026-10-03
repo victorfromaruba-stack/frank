@@ -5,7 +5,7 @@ const { app } = L;
 
 module.exports = {
   name: 'smoke',
-  about: 'every tab, the exercise sheet, a workout, the player starts, logging walks, water, meals and weight, delete my data, a phone that can\'t save, other options in the sheet, muscle maps when the coach comes in late, Back after a tab switch, the scroll after Back and after a workout, the activity slider, the Personal prototype',
+  about: 'every tab, the exercise sheet, a workout, the player starts, logging walks, water, meals and weight, delete my data, a phone that can\'t save, other options in the sheet, muscle maps when the coach comes in late, Back after a tab switch, the scroll after Back and after a workout, the activity slider, the keyboard\'s focus (new screens, Back, choices, an open sheet, Space in the player), toasts clear of the main button, the BMI bar\'s colours, the iPhone status bar on light screens, the Personal prototype',
   async run(t) {
     await t.flow('first visit', async () => {
       const p = await t.page();
@@ -338,6 +338,174 @@ module.exports = {
       await app.tap(p, '[data-act="ob-back"]');
       t.equal(await p.locator('#act-in').inputValue(), '3', 'the answer after Next and Back');
       t.equal(await drag(1, 0), ['0', 'I sit most of the day'], 'one drag back to Sitting [value, words]');
+    });
+
+    await t.flow('keyboard: focus on a new screen, a choice and a sheet', async () => {
+      // someone with a keyboard or a screen reader: a new screen puts the focus on its heading, Back puts it on the control
+      // that opened the screen, a choice that redraws its step keeps it, and an open sheet holds it until it closes
+      const p = await t.page({ state: L.member() });
+      const at = () => p.evaluate(() => {
+        const a = document.activeElement, o = document.getElementById('overlay');
+        return { tag: a.tagName.toLowerCase(), act: a.getAttribute('data-act') || '', k: a.getAttribute('data-k') || '', v: a.getAttribute('data-v') || '', id: a.getAttribute('data-id') || '',
+          text: a.textContent.replace(/\s+/g, ' ').trim().slice(0, 40), sheet: !o.hidden && o.contains(a), pressed: a.getAttribute('aria-pressed') };
+      });
+      const enter = async (sel, nth = 0) => { await p.locator(sel).nth(nth).focus(); await p.keyboard.press('Enter'); await p.waitForTimeout(200); };
+      await enter('.tab[data-tab="workouts"]');
+      let a = await at();
+      t.equal([a.tag, a.text], ['h1', 'Workouts'], 'focus after the Workouts tab [element, text]');
+      const card = await p.locator('#app [data-act="open-workout"]').first().getAttribute('data-id');
+      await enter('#app [data-act="open-workout"]');
+      await p.waitForSelector('.wd-title');
+      a = await at();
+      t.equal(a.tag, 'h1', 'focus on a workout opened with Enter: element');
+      t.has(a.text, await p.locator('.wd-title').innerText(), 'focus on a workout opened with Enter');
+      t.step('a sheet');
+      await enter('#app [data-act="ex-wo"]');
+      t.equal(await p.evaluate(() => [document.getElementById('app').inert, document.getElementById('tabs').inert]), [true, true], 'the screen and the tab bar under an open sheet [inert, inert]');
+      // past the sheet's last control Tab may leave the page for the browser's own bar, never for the screen underneath
+      let out = 0;
+      for (let i = 0; i < 30; i++) {
+        await p.keyboard.press('Tab');
+        if (await p.evaluate(() => document.getElementById('app').contains(document.activeElement) || document.getElementById('tabs').contains(document.activeElement))) out++;
+      }
+      t.equal(out, 0, 'Tab presses that reached the screen under the open sheet (of 30)');
+      t.check((await at()).sheet || (await at()).tag === 'body', 'the focus after 30 Tab presses is neither on the sheet nor outside the page');
+      await p.keyboard.press('Escape');
+      await p.waitForTimeout(150);
+      a = await at();
+      t.equal([await p.locator('#overlay').isHidden(), a.act, await p.evaluate(() => document.getElementById('app').inert)], [true, 'ex-wo', false], 'after Escape [sheet closed, focus on, screen inert]');
+      t.step('Back');
+      await enter('#app [data-act="back"]');
+      await app.waitTitle(p, 'Workouts');
+      a = await at();
+      t.equal([a.act, a.id], ['open-workout', card], 'focus after Back [control, workout]: the card that opened the workout');
+      t.step('a choice on the onboarding');
+      await p.evaluate(() => { WBF.app.tab('me'); });
+      await enter('[data-act="ob-edit"]');
+      await p.evaluate(() => WBF.app.go('onboard', { step: 'health' }));
+      await p.waitForSelector('[data-act="ob-health"]');
+      await enter('[data-act="ob-health"][data-k="heart"][data-v="0"]');
+      a = await at();
+      t.equal([a.act, a.k, a.v, a.pressed], ['ob-health', 'heart', '0', 'true'], 'focus after answering No with the keyboard [control, question, answer, pressed]');
+      await enter('[data-act="ob-health"][data-k="chest"][data-v="1"]');
+      a = await at();
+      t.equal([a.act, a.k, a.v], ['ob-health', 'chest', '1'], 'focus after answering Yes with the keyboard [control, question, answer]');
+      t.step('Space in the player');
+      // the step's heading takes the focus; Space still starts and pauses, as when nothing has the focus
+      const q = await t.page({ state: L.member() });
+      await q.locator('[data-act="start-day"]').focus();
+      await q.keyboard.press('Enter');
+      await app.waitTitle(q, 'Workout');
+      t.equal(await q.evaluate(() => document.activeElement.textContent.trim()), 'Ready to go', 'focus when the workout starts');
+      await q.keyboard.press(' ');
+      await q.waitForSelector('.pl-name h1', { timeout: 5000 }).catch(() => t.fail('Space on the get-ready screen did not start the first move'));
+      t.equal(await q.evaluate(() => document.activeElement.tagName), 'H1', 'focus on the first move: element');
+    });
+
+    await t.flow('toasts stay clear of the main button', async () => {
+      // without the tab bar (the onboarding, a workout, the welcome) a toast goes above the screen's main button
+      const clear = async (p, what, sel) => {
+        await p.waitForFunction(() => document.getElementById('toast').classList.contains('on'), null, { timeout: 5000 });
+        // it slides up 20 px as it comes in: measure where it stops
+        await p.waitForFunction(() => !document.getElementById('toast').getAnimations().length, null, { timeout: 5000 });
+        const [tb, bb] = await p.evaluate((s) => [document.getElementById('toast'), document.querySelector(s)].map((e) => { const r = e.getBoundingClientRect(); return [Math.round(r.top), Math.round(r.bottom)]; }), sel);
+        t.check(tb[1] <= bb[0], what + ': the toast (' + tb.join(' to ') + ' px) covers ' + sel + ' (' + bb.join(' to ') + ' px)');
+      };
+      t.step('a client code: the first onboarding screen');
+      let p = await t.page();
+      await app.tap(p, '[data-act="join"]');
+      await app.addCode(p);
+      await p.fill('#join-in', L.QA_CODE);
+      await app.tap(p, 'form[data-form="join"] button[type="submit"]', { wait: 0 });
+      await app.waitTitle(p, 'Your plan');
+      await clear(p, 'Welcome. The whole app is open to you.', '.part .btn');
+      t.step('a swap on a workout');
+      p = await t.page({ state: L.member() });
+      await app.tap(p, '[data-act="open-day"][data-day="1"]', { nth: 0 });
+      await app.tap(p, '[data-act="swap"]');
+      await app.tap(p, '#overlay [data-act="do-swap"]', { wait: 0 });
+      await clear(p, 'a swap', '.dock .btn');
+      t.step('a broken link on the welcome screen');
+      // its toast comes 0.3 s after the page opens and is gone before the coach is in: watch for it from the start
+      p = await t.page({ go: false });
+      await p.goto(p.srv.home + 'index.html#frank.not-a-real-code');
+      await clear(p, 'a broken link', '.ob-cta .btn');
+      t.step('a tab: above the tab bar');
+      p = await t.page({ state: L.member() });
+      await app.tap(p, '.tab[data-tab="today"]');
+      await app.tap(p, '[data-act="walk"][data-m="10"]', { wait: 0 });
+      await clear(p, 'a walk on Today', '#tabs');
+      t.step('a toast still showing when the next screen opens');
+      await p.evaluate(() => { document.querySelector('[data-act="walk"][data-m="10"]').click(); WBF.app.go('workout', { day: 1 }); });
+      await clear(p, 'a walk\'s toast on the workout opened next', '.dock .btn');
+    });
+
+    await t.flow('BMI bar: the marker sits in the colour of its word', async () => {
+      // the bar runs from BMI 15 to 40 and changes colour at 18.5, 25 and 30; the numbers under it sit at those points
+      const COLOUR = { Underweight: [110, 193, 228], Healthy: [61, 190, 122], Overweight: [242, 201, 107], Obesity: [224, 106, 90] };
+      const bar = (p, sel) => p.evaluate((s) => {
+        const b = document.querySelector(s), m = b.querySelector('i'), r = b.getBoundingClientRect(), mr = m.getBoundingClientRect();
+        const f = (mr.left + mr.width / 2 - r.left) / r.width;
+        // the colour band under the marker, from the bar's gradient: "rgb(..) 0%, rgb(..) 14%, ..."
+        const stops = [...getComputedStyle(b).backgroundImage.matchAll(/rgba?\(([^)]+)\)\s*([\d.]+)(%|px)?/g)]
+          .map((x) => ({ c: x[1].split(/,\s*/).slice(0, 3).map(Number), p: x[3] === 'px' ? +x[2] / r.width : +x[2] / 100 }));
+        let c = stops[stops.length - 1].c;
+        for (let i = 1; i < stops.length; i++) if (f < stops[i].p) { c = stops[i - 1].c; break; }
+        const sc = b.nextElementSibling && b.nextElementSibling.classList.contains('bmi-scale') ? [...b.nextElementSibling.children].map((x) => {
+          const q = x.getBoundingClientRect(); return [x.textContent, Math.round((q.left + q.width / 2 - r.left) / r.width * 100)];
+        }) : null;
+        return { at: Math.round(f * 1000) / 10, c, scale: sc };
+      }, sel);
+      for (const [kg, word] of [[49.1, 'Underweight'], [63.6, 'Healthy'], [78.6, 'Overweight'], [95.4, 'Obesity']]) {
+        t.step(word);
+        const p = await t.page({ state: L.member({ cm: 170, kg, targetKg: kg }, { weights: [{ date: L.TODAY, kg }] }) });
+        await app.tap(p, '.tab[data-tab="me"]');
+        t.has(await app.text(p), word, 'Me');
+        let b = await bar(p, '.dark-bmi');
+        t.equal(b.c, COLOUR[word], 'Me: the colour under the marker at ' + b.at + '% (' + word + ')');
+        await app.tap(p, '[data-act="ob-edit"]');
+        await p.evaluate(() => WBF.app.go('onboard', { step: 'weight' }));
+        await p.waitForSelector('#bmi-box .bmi-bar');
+        t.has(await p.locator('#bmi-box').innerText(), word, 'the weight step');
+        b = await bar(p, '#bmi-box .bmi-bar');
+        t.equal(b.c, COLOUR[word], 'the weight step: the colour under the marker at ' + b.at + '% (' + word + ')');
+        if (word === 'Overweight') {
+          // 15 at the start, 18.5 at 14%, 25 at 40%, 30 at 60%, 40 at the end
+          t.equal(b.scale.map((x) => x[0]), ['15', '18.5', '25', '30', '40'], 'the numbers under the bar');
+          t.check(b.scale.slice(1, 4).every((x, i) => Math.abs(x[1] - [14, 40, 60][i]) <= 1), () => 'the numbers under the bar sit at ' + JSON.stringify(b.scale) + ' (% of the bar), expected 18.5 at 14, 25 at 40, 30 at 60');
+          await p.evaluate(() => WBF.app.go('onboard', { step: 'ready' }));
+          await p.waitForSelector('.summary .bmi-bar');
+          b = await bar(p, '.summary .bmi-bar');
+          t.equal(b.c, COLOUR[word], 'the summary: the colour under the marker at ' + b.at + '% (' + word + ')');
+        }
+      }
+    });
+
+    await t.flow('iPhone status bar on the light screens', async () => {
+      // The app on an iPhone's home screen draws the clock and battery in white over the top of the page
+      // (black-translucent): the light screens keep a dark band behind them. Chromium has no notch, so the page gets an
+      // iPhone's 47 px here. The real thing: .claude/skills/frank-device-check
+      const p = await t.page();
+      const band = () => p.evaluate(() => {
+        const s = getComputedStyle(document.body, '::before');
+        return { content: s.content, pos: s.position, top: s.top, h: s.height, bg: s.backgroundColor, light: document.body.classList.contains('light') };
+      });
+      t.equal((await band()).h, '0px', 'the band on a phone without a notch: height');
+      await p.evaluate(() => document.documentElement.style.setProperty('--safe-t', '47px'));
+      for (const step of ['welcome', 'onboarding']) {
+        if (step === 'onboarding') { await app.tap(p, '[data-act="ob-start"]'); await app.tap(p, '.part .btn'); }
+        const b = await band();
+        t.equal([b.light, b.pos, b.top, b.h], [true, 'fixed', '0px', '47px'], step + ': the band behind the status bar [light screen, position, top, height]');
+        const c = (b.bg.match(/[\d.]+/g) || []).map(Number);
+        const lin = (v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+        const k = c.length >= 3 && (c[3] == null || c[3] === 1) ? 1.05 / (0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]) + 0.05) : 0;
+        t.check(k >= 4.5, () => step + ': white status bar text on the band is ' + k.toFixed(2) + ':1 (' + b.bg + '), 4.5 needed');
+        // what the screen shows first starts under the band, not behind it
+        const top = await p.evaluate(() => Math.min(...[...document.querySelectorAll('#app .wordmark, #app .ob-top, #app .ob-q, #app .part p')].map((e) => e.getBoundingClientRect().top)));
+        t.check(top >= 47, () => step + ': the top of the screen starts at ' + Math.round(top) + ' px, under the 47 px band');
+      }
+      await p.evaluate(() => WBF.app.tab('workouts'));
+      t.equal((await band()).content, 'none', 'a dark screen: the band');
     });
 
     await t.flow('personal prototype', async () => {

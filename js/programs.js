@@ -88,6 +88,11 @@
     core: [['cobra', 6], ['knee-to-chest', 30]],
     program: [['hip-flexor-stretch', 30], ['childs-pose', 30]]
   };
+  // easy moves that stand in for a warm-up or cool-down move the workout already has (buildWith), in this order
+  var SPARE = {
+    warm: ['cat-cow', 'arm-raise', 'leg-swings', 'arm-circles', 'march'],
+    cool: ['childs-pose', 'forward-fold', 'quad-stretch', 'calf-stretch', 'hip-flexor-stretch']
+  };
 
   function area(id, a, lvl, title, moves, extra) {
     var base = { abs: 'core', legs: 'lower', chest: 'upper', arms: 'upper', back: 'upper', core: 'core', lower: 'lower', upper: 'upper', full: 'full', cardio: 'cardio' }[a];
@@ -335,7 +340,21 @@
   }
   function buildWith(w, wid, ctx, lvl, rounds) {
     var mult = ctx.mult || 1;
-    var steps = [], taken = {}, chosen = {};
+    var blocks = { warm: [], main: [], focus: [], cool: [] }, taken = {}, chosen = {}, had = { warm: {}, cool: {} };
+    // a warm-up or cool-down move: never one the workout itself has (main or focus), or one the warm-up or this block
+    // already has. Such a move is swapped for the first spare that fits the person; with none left, it is left out
+    function easy(id, block) {
+      var no = {}, k, use = pick(id, ctx);
+      for (k in taken) no[k] = 1;
+      for (k in had.warm) no[k] = 1;
+      for (k in had[block]) no[k] = 1;
+      if (use && !no[use]) return use;
+      for (var i = 0; i < SPARE[block].length; i++) {
+        use = pick(SPARE[block][i], ctx, {}, no);
+        if (use) return use;
+      }
+      return null;
+    }
     function addMove(item, block, round, R, orig) {
       var id = Array.isArray(item) ? item[0] : item;
       var use;
@@ -344,10 +363,10 @@
         if (!(id in chosen)) { chosen[id] = pick(id, ctx, null, taken); if (chosen[id]) taken[chosen[id]] = true; }
         use = chosen[id];
       } else if (block === 'focus') use = id;
-      else use = pick(id, ctx);
+      else { use = easy(id, block); if (use) had[block][use] = true; }
       if (!use) return;
       if (orig) id = orig;
-      var ex = EX[use];
+      var ex = EX[use], steps = blocks[block];
       var dose;
       if (Array.isArray(item) && use === id) dose = item[1];
       else if (block === 'main' || block === 'focus') dose = roundDose(ex, ex.dose[lvl] * mult);
@@ -359,9 +378,7 @@
         steps.push({ ex: use, orig: id, dose: dose, block: block, round: round, rounds: R, side: ex.each ? 3 : 0 });
       }
     }
-    (w.warm || []).forEach(function (it) { addMove(it, 'warm', 1, 1); });
-    // 60 and over: balance work in every session (WHO 2020, older adults)
-    if (ctx.older && w.kind !== 'quick') addMove(['balance', 20], 'warm', 1, 1);
+    // the workout first, so the warm-up and cool-down can leave out what it already has
     for (var r = 1; r <= rounds; r++) w.moves.forEach(function (it) { addMove(it, 'main', r, rounds); });
     // the body parts the person wants to focus on: a short extra block at the end of plan sessions
     focusFor(w, ctx, lvl).forEach(function (f) {
@@ -375,7 +392,11 @@
         added++;
       }
     });
+    (w.warm || []).forEach(function (it) { addMove(it, 'warm', 1, 1); });
+    // 60 and over: balance work in every session (WHO 2020, older adults), unless the workout already has it
+    if (ctx.older && w.kind !== 'quick' && !taken.balance) addMove(['balance', 20], 'warm', 1, 1);
     (w.cool || []).forEach(function (it) { addMove(it, 'cool', 1, 1); });
+    var steps = blocks.warm.concat(blocks.main, blocks.focus, blocks.cool);
 
     // circuits: a short change-over between moves; each muscle rests while the others work
     var rest = { b: 30, i: 20, a: 15 }[lvl] || 25;

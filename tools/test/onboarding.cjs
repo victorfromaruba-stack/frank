@@ -13,6 +13,8 @@ async function expectStep(t, p, want) {
 }
 const next = (p) => app.tap(p, '.ob-cta [data-act="ob-next"]');
 const cont = (p) => app.tap(p, '.part .btn');
+// an onboarding ruler as a screen reader says it: [its name, its value with the unit]
+const said = (p, id) => p.evaluate((i) => { const r = document.getElementById('rl-' + i); return [r.getAttribute('aria-label'), r.getAttribute('aria-valuetext')]; }, id);
 // popstate events in the next ms: Back may not keep going back by itself (the old Back loop fired about 1,100 a second)
 const popsIn = (p, ms = 600) => p.evaluate((w) => new Promise((r) => {
   let n = 0; const f = () => n++;
@@ -136,6 +138,7 @@ async function walk(t, o) {
   }
   const h = await app.slideRuler(p, 'h', o.heightSteps);
   t.equal(h.text.replace(/\s/g, ''), o.heightShows.replace(/\s/g, ''), 'height after sliding the ruler');
+  t.equal(await said(p, 'h'), ['Height', o.rulerSays.h], 'the height ruler for a screen reader [name, value]');
   await t.look(p, 'height ' + (o.imperial ? 'ft' : 'cm'));
   await next(p);
 
@@ -144,6 +147,7 @@ async function walk(t, o) {
   if (o.imperial) await app.tap(p, '[data-act="units"][data-v="lb"]');
   const w = await app.slideRuler(p, 'w', o.weightSteps);
   t.equal(w.text.replace(/\s/g, ''), o.weightShows.replace(/\s/g, ''), 'weight after sliding the ruler');
+  t.equal(await said(p, 'w'), ['Weight', o.rulerSays.w], 'the weight ruler for a screen reader [name, value]');
   t.has(await p.locator('#bmi-box').innerText(), o.bmiWord, 'BMI box');
   await t.look(p, 'weight ' + (o.imperial ? 'lb' : 'kg'));
   await next(p);
@@ -151,6 +155,7 @@ async function walk(t, o) {
   t.step('target');
   await expectStep(t, p, 'target');
   if (o.targetSteps) await app.slideRuler(p, 't', o.targetSteps);
+  t.equal(await said(p, 't'), ['Target weight', o.rulerSays.t], 'the target weight ruler for a screen reader [name, value]');
   t.has(await p.locator('#tg-box').innerText(), o.targetSays, 'target box');
   await t.look(p, 'target weight');
   await next(p);
@@ -273,6 +278,7 @@ const METRIC = {
   heightSteps: 2, heightShows: '180cm', cm: 180,
   weightSteps: -2, weightShows: '79kg', kg: 79, bmiWord: 'Healthy',
   targetSteps: -1, targetSays: 'lose 7.6%',                  // 79 kg: the ruler starts at 73.5 (7% less), one mark down is 73
+  rulerSays: { h: '180 centimetres', w: '79 kilograms', t: '73 kilograms' },
   healthYes: [], healthNone: true, sore: [], soreSays: null,
   activeRight: -1, activeSays: 'I sit most of the day',
   push: 2, testLevel: 'Intermediate', planLevel: 'i',
@@ -286,6 +292,7 @@ const IMPERIAL = {
   heightSteps: 2, heightShows: '5ft7in', cm: 67 * 2.54,             // 165 cm is 65 in (5 ft 5 in); two marks up: 5 ft 7 in
   weightSteps: 4, weightShows: '147lb', kg: 147 / 2.20462, bmiWord: 'Healthy',      // 65 kg is 143 lb
   targetSteps: 0, targetSays: 'Keep your weight',
+  rulerSays: { h: '5 feet 7 inches', w: '147 pounds', t: '147 pounds' },
   healthYes: ['joint'], sore: ['knee', 'other'], soreSays: 'Moves that load your knee are left out or swapped, and jumps are left out. For the other spot',
   activeRight: 1, activeSays: "I'm on my feet and moving a lot",
   push: 3, testLevel: 'Advanced', planLevel: 'b',
@@ -296,7 +303,7 @@ const IMPERIAL = {
 
 module.exports = {
   name: 'onboarding',
-  about: 'the whole onboarding by tapping, in cm/kg and in ft/lb, to a built plan, with real session lengths; Me: change sore spots, Edit and Back, Edit after an old Change, Edit keeps the health answers and leaves an older profile\'s unanswered ones open, Edit all the way, Edit keeps weights and ticks, a new goal or new days ask first; the name step across a coach load, the map on the focus step when the coach comes in late',
+  about: 'the whole onboarding by tapping, in cm/kg and in ft/lb, to a built plan, with real session lengths and the rulers as a screen reader says them; Me: change sore spots, Edit and Back, Edit after an old Change, Edit keeps the health answers and leaves an older profile\'s unanswered ones open, Edit all the way, Edit keeps weights and ticks, a new goal or new days ask first; the name step across a coach load, the map on the focus step when the coach comes in late',
   async run(t) {
     await t.flow('metric (cm, kg)', async () => {
       const o = METRIC;

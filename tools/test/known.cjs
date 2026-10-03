@@ -4,10 +4,4 @@
 //   suite: the suite that reports it · match: a regular expression on the problem line · why: the bug, in a line
 // Keep `match` narrow (flow name + check), so a known bug can't hide a new one.
 module.exports = [
-  {
-    suite: 'client',
-    match: /^long titles fit the screen: (session|finish) screen with a long title: sideways scroll/,
-    why: 'A session title with one long word (Dutch "Bovenlichaamskrachttraining") does not wrap: the session and finish screens scroll sideways and cut it off (.wd-title and the finish heading need overflow-wrap: anywhere).',
-    since: '2026-10-02'
-  }
 ];
