@@ -191,9 +191,11 @@ async function blankFigures(page) {
 async function screenProblems(page, { kcal = true, figures = true } = {}) {
   const out = [];
   const r = await page.evaluate((checkKcal) => {
-    const res = { overflow: document.documentElement.scrollWidth - innerWidth, shot: !!window.WBF_SHOT, kcal: [], broken: [], fonts: true };
+    const res = { overflow: document.documentElement.scrollWidth - innerWidth, shot: !!window.WBF_SHOT, kcal: [], broken: [], fonts: true, maps: 0 };
     res.fonts = document.fonts.check('900 20px Nunito') && document.fonts.check('20px "Gilda Display"');
     res.broken = [...document.images].filter((i) => !i.hidden && i.complete && i.getAttribute('src') && !i.naturalWidth).map((i) => i.getAttribute('src').slice(0, 60));
+    // the coach draws the muscle maps: once it is in, a map still hidden or empty is one that never showed
+    if (window.WBF && WBF.fig3d && WBF.fig3d.ready()) res.maps = [...document.querySelectorAll('img[data-map]')].filter((i) => i.hidden || !i.getAttribute('src')).length;
     if (checkKcal) {
       // calories are estimates: every kcal on screen needs "est." in the same line or the box around it
       const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
@@ -211,6 +213,7 @@ async function screenProblems(page, { kcal = true, figures = true } = {}) {
   if (r.shot) out.push('screenshot mode (WBF_SHOT) is on in normal use');
   if (!r.fonts) out.push("Frank's fonts (Nunito, Gilda Display) did not load");
   if (r.broken.length) out.push('broken images: ' + r.broken.join(', '));
+  if (r.maps) out.push('muscle maps not shown though the 3D coach is in: ' + r.maps);
   if (r.kcal.length) out.push('calories without "est.": ' + r.kcal.join(' | '));
   if (figures) {
     const blank = await blankFigures(page);
@@ -399,6 +402,21 @@ const app = {
   toast: (page) => page.evaluate(() => { const l = (window.__qa && window.__qa.toasts) || []; return l[l.length - 1] || ''; }),
   toasts: (page) => page.evaluate(() => (window.__qa && window.__qa.toasts) || []),
   overlay: (page) => page.evaluate(() => { const o = document.getElementById('overlay'); return o && !o.hidden ? o.innerText : ''; }),
+  // the muscle maps (Focus area, the onboarding's focus step) inside root: true for each one drawn and showing
+  maps: (page, root = '#app') => page.evaluate((r) => [...document.querySelectorAll(r + ' img[data-map]')]
+    .map((i) => !i.hidden && !!i.getAttribute('src') && i.getBoundingClientRect().width > 0), root),
+  // a slow phone: the 3D coach stays out until the returned function lets it in (and waits for it). Call it on a page
+  // opened with go: false, before it goes anywhere; then the screens draw first without the coach
+  async holdCoach(page) {
+    let open;
+    const gate = new Promise((r) => { open = r; });
+    await page.route('**/assets/coach-*.glb', async (route) => { await gate; await route.continue().catch(() => null); });
+    return async () => {
+      open();
+      await page.waitForFunction(() => window.WBF && WBF.fig3d && WBF.fig3d.ready(), null, { timeout: 90000 })
+        .catch(() => { throw new Error('the 3D coach did not load within 90 s after it was let in'); });
+    };
+  },
   // make a client code valid on this page (default: QA_CODE); call again after a reload
   addCode: (page, code = QA_CODE) => page.evaluate((h) => { if (WBF.FRANK.codes.indexOf(h) === -1) WBF.FRANK.codes.push(h); }, codeHash(code)),
   // tap like a finger: the element must be visible and enabled; then let the screen redraw

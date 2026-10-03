@@ -52,7 +52,7 @@ const phoneBack = (p) => p.evaluate(() => new Promise((r) => {
 
 module.exports = {
   name: 'player',
-  about: 'every player control on a session from Frank, a full plan day to the finish screen, quitting with and without saving, the phone\'s Back twice and a locked phone during a rest and a reps move, the phone\'s Back on the finish screen',
+  about: 'every player control on a session from Frank, a full plan day to the finish screen, quitting with and without saving, the phone\'s Back twice and a locked phone during a rest and a reps move, the phone\'s Back on the finish screen, everything deleted in another window during a workout',
   async run(t) {
     await t.flow('every control', async () => {
       // squat (reps) · side plank (timed, each side: switch sides) · plank (timed)
@@ -341,6 +341,38 @@ module.exports = {
       await p.goBack({ timeout: 5000 }).catch(() => null);
       await p.waitForURL((u) => !u.href.startsWith(p.srv.url), { timeout: 5000 }).catch(() => null);
       t.check(!inApp(), () => "the phone's Back on the Plan after the finish screen did not leave the app (still on " + p.url() + ')');
+    });
+
+    await t.flow('two windows: data deleted in the other one during a workout stays deleted', async () => {
+      // the workout takes the deletion in: its finish saves the new workout on its own, not the old data back
+      const a = await t.page({ state: L.member({}, { weights: [{ date: L.isoDay(-3), kg: 80 }] }), speed: 50 });
+      await app.tap(a, '[data-act="start-day"][data-day="1"]');
+      await app.waitTitle(a, 'Workout');
+      const b = t.watch(await a.context().newPage());          // the same phone: the installed app, a browser tab
+      await b.goto(a.srv.home + 'index.html');
+      await app.waitTitle(b, 'Plan');
+      await app.tap(b, '.tab[data-tab="me"]');
+      await app.tap(b, '[data-act="reset"]');
+      await app.tap(b, '[data-act="modal-yes"]');
+      await app.waitTitle(b, 'Wellness by Frank');
+      t.lastPage = a;
+      t.equal(await app.stored(a), null, 'stored after Delete in the other window');
+      await a.waitForFunction(() => !WBF.app.state().profile, null, { timeout: 5000 }).catch(() => null);   // the storage event
+      // the countdowns run 50 times faster: a move with reps waits for Done, a timed one ends by itself
+      await a.waitForFunction(() => document.querySelector('[data-act="pl-done"]') || document.querySelectorAll('.pl-segs i.on').length > 0);
+      if (await a.locator('[data-act="pl-done"]').count()) await app.tap(a, '[data-act="pl-done"]');
+      await a.waitForFunction(() => document.querySelectorAll('.pl-segs i.on').length > 0);
+      await app.tap(a, '[data-act="quit"]');
+      await app.tap(a, '[data-act="modal-yes"]');
+      await app.waitTitle(a, 'Workout complete');
+      const s = await app.stored(a);
+      t.equal([s.profile, s.weights, s.access, s.done, s.sessions.length], [null, [], null, {}, 1],
+        'saved by the workout\'s finish [profile, weights, access, ticks, workouts]');
+      t.lacks(await app.text(a), /Day \d+ (is ticked|stays open)/i, 'finish screen with no plan left');
+      await t.look(a, 'finish screen after a delete in the other window');
+      await b.waitForFunction(() => WBF.app.state().sessions.length === 1, null, { timeout: 5000 }).catch(() => null);
+      t.equal(await b.evaluate(() => [document.title.split(' · ')[0], !!WBF.app.state().profile]), ['Wellness by Frank', false],
+        'the other window after the workout\'s finish [screen, a profile in it]');
     });
   }
 };

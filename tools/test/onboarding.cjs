@@ -296,7 +296,7 @@ const IMPERIAL = {
 
 module.exports = {
   name: 'onboarding',
-  about: 'the whole onboarding by tapping, in cm/kg and in ft/lb, to a built plan, with real session lengths; Me: change sore spots, Edit and Back, Edit after an old Change, Edit keeps the health answers and leaves an older profile\'s unanswered ones open, Edit all the way, Edit keeps weights and ticks, a new goal or new days ask first; the name step across a coach load',
+  about: 'the whole onboarding by tapping, in cm/kg and in ft/lb, to a built plan, with real session lengths; Me: change sore spots, Edit and Back, Edit after an old Change, Edit keeps the health answers and leaves an older profile\'s unanswered ones open, Edit all the way, Edit keeps weights and ticks, a new goal or new days ask first; the name step across a coach load, the map on the focus step when the coach comes in late',
   async run(t) {
     await t.flow('metric (cm, kg)', async () => {
       const o = METRIC;
@@ -566,6 +566,53 @@ module.exports = {
       t.equal(await p.locator('.wk-days button.dd.done').count(), 0, 'days ticked on the 28-day grid after Restart');
     });
 
+    await t.flow('Me: Edit with new days, Keep my progress goes on from the same week', async () => {
+      // two full weeks on 3 days a week (days 1, 3, 5, 8, 10 and 12 ticked off), so day 15 in week 3 is next. With
+      // fewer or more days, the new plan's days before day 15 count as done: the plan goes on from day 15
+      const ticks = [1, 3, 5, 8, 10, 12];
+      const sessions = ticks.map((d) => ({ id: 'h' + d, at: L.isoDay(d - 15) + 'T07:30:00.000Z', date: L.isoDay(d - 15), wid: 'full-i', title: 'Full body',
+        level: 'i', day: d, sec: 900, moves: 12, total: 12, feel: 'right', adj: 0, loads: {}, kcal: 90 }));
+      const st = L.member({ start: L.isoDay(-14), health: confirmedHealth() }, { sessions, done: Object.fromEntries(ticks.map((d) => [d, 'h' + d])) });
+      // the days each plan trains before day 15 (WEEK in js/programs.js)
+      for (const [days, before] of [[2, [1, 4, 8, 11]], [4, [1, 2, 4, 5, 8, 9, 11, 12]]]) {
+        t.step(days + ' days a week');
+        const p = await t.page({ state: st });
+        t.has(await app.text(p), 'Round 1 · 6/12 done', 'control: the plan before the Edit');
+        await editAll(p, async (q) => { if (/days a week/i.test(q)) await app.tap(p, '[data-act="ob-pick-stay"][data-k="days"][data-v="' + days + '"]'); return false; });
+        t.has(await app.overlay(p), 'Restart your 28 days?', 'question after new days');
+        await app.tap(p, '[data-act="modal-no"]');
+        await app.waitTitle(p, 'Plan');
+        const txt = await app.text(p);
+        t.has(txt, 'Round 1 · ' + before.length + '/' + days * 4 + ' done', 'plan after Keep my progress');
+        t.has(txt, 'Start day 15', 'plan after Keep my progress');
+        t.has(txt, 'Week 3: Push', 'this week after Keep my progress');
+        t.equal(await p.$$eval('.wk-days button.dd.done', (bs) => bs.map((b) => +b.getAttribute('data-day'))), before, 'days ticked on the 28-day grid after Keep my progress');
+        const s = await app.stored(p);
+        t.equal([s.profile.days, s.profile.start, s.sessions.length], [days, st.profile.start, 6], 'Keep my progress [days, plan start, workouts]');
+        t.equal(ticks.filter((d) => s.done[d] !== st.done[d]), [], 'days whose tick Keep my progress changed');
+        await t.look(p, 'plan after Keep my progress with ' + days + ' days');
+        await p.context().close();
+      }
+    });
+
+    await t.flow('Me: Edit with no changes in ft and lb keeps the height and the target', async () => {
+      // the rulers show 5 ft 11 in, 168 lb and 172 lb: passing them by keeps 180 cm, 76.4 kg and 78 kg exactly
+      const st = L.member({ cm: 180, kg: 80, targetKg: 78, health: confirmedHealth() }, { weights: [{ date: L.isoDay(-7), kg: 80 }, { date: L.TODAY, kg: 76.4 }] });
+      st.settings = Object.assign({}, st.settings, { units: 'lb', hunits: 'ft' });
+      const p = await t.page({ state: st });
+      const shown = {};
+      await editAll(p, async (q) => {
+        if (/tall/i.test(q)) shown.h = await p.locator('#rv-h').innerText();
+        if (/target/i.test(q)) shown.t = await p.locator('#rv-t').innerText();
+        return false;
+      });
+      t.equal([shown.h, shown.t].map((x) => (x || '').replace(/\s/g, '')), ['5ft11in', '172lb'], 'rulers [height, target]');
+      await app.waitTitle(p, 'Plan');
+      t.equal(await app.toast(p), 'Saved', 'toast after an Edit with no changes');
+      const s = await app.stored(p);
+      t.equal([s.profile.cm, s.profile.kg, s.profile.targetKg, s.weights], [180, 76.4, 78, st.weights], 'after an Edit with no changes [cm, kg, target kg, weights]');
+    });
+
     await t.flow("Me: Edit, the phone's Back on the restart question", async () => {
       // Back closes the question as "Keep my progress", once: the next Back leaves the app from the plan
       const st = ticked();
@@ -604,6 +651,23 @@ module.exports = {
       await next(p);
       await expectStep(t, p, 'call');
       t.equal(await p.locator('#ob-name').inputValue(), 'Mariana', 'name after Back and Next');
+    });
+
+    await t.flow('focus step: the muscle map shows when the coach comes in late', async () => {
+      // a slow phone: the coach comes in after the person reaches the focus step, so the map waits for it
+      const p = await t.page({ go: false });
+      const coachIn = await app.holdCoach(p);
+      await p.goto(p.srv.home + 'index.html');
+      await L.settle(p, { threeD: false });
+      await app.tap(p, '[data-act="ob-start"]');
+      await cont(p);
+      await app.tap(p, '[data-act="ob-pick"][data-k="goal"][data-v="fit"]');
+      await expectStep(t, p, 'focus');
+      await app.tap(p, '[data-act="ob-multi"][data-k="focus"][data-v="legs"]');
+      t.equal([await p.evaluate(() => WBF.fig3d.ready()), await app.maps(p)], [false, [false]], 'before the coach is let in [coach in, map showing]');
+      await coachIn();
+      t.equal(await app.maps(p), [true], 'the map once the coach is in (true: showing)');
+      await t.look(p, 'focus step after a late coach');
     });
   }
 };

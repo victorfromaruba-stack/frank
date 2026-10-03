@@ -236,6 +236,24 @@ module.exports = {
       await snap(p, 'plan with a new version', { full: false });
     });
 
+    await t.flow('Edit and saving', async () => {
+      // the question after an Edit with a new goal, on the light screen; Me when the phone can't save
+      let p = await t.page({ state: L.member({}, { done: { 1: 'x1' } }) });
+      await tab(p, 'me');
+      await app.tap(p, '[data-act="ob-edit"]');
+      await app.tap(p, '[data-act="ob-pick"][data-k="goal"][data-v="strength"]');
+      await go(p, 'onboard', { step: 'name' });
+      await app.tap(p, '[data-act="ob-build"]');
+      t.has(await app.overlay(p), 'Restart your 28 days?', 'question after an Edit with a new goal');
+      await snap(p, 'restart question after an Edit', { full: false });
+      p = await t.page({ state: L.member() });
+      await p.evaluate(() => { Storage.prototype.setItem = function () { throw new DOMException('The quota has been exceeded.', 'QuotaExceededError'); }; });
+      await tab(p, 'today');
+      await app.tap(p, '[data-act="water"][data-n="2"]');
+      await tab(p, 'me');
+      await snap(p, 'me when the phone cannot save');
+    });
+
     await t.flow('personal prototype', async () => {
       const p = await t.page({ url: 'personal/index.html', threeD: false });
       const views = [['client/week', 'week'], ['client/session/upper-a', 'session'], ['client/play/upper-a', 'player'], ['client/progress', 'progress'],

@@ -5,7 +5,7 @@ const { app } = L;
 
 module.exports = {
   name: 'smoke',
-  about: 'every tab, the exercise sheet, a workout, the player starts, logging walks, water, meals and weight, delete my data, a phone that can\'t save, other options in the sheet, Back after a tab switch, the scroll after Back and after a workout, the activity slider, the Personal prototype',
+  about: 'every tab, the exercise sheet, a workout, the player starts, logging walks, water, meals and weight, delete my data, a phone that can\'t save, other options in the sheet, muscle maps when the coach comes in late, Back after a tab switch, the scroll after Back and after a workout, the activity slider, the Personal prototype',
   async run(t) {
     await t.flow('first visit', async () => {
       const p = await t.page();
@@ -151,6 +151,8 @@ module.exports = {
       t.equal(await app.toast(p), fail, 'toast after a save that failed');
       await app.tap(p, '[data-act="walk"][data-m="10"]');
       t.equal((await app.toasts(p)).filter((x) => x === fail).length, 1, 'warnings after two saves that failed (the first one only)');
+      await app.tap(p, '[data-act="walk"][data-m="20"]');
+      t.equal((await app.toasts(p)).filter((x) => /^Activity logged/.test(x)), [], '"Activity logged" toasts after walks that could not be saved');
       await app.tap(p, '.tab[data-tab="me"]');
       t.equal(await p.locator('#save-fail').innerText().catch(() => 'nothing'), fail, 'Me after a save that failed');
       await p.fill('#w-in', '79');
@@ -190,6 +192,23 @@ module.exports = {
       // the showcase's hook opens a sheet on a tab, also while another sheet is open
       await p.evaluate(() => WBF.app.sheet('squat', 'muscle'));
       t.equal(await p.locator('#overlay [data-act="xs-tab"][aria-pressed="true"]').getAttribute('data-v'), 'muscle', 'WBF.app.sheet(id, "muscle") over an open sheet');
+    });
+
+    await t.flow('a late coach: the muscle maps show', async () => {
+      // a slow phone: a workout and an exercise sheet opened before the coach is in get its muscle maps when it comes
+      const p = await t.page({ state: L.member(), go: false });
+      const coachIn = await app.holdCoach(p);
+      await p.goto(p.srv.home + 'index.html');
+      await L.settle(p, { threeD: false });
+      await app.tap(p, '[data-act="open-day"][data-day="1"]', { nth: 0 });
+      await p.waitForSelector('.wd-title');
+      await app.tap(p, '[data-act="ex-wo"]', { nth: 0 });
+      const all = (maps) => maps.length > 0 && maps.every(Boolean);
+      const shown = async () => [await p.evaluate(() => WBF.fig3d.ready()), all(await app.maps(p)), all(await app.maps(p, '#overlay'))];
+      t.equal(await shown(), [false, false, false], 'before the coach is let in [coach in, workout maps showing, sheet maps showing]');
+      await coachIn();
+      t.equal(await shown(), [true, true, true], 'once the coach is in [coach in, workout maps showing, sheet maps showing]');
+      await t.look(p, 'workout and sheet after a late coach');
     });
 
     await t.flow('Back after a tab switch', async () => {

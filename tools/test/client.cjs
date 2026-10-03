@@ -17,7 +17,7 @@ async function otherWindow(t, a, sp) {
 
 module.exports = {
   name: 'client',
-  about: 'client codes (also typed while a coach loads), session links (opened and pasted, broken and hostile ones, opened in a second window), Back after the join screen, Coach tools: build, send, open the link on a fresh phone, Back',
+  about: 'client codes (also typed while a coach loads), session links (opened and pasted, broken and hostile ones, opened in a second window, also during a workout), Back after the join screen, Coach tools: build, send, open the link on a fresh phone, Back',
   async run(t) {
     await t.flow('client codes', async () => {
       const p = await t.page();
@@ -75,6 +75,9 @@ module.exports = {
       const sp = L.spec({ i: 'qa-link', t: 'Lower body, week 2', n: 'Slow on the way down.' });
       const p = await t.page({ hash: 'frank.' + L.pack(sp) });
       await app.waitHeading(p, 'Lower body, week 2');
+      // the app always draws its first screen before the coach is in: the Focus area maps come with the coach
+      const maps = await app.maps(p);
+      t.check(maps.length && maps.every(Boolean), () => 'Focus area maps once the coach is in: ' + JSON.stringify(maps) + ' (true: showing)');
       t.has(await app.toast(p), 'New session from Frank: Lower body, week 2', 'toast');
       t.equal(await p.evaluate(() => location.hash), '', 'the link code left in the address bar');
       const txt = await app.text(p);
@@ -113,12 +116,20 @@ module.exports = {
     });
 
     await t.flow('two windows: a link opened during a workout in the other one stays', async () => {
-      // the workout runs on undisturbed; its finish takes in what the other window saved before it saves
+      // the workout runs on undisturbed but takes in what the other window saved: a setting changed in the player
+      // saves over none of it, and the finish keeps it
       const a = await t.page({ state: L.member(), speed: 50 });
       await app.tap(a, '[data-act="start-day"]');
       await app.waitTitle(a, 'Workout');
       await otherWindow(t, a, L.spec({ i: 'qa-mid', t: 'Upper body, week 2' }));
       t.equal(await app.title(a), 'Workout', 'the first window while the other opened the link');
+      await a.waitForFunction(() => WBF.app.state().inbox.length > 0, null, { timeout: 5000 }).catch(() => null);   // the storage event
+      await app.tap(a, '[data-act="settings"]');                          // the gear: voice on, which saves
+      await app.tap(a, '#overlay [data-act="setting"][data-k="voice"]');
+      await app.tap(a, '#overlay [data-act="close"]');
+      const mid = await app.stored(a);
+      t.equal([mid.inbox.map((x) => x.i), (mid.access || {}).client, mid.settings.voice], [['qa-mid'], true, true],
+        'saved after a setting changed in the workout [sessions from Frank, client, voice]');
       // the countdowns run 50 times faster: a move with reps waits for Done, a timed one ends by itself
       await a.waitForFunction(() => document.querySelector('[data-act="pl-done"]') || document.querySelectorAll('.pl-segs i.on').length > 0);
       if (await a.locator('[data-act="pl-done"]').count()) await app.tap(a, '[data-act="pl-done"]');
@@ -127,7 +138,8 @@ module.exports = {
       await app.tap(a, '[data-act="modal-yes"]');
       await app.waitTitle(a, 'Workout complete');
       const s = await app.stored(a);
-      t.equal([s.inbox.map((x) => x.i), (s.access || {}).client, s.sessions.length], [['qa-mid'], true, 1], 'saved by the workout\'s finish [sessions from Frank, client, workouts]');
+      t.equal([s.inbox.map((x) => x.i), (s.access || {}).client, s.sessions.length, s.settings.voice], [['qa-mid'], true, 1, true],
+        'saved by the workout\'s finish [sessions from Frank, client, workouts, voice]');
       await app.tap(a, '.dock [data-act="tab"][data-tab="plan"]');
       await app.waitTitle(a, 'Plan');
       t.has(await app.text(a), 'Upper body, week 2', 'plan after the workout');

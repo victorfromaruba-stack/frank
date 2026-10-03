@@ -49,13 +49,14 @@ Exit code: 0 all passed, 1 a suite failed, 2 a usage error.
 | `client` | Client codes (a test-only code, typed with capitals and spaces); session links opened, pasted, broken and hostile (no script runs, doses capped); long titles; Coach tools: build, save, send, the link opened on a fresh phone, Back, the player counts sets |
 | `safety` | The food card refers to a dietitian or doctor when pregnant, under 18 or with a medical condition, with no water card, no food or drink lesson and no weight target (onboarding and Edit); every plan day and catalogue workout is checked against pregnancy, a PAR-Q yes (gentle until "Cleared by a doctor"), age 60+ and each sore spot; no made-up social proof |
 | `hosted` | Served under `/frank/` with Pages' 10-minute caching and the service worker on: no outside requests, no 404s, fonts and worker scope inside `/frank/`, the manifest and icons, every `SHELL` file cached; with no network the welcome, the plan, an exercise sheet, a workout and a session link still work; a new deploy reaches a phone that has the app; Personal |
-| `screens` | A screenshot of every screen and main state (79 of them, every onboarding step, sheets, player states, empty and full states, Personal) with the standard checks, plus `index.html`, a contact sheet to look through |
+| `screens` | A screenshot of every screen and main state (86 of them, every onboarding step, sheets, player states, empty and full states, Personal) with the standard checks, plus `index.html`, a contact sheet to look through |
 | `live` | The published site: every app file is served with the right type and is byte for byte what `origin/app` holds, `sw.js` VERSION, the folder address serves the app; then welcome, onboarding, a member's plan, the sheet, the player, a session link and Personal, through the real site. Only runs when named (or with `all`) |
 
 Every screen a test looks at (`t.look`) also gets the standard checks: no page or
 console errors, no sideways scroll at 390 px, Frank's fonts loaded, no broken
-images, no undrawn 3D coach, every "kcal" with "est." next to it, no screenshot
-mode, no HTTP errors, nothing requested from another site.
+images, no undrawn 3D coach, no muscle map left hidden once the coach is in, every
+"kcal" with "est." next to it, no screenshot mode, no HTTP errors, nothing
+requested from another site.
 
 ## Reading the output
 
@@ -136,6 +137,7 @@ and an `about`, and add the name to `ORDER` in `run.cjs`.
 | `app.waitTitle`, `app.waitHeading`, `app.waitText` | Wait for a screen, a heading, a text |
 | `app.text`, `app.title`, `app.toast`, `app.toasts`, `app.overlay`, `app.stored` | What's on screen, the last toast (even after it faded), the open sheet, what was saved |
 | `app.runWorkout`, `app.slideRuler`, `app.addCode` | Play a workout to the finish screen, drag an onboarding ruler, make the test-only client code valid |
+| `app.maps`, `app.holdCoach` | Which muscle maps show; keep the 3D coach out until a test lets it in (a slow phone: open the page with `go: false`) |
 | `t.has`, `t.lacks`, `t.equal`, `t.near`, `t.check`, `t.fail` | Checks. They record a problem and go on |
 | `t.step`, `t.look`, `t.shot`, `t.note`, `t.log` | Name the step, run the standard checks, save a screenshot, print a note, print with `-v` |
 

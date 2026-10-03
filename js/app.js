@@ -384,9 +384,10 @@
     $$('[data-turn]', root).forEach(function (b) {
       b.hidden = !use3d() || !!b.parentNode.querySelector('video');
     });
+    // a map drawn before the coach was in is hidden: it shows once the coach draws it (upgrade3d)
     $$('img[data-map]', root).forEach(function (im) {
       var src = mapSrc(JSON.parse(im.getAttribute('data-map')), im.getAttribute('data-view'), +im.getAttribute('width') * 2, +im.getAttribute('height') * 2);
-      if (src) im.src = src; else im.hidden = true;
+      if (src) { im.src = src; im.hidden = false; } else im.hidden = true;
     });
     $$('img[data-portrait]', root).forEach(function (im) {
       var src = use3d() && WBF.fig3d.portrait ? WBF.fig3d.portrait(im.getAttribute('data-portrait'), +im.getAttribute('width') * 2, +im.getAttribute('height') * 2) : null;
@@ -1094,18 +1095,23 @@
     el.addEventListener('pointerup', function () { x0 = null; });
     read();
   }
+  // A ruler shows the saved value at its nearest mark: the value changes only when the ruler moves off that mark, so
+  // an Edit that only passes by keeps it exactly (in ft and lb too)
   function rulerSet(id, v) {
     var d = draft;
     if (!d) return;
-    if (id === 'h') { d.cm = S.settings.hunits === 'ft' ? v * 2.54 : v; }
+    var lb = S.settings.units === 'lb';
+    var kgMark = function (kg) { return kg && (lb ? Math.round(kg * 2.20462) : Math.round(kg * 2) / 2); };
+    if (id === 'h') {
+      var ft = S.settings.hunits === 'ft';
+      if ((d.cm && (ft ? Math.round(d.cm / 2.54) : Math.round(d.cm))) !== v) d.cm = ft ? v * 2.54 : v;
+    }
     if (id === 'w') {
-      // the ruler shows the weight at its nearest mark: the weight changes only when the ruler moves off that mark
-      var mark = d.kg && (S.settings.units === 'lb' ? Math.round(d.kg * 2.20462) : Math.round(d.kg * 2) / 2);
-      if (mark !== v) d.kg = S.settings.units === 'lb' ? v / 2.20462 : v;
+      if (kgMark(d.kg) !== v) d.kg = lb ? v / 2.20462 : v;
       var bx = $('#bmi-box'); if (bx) bx.innerHTML = bmiBox(d.kg, d.cm, d);
     }
     if (id === 't') {
-      d.targetKg = S.settings.units === 'lb' ? v / 2.20462 : v;
+      if (kgMark(d.targetKg) !== v) d.targetKg = lb ? v / 2.20462 : v;
       var tb = $('#tg-box'); if (tb) tb.innerHTML = targetBox(d) + weightChart(d);
     }
   }
@@ -1559,7 +1565,7 @@
     if (!PL) return;
     clearInterval(timer); timer = null;
     SND.awake(false);
-    catchUp();                // what other windows saved while the workout ran
+    catchUp();                // what other windows saved while the workout ran, in case a storage event was missed
     var s = PL.s, didN = Object.keys(PL.did).length;
     var mainTotal = s.steps.filter(function (x) { return x.block === 'main'; }).length;
     var mainDid = s.steps.filter(function (x, i) { return x.block === 'main' && PL.did[i]; }).length;
@@ -1571,7 +1577,8 @@
               day: s.day || null, sec: Math.round(PL.elapsed), moves: didN, total: s.steps.length, feel: null, adj: 0, loads: {},
               kcal: kcalOf(s, PL.elapsed) };
       S.sessions.push(rec);
-      if (s.day && mainDid >= Math.ceil(mainTotal / 2)) S.done[s.day] = rec.id;
+      // a plan day is ticked off while there is a plan: another window may have deleted everything meanwhile
+      if (s.day && S.profile && mainDid >= Math.ceil(mainTotal / 2)) S.done[s.day] = rec.id;
       if (s.coach) { rec.coach = s.coach.i; if (mainDid >= Math.ceil(mainTotal / 2)) S.inboxDone[s.coach.i] = rec.id; }
       save();
     }
@@ -1607,7 +1614,7 @@
       var full = rec.moves >= rec.total;
       return '<div class="screen bare"><div class="rowx" style="justify-content:center;padding-top:10px"><div class="badge" aria-hidden="true">' + ic('trophy') + '</div></div>' +
         '<div class="stack tight" style="text-align:center"><p class="label">' + (full ? 'Workout complete' : (savedOk ? 'Saved: ' : '') + rec.moves + ' of ' + rec.total + ' moves') + '</p><h1 class="display xl">' + esc(rec.title) + '</h1>' +
-        (rec.day ? '<p class="meta">Day ' + rec.day + (S.done[rec.day] === rec.id ? ' is ticked off your plan.' : ' stays open: finish half the main moves to tick it off.') + '</p>' : '') +
+        (rec.day && S.profile ? '<p class="meta">Day ' + rec.day + (S.done[rec.day] === rec.id ? ' is ticked off your plan.' : ' stays open: finish half the main moves to tick it off.') + '</p>' : '') +
         (rec.coach ? '<p class="meta">' + (S.inboxDone[rec.coach] === rec.id ? 'Ticked off. Frank\'s next session will show up on your plan.' : 'Finish half the main moves to tick it off.') + '</p>' : '') + '</div>' +
         '<div class="stats"><div><b>' + mmss(rec.sec) + '</b><span>Time</span></div><div><b>' + rec.moves + '</b><span>Moves</span></div>' +
         '<div><b>' + (rec.kcal ? rec.kcal : '–') + '</b><span>' + (rec.kcal ? 'kcal, est.' : 'Add weight') + '</span></div></div>' +
@@ -2067,8 +2074,8 @@
   }
   // The draft becomes the profile; then(updated) runs once it is saved (updated: the sessions change).
   // A new goal or new training days make a new plan: with days ticked off, the person chooses between a fresh
-  // 28 days and keeping their progress (the new plan then starts with the next session). Level, minutes, kit,
-  // sore spots and health only change the sessions to come.
+  // 28 days and keeping their progress (the new plan then carries on from the old one's next session, in the same
+  // week). Level, minutes, kit, sore spots and health only change the sessions to come.
   function finishProfile(then) {
     readObInputs();
     var old = S.profile, d = draft;
@@ -2082,8 +2089,12 @@
     var updated = renew || String(old.level) !== String(d.level) || +old.minutes !== d.minutes || set(old.kit) !== set(d.kit) ||
       set(old.injuries) !== set(d.injuries) || healthSig(old.health) !== healthSig(d.health);
     delete d.edit; delete d.soreDone; delete d.only;
+    var was = old ? nextDay() : null;                 // the old plan's next session (null: all done)
     function commit(fresh) {
       if (fresh) { d.start = iso(); d.round = old ? (old.round || 1) : 1; S.done = {}; }
+      // progress kept: the ticks are by day, and new training days train on other days of the week. Every day the new
+      // plan trains before the old next session counts as done, so the count and the next session go on from there
+      else if (old) WBF.plan.days(d).forEach(function (x) { if (x.train && (!was || x.day < was.day) && !S.done[x.day]) S.done[x.day] = 'kept'; });
       // the weight is logged for today when the ruler moved from the last one (or none is logged yet), but never
       // over a weight the person logged by hand today: the ones the plan logs say from: 'plan'
       var w0 = lastWeight(), t = iso();
@@ -2326,8 +2337,8 @@
       var m = +el.getAttribute('data-m'), d = iso();
       S.walks = S.walks || {};
       if (m) S.walks[d] = Math.min(600, (S.walks[d] || 0) + m); else delete S.walks[d];
-      save(); render(false);
-      if (m) toast('Activity logged: ' + m + ' min');
+      var ok = save(); render(false);
+      if (m && ok) toast('Activity logged: ' + m + ' min');
     },
     flag: function (el) {
       // the food card's own switches; what the profile says is worked out by flags() and stays apart
@@ -2431,12 +2442,12 @@
     if (PL.phase === 'move' && !timed(PL.s.steps[PL.i])) return;
     PL.paused = true; SND.hush(); paintPlayer();
   });
-  // another window saved (catchUp): take it in and show it. A workout runs on undisturbed and catches up at its finish
+  // another window saved (catchUp): take it in and show it. During a workout too, so that a setting changed in the
+  // player saves over nothing the other window saved, and a deletion there stays one; the player isn't redrawn
   W.addEventListener('storage', function (e) {
     if (e.key !== KEY && e.key !== null) return;
-    if (cur().name === 'player') return;
     if (e.newValue == null) S = load(); else catchUp();       // deleted there: deleted here too
-    refresh();
+    if (cur().name !== 'player') refresh();
   });
   $$('.tab', tabsEl).forEach(function (t) { t.addEventListener('click', function () { tab(t.getAttribute('data-tab')); }); });
 
