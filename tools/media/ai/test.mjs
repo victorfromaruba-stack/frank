@@ -19,7 +19,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { AI, ROOT, checkImageBody, checkVeoBody, exercises, haveFfmpeg, imageCall, move, probe, sha256, shotListProblems, veoCall } from './lib.mjs';
-import { clipPrompt, startPrompt, third } from './prompts.mjs';
+import { clipPrompt, startPrompt, third, noBreath } from './prompts.mjs';
 import { TEST_KEY, startMock } from './mock-server.mjs';
 
 const KEEP = process.argv.includes('--keep');
@@ -64,11 +64,11 @@ for (const id of ids) {
   for (const c of ['f', 'm']) {
     const sp = startPrompt(c, m), cp = clipPrompt(c, m);
     if (cp.length > 3800 || sp.length > 6000) long.push(id);
-    if (!m.cues.every((q) => cp.includes(third(q)))) missingCue.push(id);
+    if (!noBreath(m.cues).every((q) => cp.includes(third(q))) || /\bbreath/i.test(cp.replace('"' + m.name + '"', ''))) missingCue.push(id);
   }
 }
 ok(!long.length, 'every clip prompt fits Veo\'s 1,024 tokens ' + long.join(' '));
-ok(!missingCue.length, 'every clip prompt carries all the move\'s cues ' + missingCue.join(' '));
+ok(!missingCue.length, 'every clip prompt carries all the move\'s cues but the ones about breathing, and no word of breathing but a move\'s name (Veo\'s audio filter) ' + missingCue.join(' '));
 ok(/returns exactly to the start position/.test(clipPrompt('f', move('squat'))) && /holds this position steady/.test(clipPrompt('f', move('plank'))), 'reps return to the start; holds hold steady');
 ok(move('plank').wide && move('push-up').wide && move('table-row').wide && move('side-plank').wide && !move('squat').wide && !move('wall-sit').wide && !move('deep-squat-hold').wide,
   'process.sh --wide for moves on the floor or on the hands, not for standing ones');

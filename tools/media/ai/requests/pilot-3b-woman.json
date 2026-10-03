@@ -1,0 +1,9 @@
+{
+  "about": "Pilot, part 3 again for the woman's squat and push-up: Veo's audio filter refused them (not charged) when the prompt asked for soft breathing.",
+  "steps": ["clip", "review"],
+  "coaches": ["f"],
+  "moves": ["squat", "push-up"],
+  "takes": 1,
+  "resolution": "720p",
+  "budget": 5
+}

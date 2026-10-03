@@ -266,7 +266,10 @@ Checked:
   with `referenceType` "asset". The answer's `name`; `GET /v1beta/<name>` until `done`; the video
   at `response.generateVideoResponse.generatedSamples[0].video.uri`, downloaded with the key
   header, following redirects. 24 fps, sound always on, SynthID, 11 s to 6 min, kept 2 days, a
-  blocked video isn't charged. The scripts send no `seed` or `generateAudio`: Google's SDK refuses
+  blocked video isn't charged. Pilot 3 (3 October 2026): Veo's audio filter refused 4 of 6 clips
+  whose prompt asked for "soft breathing" ("an issue with the audio for your prompt", not
+  charged), so the clip prompt now leaves breathing out (`noBreath` in `prompts.mjs`). A clip
+  the filter refuses shows as `filtered` in `run.json`; run it again in a new request. The scripts send no `seed` or `generateAudio`: Google's SDK refuses
   both for the Gemini API (the Veo page mentions `seed` all the same).
 - **Images:** the image docs now use the Interactions API: `POST /v1beta/interactions` with
   `model`, `input` (text and `{"type": "image", "mime_type", "data"}` items) and
