@@ -377,7 +377,8 @@ module.exports = {
     });
 
     await t.flow('Me: Edit after an old Change', async () => {
-      // phones that used Change before the fix saved only:"sore" in the profile: Edit still walks every step, and saving drops it
+      // phones that used Change before the fix saved only:"sore" in the profile. Edit must not act as a one-step edit:
+      // the goal goes on to the next step (the old code saved there and looped), Back twice returns to Me, and the next save drops it
       const p = await t.page({ state: L.member({ only: 'sore', soreDone: true }) });
       await app.tap(p, '.tab[data-tab="me"]');
       await app.tap(p, '[data-act="ob-edit"]');

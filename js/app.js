@@ -411,7 +411,7 @@
   var useHistory = !framed;           // inside a frame, history.back() could leave the host page
   var depth = 0;                      // history entries this page pushed: back never goes further
   var selfBack = false;               // the next popstate is the app's own back(): pop one screen, nothing more
-  var unwound = false;                // the next popstate is tab() dropping old entries: nothing to do
+  var unwound = false;                // the next popstate is setStack() dropping old entries: nothing to do
   function cur() { return stack[stack.length - 1]; }
   function pushState() { if (!useHistory) return; try { W.history.pushState({ wbf: stack.length }, ''); depth++; } catch (e) { useHistory = false; } }
   function go(name, params) {
@@ -425,12 +425,16 @@
     if (useHistory && depth > 0) { try { selfBack = true; depth--; W.history.back(); return; } catch (e) { selfBack = false; useHistory = false; } }
     pop();
   }
-  // a tab starts a new stack: drop the history entries the old one pushed, so the phone's Back leaves from here
-  function tab(name, params) {
-    if (useHistory && depth > 0) { try { unwound = true; W.history.go(-depth); depth = 0; } catch (e) { unwound = false; useHistory = false; } }
-    stack = [{ name: name, params: params || {} }];
+  // A new stack of screens (a tab, the finish screen, a session from a link) keeps one history entry for each screen
+  // above the first and drops the rest, so the phone's Back goes back through them, then leaves the app
+  function setStack(screens) {
+    var want = screens.length - 1;
+    if (useHistory && depth > want) { try { unwound = true; W.history.go(want - depth); depth = want; } catch (e) { unwound = false; useHistory = false; } }
+    stack = screens;
+    while (useHistory && depth < want) pushState();
     render(true);
   }
+  function tab(name, params) { setStack([{ name: name, params: params || {} }]); }
   W.addEventListener('popstate', function () {
     if (!useHistory) return;
     if (unwound) { unwound = false; return; }
@@ -1431,14 +1435,15 @@
     else live();
   }
   // A new step (a move, a rest) runs, whether a countdown ended or the person tapped to get there.
-  // With the phone locked it starts paused and quiet: nothing moves on until the person is back and taps Resume.
+  // With the phone locked it starts quiet, and a countdown starts paused: nothing moves on until the person is back and
+  // taps Resume. A reps move has no countdown and no Resume: it runs (see visibilitychange).
   function enterMove(i) {
     PL.i = i; PL.phase = 'move'; PL.half = false; PL.cueI = 0; PL.cueAt = PL.elapsed;
     var st = PL.s.steps[i];
     PL.len = timed(st) ? st.dose : 0;
     PL.left = timed(st) ? st.dose : 0;
-    PL.paused = !!document.hidden;
-    if (!PL.paused) {
+    PL.paused = !!document.hidden && timed(st);
+    if (!document.hidden) {
       beep('go'); buzz(120);
       speak(EX[st.ex].name + '. ' + spokenDose(st) + '.');
     }
@@ -1569,7 +1574,7 @@
       save();
     }
     PL = null;
-    if (rec) { stack = [{ name: 'plan', params: {} }, { name: 'done', params: { id: rec.id } }]; render(true); }
+    if (rec) setStack([{ name: 'plan', params: {} }, { name: 'done', params: { id: rec.id } }]);
     else tab('plan');
   }
   function askQuit() {
@@ -2123,7 +2128,7 @@
         if (prev && (!draft || !draft.edit || OB_I[prev.id] >= OB_I.goal)) { obGo(prev.id); return; }
       }
       if (stack.length > 1) back();
-      else { stack = [{ name: S.profile ? 'plan' : 'welcome', params: {} }]; render(true); }
+      else tab(S.profile ? 'plan' : 'welcome');
     },
     'ob-next': function () {
       var id = cur().params.step || 'p1';
@@ -2386,8 +2391,7 @@
     } else if (kind === 'join') {
       var text = $('#join-in').value, spec = importSession(text);
       if (spec) {
-        stack = [{ name: 'plan', params: {} }, { name: 'workout', params: { coach: spec.i } }];
-        render(true);
+        setStack([{ name: 'plan', params: {} }, { name: 'workout', params: { coach: spec.i } }]);
         toast('Added: ' + spec.t);
         return;
       }
@@ -2395,7 +2399,7 @@
         if (!ok) { toast('That link or code didn\'t work. Ask Frank to send it again.'); return; }
         S.access = Object.assign(S.access || {}, { client: true });
         save();
-        if (S.profile) { stack = [{ name: 'plan', params: {} }]; render(true); } else A['ob-start']();
+        if (S.profile) tab('plan'); else A['ob-start']();
         toast('Welcome. The whole app is open to you.');
       });
     } else if (kind === 'weight') {
@@ -2416,9 +2420,12 @@
       if (PL.phase === 'move') { if (timed(PL.s.steps[PL.i])) A['pl-pause'](); else afterMove(); } else A['pl-skip']();
     }
   });
-  // a locked phone or another app: whatever runs waits (get ready, a move, a rest), so nothing moves on unseen
+  // a locked phone or another app: every countdown waits (get ready, a timed move, a rest), so nothing moves on unseen.
+  // A reps move runs on: it waits for Done anyway, it has no Resume, and its clock counts a set finished with the phone locked.
   document.addEventListener('visibilitychange', function () {
-    if (document.hidden && PL && !PL.paused) { PL.paused = true; SND.hush(); paintPlayer(); }
+    if (!document.hidden || !PL || PL.paused) return;
+    if (PL.phase === 'move' && !timed(PL.s.steps[PL.i])) return;
+    PL.paused = true; SND.hush(); paintPlayer();
   });
   // another window saved (catchUp): take it in and show it. A workout runs on undisturbed and catches up at its finish
   W.addEventListener('storage', function (e) {
@@ -2467,7 +2474,12 @@
     });
   })(navigator.serviceWorker);
 
-  if (useHistory) { try { W.history.replaceState({ wbf: 1 }, ''); } catch (e) { useHistory = false; } }
+  // The app puts a screen's scroll back itself (render). The browser's own restore would also run when setStack() drops
+  // entries, and open the new screen as far down as the old first screen was scrolled.
+  if (useHistory) {
+    try { W.history.scrollRestoration = 'manual'; } catch (e) { /* an older browser: it restores the scroll itself */ }
+    try { W.history.replaceState({ wbf: 1 }, ''); } catch (e) { useHistory = false; }
+  }
   // The 3D coach is in (or the other coach loaded): the figures swap in place. A full render would wipe what the
   // person is typing (a client code, their name) and close the keyboard.
   function upgrade3d() {

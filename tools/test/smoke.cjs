@@ -5,7 +5,7 @@ const { app } = L;
 
 module.exports = {
   name: 'smoke',
-  about: 'every tab, the exercise sheet, a workout, the player starts, logging walks, water, meals and weight, delete my data, a phone that can\'t save, other options in the sheet, Back after a tab switch, the activity slider, the Personal prototype',
+  about: 'every tab, the exercise sheet, a workout, the player starts, logging walks, water, meals and weight, delete my data, a phone that can\'t save, other options in the sheet, Back after a tab switch, the scroll after Back and after a workout, the activity slider, the Personal prototype',
   async run(t) {
     await t.flow('first visit', async () => {
       const p = await t.page();
@@ -213,6 +213,76 @@ module.exports = {
       await p.goBack({ timeout: 5000 }).catch(() => null);
       await p.waitForURL((u) => !u.href.startsWith(p.srv.url), { timeout: 5000 }).catch(() => null);
       t.check(!inApp(), () => "the phone's Back on the Workouts tab did not leave the app (still on " + p.url() + ')');
+    });
+
+    await t.flow('scroll: Back keeps it, the Plan after a workout starts at the top', async () => {
+      // the app puts a screen's scroll back itself (the browser's own restore is off): Back returns to where the list
+      // was, a sheet closed by Back leaves the screen under it where it was, and after a workout the Plan opens at its
+      // top, not as far down as the Workouts list it was started from
+      const p = await t.page({ state: L.member(), speed: 1 });
+      const y = () => p.evaluate(() => Math.round(scrollY));
+      const openLow = async () => {                  // the Workouts list scrolled to the bottom, a workout opened from there
+        await p.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+        await p.waitForTimeout(200);
+        const nth = await p.evaluate(() => [...document.querySelectorAll('[data-act="open-workout"]')]
+          .findIndex((e) => { const r = e.getBoundingClientRect(); return r.top > 100 && r.bottom < innerHeight - 120; }));
+        const at = await y();
+        await app.tap(p, '[data-act="open-workout"]', { nth: Math.max(0, nth) });
+        await p.waitForSelector('.wd-title');
+        return at;
+      };
+      await app.tap(p, '.tab[data-tab="workouts"]');
+      const y0 = await openLow();
+      t.check(y0 > 200, 'control: the Workouts list should scroll (scrollY ' + y0 + ')');
+      await app.tap(p, '#app [data-act="back"]');
+      await app.waitTitle(p, 'Workouts');
+      t.near(await y(), y0, 2, 'Workouts after the back arrow: scrollY');
+      t.step("a move's sheet closed by the phone's Back");
+      await openLow();
+      const name = await app.title(p);
+      await p.evaluate(() => window.scrollTo(0, 250));
+      await p.waitForTimeout(200);
+      const y1 = await y();
+      t.check(y1 > 100, 'control: the workout screen should scroll (scrollY ' + y1 + ')');
+      const ex = await p.evaluate(() => [...document.querySelectorAll('#app [data-act="ex-wo"]')]
+        .findIndex((e) => { const r = e.getBoundingClientRect(); return r.top > 80 && r.bottom < innerHeight - 120; }));
+      await app.tap(p, '#app [data-act="ex-wo"]', { nth: Math.max(0, ex) });
+      t.check(!!(await app.overlay(p)), "the move's sheet did not open");
+      await p.goBack({ timeout: 5000 }).catch(() => null);
+      await p.waitForFunction(() => document.getElementById('overlay').hidden, null, { timeout: 5000 }).catch(() => null);
+      await p.waitForTimeout(300);
+      t.equal([await app.overlay(p), await app.title(p)], ['', name], "after the phone's Back on the sheet [sheet, screen]");
+      t.near(await y(), y1, 2, "the workout screen after the phone's Back closed the sheet: scrollY");
+      await p.goBack({ timeout: 5000 }).catch(() => null);
+      await app.waitTitle(p, 'Workouts', 5000);
+      t.near(await y(), y0, 2, "Workouts after the phone's Back: scrollY");
+      t.step('End with nothing done');
+      await openLow();
+      await app.tap(p, '[data-act="start"]');
+      await app.waitTitle(p, 'Workout');
+      await app.tap(p, '[data-act="quit"]');
+      await app.tap(p, '[data-act="modal-yes"]');
+      await app.waitTitle(p, 'Plan');
+      await p.waitForFunction(() => history.state && history.state.wbf === 1, null, { timeout: 5000 }).catch(() => null);
+      t.equal(await y(), 0, 'Plan after End: scrollY');
+      t.step('Done on the finish screen');
+      await app.tap(p, '.tab[data-tab="workouts"]');
+      await openLow();
+      await app.tap(p, '[data-act="start"]');
+      await app.waitTitle(p, 'Workout');
+      // the countdowns run 50 times faster: a move with reps waits for Done, a timed one ends by itself
+      await p.evaluate(() => window.__qa.speed(50));
+      await p.waitForFunction(() => document.querySelector('[data-act="pl-done"]') || document.querySelectorAll('.pl-segs i.on').length > 0);
+      if (await p.locator('[data-act="pl-done"]').count()) await app.tap(p, '[data-act="pl-done"]');
+      await p.waitForFunction(() => document.querySelectorAll('.pl-segs i.on').length > 0);
+      await p.evaluate(() => window.__qa.speed(1));
+      await app.tap(p, '[data-act="quit"]');
+      await app.tap(p, '[data-act="modal-yes"]');
+      await app.waitTitle(p, 'Workout complete');
+      await app.tap(p, '.dock [data-act="tab"][data-tab="plan"]');
+      await app.waitTitle(p, 'Plan');
+      await p.waitForFunction(() => history.state && history.state.wbf === 1, null, { timeout: 5000 }).catch(() => null);
+      t.equal(await y(), 0, 'Plan after Done on the finish screen: scrollY');
     });
 
     await t.flow('how active: one drag', async () => {

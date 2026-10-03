@@ -17,7 +17,7 @@ async function otherWindow(t, a, sp) {
 
 module.exports = {
   name: 'client',
-  about: 'client codes (also typed while a coach loads), session links (opened and pasted, broken and hostile ones, opened in a second window), Coach tools: build, send, open the link on a fresh phone, Back',
+  about: 'client codes (also typed while a coach loads), session links (opened and pasted, broken and hostile ones, opened in a second window), Back after the join screen, Coach tools: build, send, open the link on a fresh phone, Back',
   async run(t) {
     await t.flow('client codes', async () => {
       const p = await t.page();
@@ -142,6 +142,58 @@ module.exports = {
       t.has(await app.toast(p), 'Added: Test session', 'toast');
       await app.tap(p, '[data-act="start-coach"]');
       await app.waitTitle(p, 'Workout');
+    });
+
+    await t.flow('Back after a link or a code from the join screen', async () => {
+      // the join screen hands over to the Plan (or the onboarding): the phone's Back goes back through what is on
+      // screen, then leaves the app, with no dead presses, however deep the join screen was
+      const inApp = (p) => p.url().startsWith(p.srv.url);
+      const leaves = async (p, where) => {
+        await p.goBack({ timeout: 5000 }).catch(() => null);
+        await p.waitForURL((u) => !u.href.startsWith(p.srv.url), { timeout: 5000 }).catch(() => null);
+        t.check(!inApp(p), () => "the phone's Back on " + where + ' did not leave the app (still on ' + p.url() + ')');
+      };
+      t.step('a link pasted: Frank > See them > Add a session from a link');
+      const p = await t.page({ state: L.member({}, { inbox: [L.spec({ i: 'qa-old', t: 'Old session' })], access: { client: true } }) });
+      await app.tap(p, '.tab[data-tab="frank"]');
+      await app.tap(p, '[data-act="inbox"]');
+      await app.tap(p, '[data-act="join"]');
+      await app.waitTitle(p, "Frank's clients");
+      await p.fill('#join-in', 'Open it here: https://example.org/frank/#frank.' + L.pack(L.spec({ i: 'qa-new', t: 'New session' })));
+      await submit(p);
+      await app.waitHeading(p, 'New session');
+      await p.waitForFunction(() => history.state && history.state.wbf === 2, null, { timeout: 5000 }).catch(() => null);
+      await p.goBack({ timeout: 5000 }).catch(() => null);
+      t.check(inApp(p), "the phone's Back on a pasted session left the app");
+      if (inApp(p)) await app.waitTitle(p, 'Plan', 5000);
+      await leaves(p, 'the Plan after a pasted session');
+
+      t.step("a code: Me > See membership > I'm one of Frank's clients");
+      const q = await t.page({ state: L.state({ profile: L.profile(), access: { trialStart: L.isoDay(-1) } }) });
+      await app.tap(q, '.tab[data-tab="me"]');
+      await app.tap(q, '.card [data-act="paywall"]');
+      await app.waitTitle(q, 'Membership');
+      await app.tap(q, '[data-act="join"]');
+      await app.waitTitle(q, "Frank's clients");
+      await app.addCode(q);
+      await q.fill('#join-in', L.QA_CODE);
+      await submit(q);
+      await app.waitTitle(q, 'Plan');
+      await q.waitForFunction(() => history.state && history.state.wbf === 1, null, { timeout: 5000 }).catch(() => null);
+      await leaves(q, 'the Plan after a code');
+
+      t.step('a code with no plan yet: welcome > I train with Frank > the onboarding');
+      const r = await t.page();
+      await app.tap(r, '[data-act="join"]');
+      await app.addCode(r);
+      await r.fill('#join-in', L.QA_CODE);
+      await submit(r);
+      await app.waitTitle(r, 'Your plan');
+      await r.goBack({ timeout: 5000 }).catch(() => null);
+      t.check(inApp(r), "the phone's Back on the first onboarding step after a code left the app");
+      if (inApp(r)) await app.waitTitle(r, 'Wellness by Frank', 5000);
+      await r.waitForFunction(() => history.state && history.state.wbf === 1, null, { timeout: 5000 }).catch(() => null);
+      await leaves(r, 'the welcome screen after a code');
     });
 
     await t.flow('broken and hostile links', async () => {

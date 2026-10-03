@@ -52,7 +52,7 @@ const phoneBack = (p) => p.evaluate(() => new Promise((r) => {
 
 module.exports = {
   name: 'player',
-  about: 'every player control on a session from Frank, a full plan day to the finish screen, quitting with and without saving, the phone\'s Back twice and a locked phone during a rest',
+  about: 'every player control on a session from Frank, a full plan day to the finish screen, quitting with and without saving, the phone\'s Back twice and a locked phone during a rest and a reps move, the phone\'s Back on the finish screen',
   async run(t) {
     await t.flow('every control', async () => {
       // squat (reps) · side plank (timed, each side: switch sides) · plank (timed)
@@ -287,23 +287,60 @@ module.exports = {
         .catch(() => t.fail('the rest did not go on to ' + N.ws + ' after Resume'));
       await speed(p, 1);
 
-      t.step('locked during a reps move, then Done');
+      t.step('locked during a reps move: it runs on, then Done');
+      // a reps move waits for Done and has no Resume: locked, nothing moves on and the voice stays quiet, but the clock
+      // counts the set, and it still runs after unlocking
       await speed(p, 20);
       await p.waitForFunction(() => /Rest/.test((document.querySelector('.pl-rest .label') || {}).textContent || ''), null, { timeout: 20000 });
       await speed(p, 1);
       await app.tap(p, '[data-act="pl-skip"]');
       t.equal(await moveName(p), N.sq, 'the reps move');
+      const said1 = (await heard(p)).length;
       await locked(p, true);
-      const c0 = await clock(p);
+      const c0 = secs(await clock(p));
       await speed(p, 50); await p.waitForTimeout(600); await speed(p, 1);
-      t.equal(await clock(p), c0, 'the workout clock while locked on a reps move');
+      t.equal([await moveName(p), await movesDone(p)], [N.sq, 2], 'while locked on a reps move [move, moves done]');
+      t.check(secs(await clock(p)) > c0, 'the workout clock stopped while locked on a reps move');
+      t.equal((await heard(p)).slice(said1), [], 'what the voice said while locked on a reps move');
       await locked(p, false);
+      const c1 = secs(await clock(p));
+      await speed(p, 20); await p.waitForTimeout(400); await speed(p, 1);
+      const c2 = secs(await clock(p));
+      t.check(c2 > c1, 'the workout clock stopped after unlocking on a reps move (' + c1 + ' s, then ' + c2 + ' s)');
       await app.tap(p, '[data-act="pl-done"]');
       t.equal([await restLabel(p), await pauseSays(p)], ['Rest', 'Pause'], 'the rest after Done (Done goes on) [step, pause button]');
       const r0 = +(await count(p));
       await speed(p, 20); await p.waitForTimeout(400); await speed(p, 1);
       t.check(+(await count(p)) < r0, 'the rest after Done does not count down');
       t.equal(await movesDone(p), 3, 'moves done');
+    });
+
+    await t.flow("the finish screen: the phone's Back", async () => {
+      // a workout started from its detail screen ends on the finish screen above the Plan: Back goes to the Plan, the
+      // next Back leaves the app, with no dead presses
+      const p = await t.page({ state: L.member(), speed: 1 });
+      const inApp = () => p.url().startsWith(p.srv.url);
+      await app.tap(p, '[data-act="open-day"][data-day="1"]', { nth: 0 });
+      await p.waitForSelector('.wd-title');
+      await app.tap(p, '[data-act="start"]');
+      await app.waitTitle(p, 'Workout');
+      // the countdowns run 50 times faster: a move with reps waits for Done, a timed one ends by itself
+      await speed(p, 50);
+      await p.waitForFunction(() => document.querySelector('[data-act="pl-done"]') || document.querySelectorAll('.pl-segs i.on').length > 0);
+      if (await p.locator('[data-act="pl-done"]').count()) await app.tap(p, '[data-act="pl-done"]');
+      await p.waitForFunction(() => document.querySelectorAll('.pl-segs i.on').length > 0);
+      await speed(p, 1);
+      await app.tap(p, '[data-act="quit"]');
+      await app.tap(p, '[data-act="modal-yes"]');
+      await app.waitTitle(p, 'Workout complete');
+      // the player's history entry is dropped: the finish screen keeps the detail screen's (state 2)
+      await p.waitForFunction(() => history.state && history.state.wbf === 2, null, { timeout: 5000 }).catch(() => null);
+      await p.goBack({ timeout: 5000 }).catch(() => null);
+      t.check(inApp(), "the phone's Back on the finish screen left the app");
+      if (inApp()) await app.waitTitle(p, 'Plan', 5000);
+      await p.goBack({ timeout: 5000 }).catch(() => null);
+      await p.waitForURL((u) => !u.href.startsWith(p.srv.url), { timeout: 5000 }).catch(() => null);
+      t.check(!inApp(), () => "the phone's Back on the Plan after the finish screen did not leave the app (still on " + p.url() + ')');
     });
   }
 };
