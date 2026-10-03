@@ -263,10 +263,15 @@ module.exports = {
             await app.tap(p, '.tab[data-tab="' + name + '"]');
             t.equal(await p.locator('#update-bar').count(), n, 'update bars on ' + name);
           }
-          await app.tap(p, '[data-act="ob-edit"]');
+          await app.tap(p, '[data-act="flow-answers"]');
+          await app.waitTitle(p, 'Your answers');
+          t.equal(await p.locator('#update-bar').count(), 0, 'update bars on Your answers');
+          await app.tap(p, '[data-row="goal"]');
           await app.waitTitle(p, 'Your plan');
-          t.equal(await p.locator('#update-bar').count(), 0, 'update bars in the onboarding (Me, Edit)');
+          t.equal(await p.locator('#update-bar').count(), 0, 'update bars in the onboarding (Me, Your answers, Goal)');
           await app.tap(p, '[data-act="ob-back"]');
+          await app.waitTitle(p, 'Your answers');
+          await app.tap(p, '[data-act="back"]');
           await app.waitTitle(p, 'Me');
           // Update: the new version on screen, and no bar after it
           await Promise.all([p.waitForEvent('load'), app.tap(p, '#update-bar [data-act="sw-update"]')]);

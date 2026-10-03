@@ -22,15 +22,25 @@ Two kinds of users:
 
 ## What it does
 
-- **Onboarding** in three parts, like the reference app. Goal and focus: goal,
-  body parts to focus on (shown on a muscle map), what you want most. Your body:
-  who demonstrates (the male or female coach), year of birth, the PAR-Q+
-  health questions and pregnancy (each answered on purpose), height and weight
-  on sliding rulers with BMI, target weight with a realistic date range, sore
-  spots. No BMI verdict while growing up or pregnant, and no target weight for
-  anyone pregnant, maybe under 18 or with a medical condition. Fitness: how
-  active you are, a push-up test that sets the level, days a week, minutes, kit
-  at home. Then Frank, your name, the plan being built, and a summary.
+- **The fast start** (`js/onboard-flow.js`): someone new answers eight questions,
+  with one bar over them: the goal, what keeps them safe (year of birth, the PAR-Q+
+  health questions and pregnancy, each answered on purpose, sore spots), days a
+  week, minutes, kit at home and who demonstrates (the male or female coach). The
+  plan is built, and **Your first week** shows week 1's sessions with their real
+  lengths, Day 1's first move, a line for the goal, the safety rows and when the
+  free trial starts. **Start Day 1** opens the first workout. Everyone starts at
+  Beginner.
+- **Make it yours**: after the first workout, a card on the finish screen and the
+  Plan asks the rest, one question at a time: the fitness check (how active, a
+  push-up guess) that sets the level from the next workout, height and weight on
+  sliding rulers with BMI, a target weight with a realistic date range, focus
+  areas on a muscle map, what you want most, the name. No BMI verdict while
+  growing up or pregnant; no target weight for anyone pregnant, maybe under 18,
+  with a medical condition or in gentle mode. Me's **Your answers** lists every
+  answer and changes each on its own; a new goal or new days ask before the 28
+  days restart. One of Frank's clients with no plan is offered one "for the days
+  between Frank's sessions". (Without the module, the app asks all nineteen
+  questions in three parts, then shows a summary and the price screen.)
 - **The plan**: 28 days in four weeks (Foundation, Build, Push, Peak) on a
   day grid, with this week's sessions listed. Every muscle is trained twice a
   week, the focus areas get extra work, and "Too easy / Just right / Too hard"
@@ -53,8 +63,8 @@ Two kinds of users:
   pregnant, may be under 18 or has a medical condition, the food card only
   refers them to a dietitian or doctor, and there is no water card (8 glasses
   is a goal), no lesson about food or drink and no 250 minutes.
-- **Me**: workouts, minutes, streak, minutes per week, weight trend with the
-  goal, a calendar, history, dumbbell weights, settings, health switches,
+- **Me**: Your answers, workouts, minutes, streak, minutes per week, weight trend
+  with the goal, a calendar, history, dumbbell weights, settings, health switches,
   membership, the science, a backup file and Move my plan, delete my data.
 - **Frank**: his bio, the method, "Train with Frank in person" (Instagram DM),
   and **Coach tools**: Frank builds a session from the library (moves, reps or
@@ -179,6 +189,7 @@ phones pick up the update. The `static` suite fails until you do.
 | `js/app.js` | screens, onboarding, the player, access (trial, member, client), coach tools, Today, Me, and the seam modules plug into (`WBF.ext`) |
 | `js/links.js` | links to one move or one workout: a module, a feature in its own file (`.claude/skills/frank-module`) |
 | `js/keep.js` | keep my progress: the backup file, the move link (`#move.`), the Instagram warning, the Home Screen sheet, storage the browser keeps, the moved banner (a module) |
+| `js/onboard-flow.js` | the fast start: the eight questions before the plan, Your first week, Make it yours after Day 1, Me's Your answers (a module) |
 | `js/sound.js` | beeps, voice, vibration, keeping the screen on |
 | `img/` | Frank's four graphics, the app icons, and the two screenshots Android's install dialog shows (`screenshot-*.png`, not cached offline) |
 | `img/brand/`, `tools/brand/` | the "W by Frank" marks (SVG) and the scripts that draw them and the app icons |

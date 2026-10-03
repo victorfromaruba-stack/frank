@@ -3,7 +3,7 @@ name: frank-app
 description: How the Wellness by Frank workout app is built and how to change it safely. Use it whenever you add or edit an exercise, its animation, video or coaching text, a workout or program, the 28-day plan generator, the 3D coach (models, poses, muscle view), Frank's filmed clips, the onboarding, the membership/paywall, Frank's coach tools or client links, or the app's look; and whenever someone mentions Frank's app, wellnessbyfrank, the 3D coach or demos, "the generated plans", or "the science behind the plans", even without naming a file.
 metadata:
   owner: victor
-  version: "2.2"
+  version: "2.3"
 ---
 # Wellness by Frank: the app
 
@@ -50,6 +50,7 @@ The other project skills, each for one job:
 | `js/app.js` | screens and navigation, onboarding, paywall, plan, workouts, exercise sheet, player, Today, Me, Frank, coach tools, access; at its end the module seam (`WBF.ext`, `WBF.app`) |
 | `js/links.js` | a module: links to one move (`#ex.<move>`) or one workout (`#w.<workout>`) for Frank to send. The example to read before writing one (`.claude/skills/frank-module/`) |
 | `js/keep.js` | a module, keep my progress: the backup file and the move link (`#move.<code>`, made and checked here, merged into the phone's data with `WBF.app.replace`), "I already have a plan", the warning in Instagram's browser, the Home Screen sheet after a workout, `navigator.storage.persist()`, and the "Frank's app has moved" banner once `FRANK.home` is set |
+| `js/onboard-flow.js` | a module, the fast start: the eight questions someone new answers before the plan (`FIRST`; the fitness check up front or after Day 1 is `FITNESS_FIRST`, Frank's decision), "Your first week" in place of the summary, "Make it yours" after Day 1 (the finish screen and the Plan), Me's "Your answers" (each answer on its own), and the plan card for Frank's clients with none. It keeps `profile.asked` (when each later question was answered) and `profile.later` (Not now) |
 | `js/sound.js` | beeps, voice coach, vibration, screen wake lock |
 | `app.css` | Frank's look; tokens at the top. Light screens (welcome, onboarding, paywall) use `body.light` |
 | `vendor/` | three.js r170 and its GLTF loader (MIT). Single-file builds load them from jsDelivr |
@@ -101,6 +102,18 @@ VP9 copies with the same names. The service worker leaves videos to the browser.
   body, upper body and core on 2+ days a week, with at most 2 cardio days.
 - Keep the evidence rules in [references/science.md](references/science.md).
   A change that breaks one needs a source and Frank's yes.
+
+## The onboarding
+
+The steps (questions, rulers, the year wheel, the health questions) are drawn in
+`SCREENS.onboard` in `js/app.js`; which ones someone new answers, and in what order, is
+`FIRST` in `js/onboard-flow.js`. The app refuses an order that leaves out the goal, the
+year of birth, the health questions or the sore spots, or asks height, weight or a target
+before the year and the health questions (`order()` in `js/app.js`): what keeps someone
+safe is always asked before the plan is built. Everyone starts at Beginner until the
+fitness check (`levelFor()` keeps gentle mode at Beginner either way). A plan made before
+the fast start has no `profile.asked` and never gets the Make it yours card. The hooks a
+module uses for it: "The onboarding" in `.claude/skills/frank-module/`.
 
 ## Adding a feature
 
@@ -173,8 +186,9 @@ python3 -m http.server 8765            # to look for yourself: Playwright at 390
 node tools/build.mjs
 ```
 
-- The suites tap through all of this: welcome, the whole onboarding (rulers, year
-  wheel, health questions, build, summary), the price screen before, during and
+- The suites tap through all of this: welcome, the fast start (eight questions, Your
+  first week, Start Day 1, Make it yours, Your answers), the app's own onboarding (rulers,
+  year wheel, health questions, build, summary), the price screen before, during and
   after the trial, Plan (28-day grid, this week), a workout, the exercise sheet
   (Video, Muscle, How-to, the pager), a full session in the player (ready, timed
   move, reps move, rest, switch sides, pause, quit), the finish screen, Workouts

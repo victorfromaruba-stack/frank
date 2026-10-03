@@ -61,27 +61,54 @@ const weights = (kg) => [{ date: L.isoDay(-7), kg: kg + 1 }, { date: L.TODAY, kg
 // the health questions on the health step with no answer (neither button pressed)
 const openHealth = (p) => p.evaluate(() => WBF.PARQ.map((q) => q[0]).concat(['pregnant'])
   .filter((k) => !document.querySelector('[data-act="ob-health"][data-k="' + k + '"][aria-pressed="true"]')));
-// Me > Edit, then the saved answer on every step to "Build my plan". A health question the profile never answered
-// (older versions saved only the questions tapped) waits for an answer: it gets No. Returns the steps it showed, the
-// questions it found open and the BMI box
+// after a tap on a step: the next step, back on Your answers, or a question box
+async function settled(p, before) {
+  await p.waitForFunction((q) => {
+    const o = document.getElementById('overlay'), e = document.querySelector('.ob-q');
+    return document.title.split(' · ')[0] === 'Your answers' || (o && !o.hidden) || (!!e && e.innerText.replace(/\s+/g, ' ').trim() !== q);
+  }, before, { timeout: 10000 });
+}
+// Me > Your answers (js/onboard-flow.js), every row tapped through with its saved answer: every question again. A health
+// question the profile never answered (older versions saved only the questions tapped) waits for an answer: it gets No.
+// Returns the rows listed, the questions shown, the ones found open and the BMI box; ends back on Me
 async function editThrough(p) {
   await app.tap(p, '.tab[data-tab="me"]');
-  await app.tap(p, '[data-act="ob-edit"]');
+  await app.tap(p, '[data-act="flow-answers"]');
+  await app.waitTitle(p, 'Your answers');
+  const rows = await p.$$eval('#app [data-row]', (bs) => bs.map((b) => b.getAttribute('data-row')));
   const seen = [];
   let bmi = null, open = null;
-  for (let i = 0; i < 30; i++) {
-    const q = await question(p);
-    seen.push(q);
-    if (/current weight/i.test(q)) bmi = await p.locator('#bmi-box').innerText();
-    if (/Before you/i.test(q)) {
-      open = await openHealth(p);
-      for (const k of open) await app.tap(p, '[data-act="ob-health"][data-k="' + k + '"][data-v="0"]');
+  for (const id of rows) {
+    await app.tap(p, '#app [data-row="' + id + '"]');
+    for (let i = 0; i < 4 && (await app.title(p)) !== 'Your answers'; i++) {
+      await p.waitForFunction(() => !!document.querySelector('.ob-q'), null, { timeout: 10000 });
+      const q = await question(p);
+      seen.push(q);
+      if (/current weight/i.test(q)) bmi = await p.locator('#bmi-box').innerText();
+      if (/Before you/i.test(q)) {
+        open = await openHealth(p);
+        for (const k of open) await app.tap(p, '[data-act="ob-health"][data-k="' + k + '"][data-v="0"]');
+      }
+      if (await p.locator('.ob-cta [data-act="ob-next"]').count()) await next(p);
+      else await app.tap(p, '[data-act="ob-pick"][aria-pressed="true"]');
+      await settled(p, q);
     }
-    if (await p.locator('[data-act="ob-build"]').count()) { await app.tap(p, '[data-act="ob-build"]'); return { seen, bmi, open }; }
-    if (await p.locator('.ob-cta [data-act="ob-next"]').count()) await next(p);
-    else await app.tap(p, '[data-act="ob-pick"][aria-pressed="true"]');
   }
-  throw new Error('Edit never reached "Build my plan": ' + seen.join(' › '));
+  await app.tap(p, '[data-act="back"]');
+  await app.waitTitle(p, 'Me');
+  return { rows, seen, bmi, open };
+}
+// a fast-start member after Day 1 (js/onboard-flow.js) who gave height and weight (Your body), with the rest of Make it yours
+// still to answer (profile.asked): only the safety rules keep the target weight away
+const HQ = ['heart', 'chest', 'dizzy', 'chronic', 'meds', 'joint', 'supervised', 'pregnant'];
+function fresh(pOver, over) {
+  const rec = { id: 'd1', at: L.TODAY + 'T07:30:00.000Z', date: L.TODAY, wid: 'full-b', title: 'Full body', level: 'b', day: 1, sec: 640, moves: 18, total: 18,
+    feel: null, adj: 0, loads: {}, kcal: 50 };
+  const health = Object.assign(Object.fromEntries(HQ.map((k) => [k, false])), { confirmed: L.TODAY }, (pOver || {}).health || {});
+  return L.state(Object.assign({
+    profile: L.profile(Object.assign({ goal: 'fat', cm: 170, kg: 80, targetKg: null, level: 'b', push: null, focus: ['full'], want: [], name: '', asked: { body: L.TODAY } }, pOver || {}, { health })),
+    access: { trialStart: L.TODAY }, sessions: [rec], done: { 1: 'd1' }, weights: [{ date: L.TODAY, kg: 80, from: 'plan' }]
+  }, over || {}));
 }
 
 module.exports = {
@@ -123,11 +150,10 @@ module.exports = {
       let f = await foodRefers(p);
       t.check(f.refers && !f.tracker, 'the medical switch was dropped by Pregnancy mode on, then off');
       t.equal(await flagSwitch(p, 'medical'), 'on', 'medical switch after Pregnancy mode on, then off');
-      t.step('Me > Edit');
+      t.step('Me > Your answers, every answer again');
       await editThrough(p);
-      await app.waitTitle(p, 'Plan');
       f = await foodRefers(p);
-      t.check(f.refers && !f.tracker, 'the medical switch was dropped by an Edit');
+      t.check(f.refers && !f.tracker, 'the medical switch was dropped by the answers');
       t.equal((await app.stored(p)).flags, { manual: { medical: true } }, 'saved switches');
       // an older phone kept the switches mixed with the profile's answers: every one that was on stays on
       const old = await t.page({ state: L.member({}, { flags: { pregnant: false, child: false, medical: true } }) });
@@ -172,17 +198,13 @@ module.exports = {
     });
 
     await t.flow('under 18: onboarding gives no weight target or food advice', async () => {
-      // a 14-year-old who picks "Lose fat", tapped through from the welcome screen
-      const p = await t.page();
+      // a 14-year-old who picks "Lose fat", tapped through from the welcome screen: the eight questions of the fast start
+      // (js/onboard-flow.js), Day 1, then height and weight from Make it yours
+      const p = await t.page({ speed: 50 });
       await app.tap(p, '[data-act="ob-start"]');
-      await app.tap(p, '.part .btn');
       await app.tap(p, '[data-act="ob-pick"][data-k="goal"][data-v="fat"]');
-      await app.tap(p, '[data-act="ob-multi"][data-k="focus"][data-v="full"]');
-      await next(p);
-      await next(p);                                                        // what you want most
-      await app.tap(p, '.part .btn');
-      await app.tap(p, '[data-act="ob-pick"][data-k="sex"][data-v="f"]');
       t.step('year of birth');
+      t.has(await question(p), 'born', 'step after the goal');
       t.check(await p.locator('#born-warn').isHidden(), 'the under-18 note shows for the year the wheel starts on');
       await app.tap(p, '#wheel button[data-year="' + (Y - 14) + '"]');
       t.check(await p.locator('#born-warn').isVisible(), 'born ' + (Y - 14) + ': no under-18 note on the way forward');
@@ -193,35 +215,36 @@ module.exports = {
       t.has(await question(p), 'Before you', 'step after the year of birth');
       await app.tap(p, '[data-act="ob-health-none"]');
       await next(p);
-      t.step('height and weight');
-      t.has(await question(p), 'tall', 'step after the health questions');
+      t.step('the rest of the questions');
+      t.has(await question(p), 'sore spots', 'step after the health questions');
+      await app.tap(p, '[data-act="ob-none"]');
+      await next(p);
+      for (const q of ['days a week', 'How long', 'at home']) { t.has(await question(p), q, 'the questions under 18'); await next(p); }
+      t.has(await question(p), 'demonstrate', 'the last question');
+      t.lacks(await app.text(p), /BMI|target/i, 'the questions under 18');
+      await app.tap(p, '[data-act="ob-pick"][data-k="sex"][data-v="f"]');
+      t.step('your first week');
+      await p.waitForSelector('[data-act="ob-finish"][data-then="day"]', { timeout: 15000 });
+      const sum = await app.text(p);
+      t.has(sum, 'Your first week', 'after the build under 18');
+      t.lacks(sum, 'Target weight', 'Your first week under 18');
+      t.lacks(sum, 'BMI', 'Your first week under 18');
+      await t.look(p, 'your first week under 18');
+      await app.tap(p, '[data-act="ob-finish"][data-then="day"]');
+      await app.waitTitle(p, 'Workout');
+      await app.runWorkout(p);
+      t.step('make it yours: height and weight');
+      t.equal(await p.locator('[data-card="flow-yours"] [data-row="target"]').count(), 0, 'Make it yours under 18: Your target');
+      await app.tap(p, '[data-card="flow-yours"] [data-row="body"]');
+      t.has(await question(p), 'tall', 'Your body under 18');
       t.lacks(await app.text(p), 'BMI', 'height step under 18');
       await next(p);
       t.has(await question(p), 'current', 'step after height');
       t.equal((await p.locator('#bmi-box').innerText()).trim(), '', 'BMI box under 18');
       await next(p);
-      t.step('no target weight');
-      t.has(await question(p), 'sore spots', 'step after weight under 18 (the target weight is skipped)');
-      await app.tap(p, '[data-act="ob-back"]');
-      t.has(await question(p), 'current', 'Back from sore spots under 18 (the target weight is skipped)');
-      await next(p);
-      await app.tap(p, '[data-act="ob-none"]');
-      await next(p);
-      await app.tap(p, '.part .btn');
-      for (let i = 0; i < 12 && !(await p.locator('[data-act="ob-build"]').count()); i++) {
-        if (await p.locator('[data-act="ob-push"]').count() && await p.locator('.ob-cta [data-act="ob-next"]').isDisabled()) await app.tap(p, '[data-act="ob-push"][data-v="0"]');
-        await next(p);
-      }
-      await app.tap(p, '[data-act="ob-build"]');
-      await app.waitText(p, 'Your plan is ready', 15000);
-      t.step('summary');
-      const sum = await app.text(p);
-      t.lacks(sum, 'Target weight', 'summary under 18');
-      t.lacks(sum, 'BMI', 'summary under 18');
-      await t.look(p, 'summary under 18');
-      await app.tap(p, '[data-act="ob-finish"]');
-      await app.waitTitle(p, 'Membership');
-      await app.tap(p, '[data-act="pay-close"]');
+      await app.waitTitle(p, 'Workout complete');
+      t.equal(await p.locator('[data-card="flow-yours"] [data-row="target"]').count(), 0, 'Make it yours under 18 once the weight is known: Your target');
+      await app.tap(p, '.dock [data-act="tab"][data-tab="plan"]');
       await app.waitTitle(p, 'Plan');
       t.step('saved, Today and Me');
       const pr = (await app.stored(p)).profile;
@@ -231,9 +254,13 @@ module.exports = {
       t.equal(await flagSwitch(p, 'child'), 'on, locked', 'the "Under 18" switch');
       t.lacks(await app.text(p), 'For fat loss', 'Today: moving minutes under 18');
       const wc = await weightCard(p);
+      t.has(wc, 'Current', 'Me weight card under 18 (the weight from Your body)');
       t.lacks(wc, 'Goal', 'Me weight card under 18');
       t.lacks(wc, 'BMI', 'Me weight card under 18');
       await t.look(p, 'me under 18');
+      await app.tap(p, '[data-act="flow-answers"]');
+      await app.waitTitle(p, 'Your answers');
+      t.equal(await p.locator('[data-row="target"]').count(), 0, 'Your answers under 18: Your target');
     });
 
     await t.flow('born 18 years ago: maybe 17', async () => {
@@ -245,13 +272,14 @@ module.exports = {
       const wc = await weightCard(p);
       t.lacks(wc, 'Goal', 'Me weight card, born ' + (Y - 18) + ', with a target saved by an older version');
       t.lacks(wc, 'BMI', 'Me weight card, born ' + (Y - 18));
-      t.step('Me > Edit: the year wheel');
-      await app.tap(p, '[data-act="ob-edit"]');
-      await p.evaluate(() => WBF.app.go('onboard', { step: 'born' }));
+      t.step('Me > Your answers: the year wheel');
+      await app.tap(p, '[data-act="flow-answers"]');
+      await app.waitTitle(p, 'Your answers');
+      await app.tap(p, '[data-row="born"]');
       await p.waitForSelector('#wheel');
-      t.check(await p.locator('#born-warn').isVisible(), 'Edit: no under-18 note for ' + (Y - 18));
+      t.check(await p.locator('#born-warn').isVisible(), 'Your answers: no under-18 note for ' + (Y - 18));
       await app.tap(p, '#wheel button[data-year="' + (Y - 19) + '"]');
-      t.check(await p.locator('#born-warn').isHidden(), 'Edit: the under-18 note stays for ' + (Y - 19));
+      t.check(await p.locator('#born-warn').isHidden(), 'Your answers: the under-18 note stays for ' + (Y - 19));
       // the wheel glides to the tapped year: let it stop (still for 300 ms, at most 4 s)
       await p.evaluate(() => new Promise((r) => {
         const wh = document.getElementById('wheel');
@@ -270,7 +298,8 @@ module.exports = {
       t.has(await question(p), 'born', 'Next tapped as the wheel reached ' + (Y - 16) + ': the step');
       t.check(await p.locator('#born-warn').isVisible(), 'Next tapped as the wheel reached ' + (Y - 16) + ': no under-18 note');
       await next(p);
-      t.has(await question(p), 'Before you', 'Next again, with the note read');
+      await app.waitTitle(p, 'Your answers');
+      t.equal((await app.stored(p)).profile.birthYear, Y - 16, 'Next again, with the note read: the year saved');
     });
 
     await t.flow('pregnant: no weight target or BMI verdict', async () => {
@@ -278,17 +307,16 @@ module.exports = {
       const wc = await weightCard(p);
       t.lacks(wc, 'Goal', 'Me weight card, pregnant');
       t.lacks(wc, 'BMI', 'Me weight card, pregnant');
-      t.step('Me > Edit');
+      t.step('Me > Your answers, every answer again');
       const e = await editThrough(p);
-      t.check(!e.seen.some((q) => /target/i.test(q)), () => 'Edit shows the target weight to a pregnant member: ' + e.seen.join(' › '));
+      t.check(!e.rows.includes('target') && !e.seen.some((q) => /target/i.test(q)), () => 'Your answers shows the target weight to a pregnant member: ' + e.seen.join(' › '));
       t.equal((e.bmi || '').trim(), '', 'weight step BMI box, pregnant');
-      // saved by an older version, which kept only the yes: Edit leaves the other seven open, never answered for her
-      t.equal([(e.open || []).length, (e.open || []).includes('pregnant')], [7, false], 'Edit: health questions open [how many, pregnancy among them]');
-      await app.waitTitle(p, 'Plan');
+      // saved by an older version, which kept only the yes: the health step leaves the other seven open, never answered for her
+      t.equal([(e.open || []).length, (e.open || []).includes('pregnant')], [7, false], 'Your answers: health questions open [how many, pregnancy among them]');
       const pr = (await app.stored(p)).profile;
-      t.equal([pr.targetKg, pr.health.pregnant], [null, true], 'saved after an Edit, pregnant [target weight, pregnancy answer]');
+      t.equal([pr.targetKg, pr.health.pregnant], [null, true], 'saved after the answers, pregnant [target weight, pregnancy answer]');
       const f = await foodRefers(p);
-      t.check(f.refers && !f.tracker && !f.habits, 'pregnant after an Edit: the food card gives the journal or diet habits');
+      t.check(f.refers && !f.tracker && !f.habits, 'pregnant after the answers: the food card gives the journal or diet habits');
       t.equal(await flagSwitch(p, 'pregnant'), 'on, locked', 'the "Pregnant or breastfeeding" switch');
     });
 
@@ -302,19 +330,62 @@ module.exports = {
       const wc = await weightCard(p);
       t.lacks(wc, 'Goal', 'Me weight card, PAR-Q chronic yes');
       t.has(wc, 'BMI', 'Me weight card, PAR-Q chronic yes (an adult, not pregnant: BMI stays)');
-      t.step('Me > Edit');
+      t.step('Me > Your answers, every answer again');
       const e = await editThrough(p);
-      t.check(!e.seen.some((q) => /target/i.test(q)), () => 'Edit shows the target weight with a PAR-Q chronic yes: ' + e.seen.join(' › '));
+      t.check(!e.rows.includes('target') && !e.seen.some((q) => /target/i.test(q)), () => 'Your answers shows the target weight with a PAR-Q chronic yes: ' + e.seen.join(' › '));
       t.has(e.bmi || '', 'Ask your doctor', 'weight step BMI box, PAR-Q chronic yes');
       t.lacks(e.bmi || '', 'your food', 'weight step BMI box, PAR-Q chronic yes');
-      t.equal([(e.open || []).length, (e.open || []).includes('chronic')], [7, false], 'Edit: health questions open [how many, chronic among them]');
-      await app.waitTitle(p, 'Plan');
+      t.equal([(e.open || []).length, (e.open || []).includes('chronic')], [7, false], 'Your answers: health questions open [how many, chronic among them]');
       const pr = (await app.stored(p)).profile;
-      t.equal([pr.targetKg, pr.health.chronic], [null, true], 'saved after an Edit, PAR-Q chronic yes [target weight, chronic answer]');
+      t.equal([pr.targetKg, pr.health.chronic], [null, true], 'saved after the answers, PAR-Q chronic yes [target weight, chronic answer]');
       // control: the same person without the yes gets the journal, the target and the food advice back
       const c = await t.page({ state: L.member({ goal: 'fat', kg: 95, targetKg: 85 }, { weights: weights(95) }) });
       t.check((await foodRefers(c)).tracker, 'control: an adult with no health yes should get the food journal');
       t.has(await weightCard(c), 'Goal', 'control: Me weight card with a target');
+    });
+
+    await t.flow('fast start: no target weight or BMI verdict for anyone at risk, no fitness check while gentle', async () => {
+      // Make it yours (the card after Day 1) and Me's Your answers (js/onboard-flow.js) never offer a target weight to
+      // anyone who may be under 18, is pregnant or has a medical condition, nor while a PAR-Q yes keeps the plan gentle;
+      // the weight step shows no BMI to a minor or in pregnancy, and no food advice with a medical condition. The card has
+      // no fitness check while the plan stays gentle (its level is held at Beginner)
+      const pq = (k) => ({ health: { [k]: true } });
+      const who = [
+        ['pregnant', fresh({ sex: 'f', health: { pregnant: true } }), 'none'],
+        ['under 18', fresh({ birthYear: Y - 15 }), 'none'],
+        ['born 18 years ago', fresh({ birthYear: Y - 18 }), 'none'],
+        ['PAR-Q chronic yes', fresh(pq('chronic')), 'doctor'],
+        ['the medical switch', fresh({}, { flags: { manual: { medical: true } } }), 'doctor'],
+        ['PAR-Q joint yes (gentle)', fresh(pq('joint')), null]
+      ];
+      for (const [label, st, bmi] of who) {
+        const p = await t.page({ state: st });
+        const card = await p.$$eval('[data-card="flow-yours"] [data-row]', (bs) => bs.map((b) => b.getAttribute('data-row')));
+        t.check(card.length > 0, label + ': no Make it yours card after Day 1');
+        t.check(!card.includes('target'), () => label + ': Make it yours offers a target weight (' + card.join(', ') + ')');
+        if (/gentle|chronic/.test(label)) t.check(!card.includes('fitness'), () => label + ': Make it yours offers the fitness check while the plan is gentle (' + card.join(', ') + ')');
+        await app.tap(p, '.tab[data-tab="me"]');
+        await app.tap(p, '[data-act="flow-answers"]');
+        await app.waitTitle(p, 'Your answers');
+        t.equal(await p.locator('[data-row="target"]').count(), 0, label + ': Your answers: Your target');
+        if (bmi) {
+          await app.tap(p, '[data-row="body"]');
+          await next(p);
+          await p.waitForSelector('#bmi-box', { state: 'attached' });
+          const box = (await p.locator('#bmi-box').innerText()).trim();
+          if (bmi === 'none') t.equal(box, '', label + ': the weight step\'s BMI box');
+          else { t.has(box, 'Ask your doctor', label + ': the weight step\'s BMI box'); t.lacks(box, 'your food', label + ': the weight step\'s BMI box'); }
+        }
+        if (label === 'pregnant') await t.look(p, 'Your answers, pregnant');
+        await p.context().close();
+      }
+      // control: an adult with no health yes and a weight is offered both, so the checks above mean something
+      const c = await t.page({ state: fresh() });
+      t.equal(await c.$$eval('[data-card="flow-yours"] [data-row]', (bs) => bs.map((b) => b.getAttribute('data-row'))), ['fitness', 'target', 'focus', 'want', 'name'],
+        'control: Make it yours for an adult with no health yes');
+      await app.tap(c, '.tab[data-tab="me"]');
+      await app.tap(c, '[data-act="flow-answers"]');
+      t.equal(await c.locator('[data-row="target"]').count(), 1, 'control: Your answers for an adult with no health yes: Your target');
     });
 
     await t.flow('health questions: every one answered', async () => {

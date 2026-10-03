@@ -33,7 +33,8 @@ function shotInit(o) {
       ':root{--f-body:Nunito,"Apple Color Emoji","Noto Color Emoji",ui-rounded,system-ui,sans-serif!important;--f-display:Nunito,"Apple Color Emoji","Noto Color Emoji",ui-rounded,system-ui,sans-serif!important}' +
       '#__sb{position:fixed;left:0;right:0;top:0;height:' + o.top + 'px;z-index:2147483647;pointer-events:none;color:#fff;' +
       'font:800 ' + (o.os === 'ios' ? 17 : 14) + 'px/1 Nunito,system-ui,sans-serif;letter-spacing:.01em}' +
-      'body.light #__sb{color:#0E2A1A}#__sb svg{fill:currentColor;display:block}' +
+      // white over the app's own dark band, which light screens draw behind the status bar (body.light::before, app.css)
+      '#__sb svg{fill:currentColor;display:block}' +
       '#__sb .t{position:absolute;top:50%;transform:translate(-50%,-50%)}#__sb .i{position:absolute;top:50%;transform:translate(-50%,-50%);display:flex;gap:6px;align-items:center}' +
       '#__hi{position:fixed;left:50%;bottom:8px;width:134px;height:5px;margin-left:-67px;border-radius:3px;background:#fff;z-index:2147483647;pointer-events:none;opacity:.92}' +
       'body.light #__hi{background:#0E2A1A}';
@@ -135,10 +136,21 @@ async function openSheet(p, o, tab) {
   await p.waitForSelector('.sheet .xs', { timeout: 20000 });
   if (tab) await click(p, '[data-act="xs-tab"][data-v="' + tab + '"]');
 }
-async function toCoaches(p, o) {
-  await SCREENS.focus.run(p, o); await click(p, '.ob-cta .btn');
-  await click(p, '[data-act="ob-multi"][data-v="energy"]'); await click(p, '.ob-cta .btn'); await click(p, '.part .btn');
-  await p.waitForFunction(() => document.querySelectorAll('img[data-portrait]:not([hidden])').length === 2, null, { timeout: 180000 });
+// Me > Your answers, then one answer's question on its own (js/onboard-flow.js): the demo member's answer shows as picked
+async function toAnswer(p, row) {
+  await app(p, () => WBF.app.tab('me'));
+  await click(p, '[data-act="flow-answers"]');
+  await click(p, '[data-row="' + row + '"]');
+}
+// the fast start's eight questions, from Welcome to the plan being built
+async function toBuild(p, o) {
+  await click(p, '[data-act="ob-start"]');
+  await click(p, '[data-act="ob-pick"][data-v="fat"]');
+  await click(p, '.ob-cta .btn');                                                         // year of birth
+  await click(p, '[data-act="ob-health-none"]'); await click(p, '.ob-cta .btn');          // health questions: none apply
+  await click(p, '[data-act="ob-none"]'); await click(p, '.ob-cta .btn');                 // sore spots: none
+  for (let k = 0; k < 3; k++) await click(p, '.ob-cta .btn');                             // days, minutes, kit
+  await click(p, '[data-act="ob-pick"][data-v="' + o.coach + '"]');                       // who demonstrates
 }
 async function toPlayer(p, o) {
   await click(p, '[data-act="start-day"]');
@@ -160,37 +172,29 @@ const app = (p, fn, arg) => p.evaluate(fn, arg);
 
 const SCREENS = {
   welcome: { state: 'new', what: 'first screen: the coach and "Get my plan"', run: async () => {} },
-  goal: { state: 'new', what: 'onboarding: main goal with 3D pictures', run: async (p) => { await click(p, '[data-act="ob-start"]'); await click(p, '.part .btn'); } },
-  focus: { state: 'new', what: 'onboarding: focus areas on the muscle map', run: async (p, o) => {
-    await SCREENS.goal.run(p, o); await click(p, '[data-act="ob-pick"][data-v="fat"]');
-    await click(p, '[data-act="ob-multi"][data-v="abs"]'); await click(p, '[data-act="ob-multi"][data-v="legs"]');
-  } },
-  coaches: { state: 'new', what: 'onboarding: choose the male or female coach (--coach shown picked)', run: async (p, o) => {
-    await toCoaches(p, o);
-    // pick, then come back: the tile shows as chosen, as when someone returns to this step
-    await click(p, '[data-act="ob-pick"][data-v="' + o.coach + '"]'); await click(p, '[data-act="ob-back"]');
+  // the fast start (js/onboard-flow.js): eight questions before the plan, the rest after Day 1 (Make it yours, Me's
+  // Your answers), where the demo member's answers show as picked
+  goal: { state: 'new', what: 'onboarding: main goal with 3D pictures', run: async (p) => { await click(p, '[data-act="ob-start"]'); } },
+  focus: { state: 'member', what: 'focus areas on the muscle map (Me, Your answers)', run: async (p) => { await toAnswer(p, 'focus'); } },
+  coaches: { state: 'member', what: 'choose the male or female coach (--coach shown picked; Me, Your answers)', run: async (p) => {
+    await toAnswer(p, 'coach');
     await p.waitForFunction(() => document.querySelectorAll('img[data-portrait]:not([hidden])').length === 2, null, { timeout: 180000 });
   } },
-  weight: { state: 'new', what: 'onboarding: weight ruler and BMI', run: async (p, o) => {
-    await toCoaches(p, o); await click(p, '[data-act="ob-pick"][data-v="' + o.coach + '"]');
-    await click(p, '.ob-cta .btn');                                                         // year of birth
-    await click(p, '[data-act="ob-health-none"]'); await click(p, '.ob-cta .btn');          // health questions: none apply
+  weight: { state: 'member', what: 'weight ruler and BMI (Me, Your answers, Your body)', run: async (p, o) => {
+    await toAnswer(p, 'body');
     await ruler(p, 'h', o.coach === 'f' ? 168 : 180); await click(p, '.ob-cta .btn');
     await ruler(p, 'w', o.coach === 'f' ? 68.5 : 86);
   } },
-  target: { state: 'new', what: 'onboarding: target weight, healthy pace and dates', run: async (p, o) => {
-    await SCREENS.weight.run(p, o); await click(p, '.ob-cta .btn'); await ruler(p, 't', o.coach === 'f' ? 63 : 80);
+  target: { state: 'member', what: 'target weight, healthy pace and dates (Me, Your answers)', run: async (p, o) => {
+    await toAnswer(p, 'target'); await ruler(p, 't', o.coach === 'f' ? 63 : 80);
   } },
-  ready: { state: 'new', what: 'onboarding: "Your plan is ready" summary', run: async (p, o) => {
-    await SCREENS.target.run(p, o);
-    for (let k = 0; k < 2; k++) await click(p, '.ob-cta .btn');                        // target, sore spots
-    await click(p, '.part .btn');                                                           // part 3
-    for (const s of ['.ob-cta .btn', '[data-act="ob-push"][data-v="1"]', '.ob-cta .btn', '.ob-cta .btn', '.ob-cta .btn', '.ob-cta .btn', '.ob-cta .btn']) await click(p, s);
-    await p.fill('#ob-name', o.coach === 'f' ? 'Ana' : 'Marco');
-    await click(p, '[data-act="ob-build"]');
-    await p.waitForSelector('[data-act="ob-finish"]', { timeout: 30000 });
+  ready: { state: 'new', what: 'onboarding: "Your first week", once the plan is built', run: async (p, o) => {
+    await toBuild(p, o);
+    await p.waitForSelector('[data-act="ob-finish"][data-then="day"]', { timeout: 30000 });
   } },
-  pay: { state: 'new', what: 'membership screen after onboarding', run: async (p, o) => { await SCREENS.ready.run(p, o); await click(p, '[data-act="ob-finish"]'); } },
+  pay: { state: 'new', what: 'membership screen, before the free trial', run: async (p, o) => {
+    await SCREENS.ready.run(p, o); await click(p, '[data-act="ob-finish"][data-then="plan"]'); await app(p, () => WBF.app.go('pay', {}));
+  } },
   plan: { state: 'member', what: 'Plan tab: the plan card and next workout', run: async () => {} },
   grid: { state: 'member', what: 'Plan tab scrolled to the 28-day grid and this week', run: async (p) => { await scrollTo(p, '.month', 120); } },
   workout: { state: 'member', what: "today's workout: focus maps and moves", run: async (p) => {

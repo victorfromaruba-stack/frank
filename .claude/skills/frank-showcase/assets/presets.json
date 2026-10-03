@@ -188,12 +188,12 @@
     "name": "start",
     "screens": [
      "welcome",
-     "focus",
+     "goal",
      "coaches"
     ],
     "labels": [
      "Welcome",
-     "Your focus",
+     "Your goal",
      "Pick a coach"
     ],
     "title": "Getting *started*"
@@ -201,14 +201,14 @@
    {
     "name": "plan",
     "screens": [
-     "target",
      "ready",
-     "plan"
+     "plan",
+     "target"
     ],
     "labels": [
-     "Target weight",
-     "Your plan",
-     "Plan tab"
+     "Your first week",
+     "Plan tab",
+     "Target weight"
     ],
     "title": "Your *plan*"
    },

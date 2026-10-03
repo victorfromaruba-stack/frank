@@ -3,7 +3,7 @@ name: frank-showcase
 description: Makes super high quality pictures of Frank's app (Wellness by Frank). Covers App Store and Google Play screenshots, Instagram posts and stories, previews to show Frank or a client, portfolio and case-study images, and big sharp renders of the 3D coach doing any exercise. Use it whenever someone wants screenshots, mockups, store listing images, marketing or social images, a preview of the app, or "better", "sharper" or "higher quality" pictures of the app or its 3D coach, even if they never say "showcase".
 metadata:
   owner: victor
-  version: "1.1"
+  version: "1.2"
 ---
 # Frank's showcase images
 
@@ -66,6 +66,9 @@ label and arrow, big and light, for posts).
    - `--list` shows every screen (onboarding steps, Plan, workout, the exercise sheet tabs, player, rest, done, Workouts,
      Today, Me, Frank, science, coach tools, a client's plan) and the devices: `iphone-6.9`, `iphone-6.5`, `android`
      (1080 x 1920) and `iphone`.
+   - The onboarding follows the fast start (`js/onboard-flow.js`): `goal` and `ready` ("Your first week") come from the
+     eight questions someone new answers; `focus`, `coaches`, `weight` and `target`, asked after Day 1, open from the
+     demo member's Me > Your answers, with the demo's answers picked.
    - The screens tell one consistent session, so a sequence reads true:
      - the exercise page opens from today's workout when the move is in it, so its dose matches the player;
      - `done` is today's workout, finished at the app's own time and kcal estimate;

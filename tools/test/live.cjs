@@ -119,10 +119,9 @@ module.exports = {
       t.has(await app.text(p), 'Your personal plan', 'welcome');
       t.equal(await app.title(p), 'Wellness by Frank', 'page title');
       await app.tap(p, '[data-act="ob-start"]');
-      await app.tap(p, '.part .btn');
       t.has(await app.text(p), "What's your main goal?", 'onboarding');
       await app.tap(p, '[data-act="ob-pick"][data-k="goal"][data-v="fit"]');
-      t.has(await app.text(p), 'focus', 'onboarding after picking a goal');
+      t.has(await app.text(p), 'What year were you born?', 'onboarding after picking a goal (the fast start: the year of birth next)');
       await t.look(p, 'onboarding on the site');
     });
 

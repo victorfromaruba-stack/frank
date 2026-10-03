@@ -819,6 +819,40 @@
   ];
   var OB_I = {};
   OB.forEach(function (s, i) { OB_I[s.id] = i; });
+  // A module may ask someone new other questions, in another order (app.steps, in "modules" at the end): ids of the app's
+  // own steps, with no Part screens. It must ask the goal, the year of birth, the health questions and the sore spots, the
+  // year and the health questions before height, weight or a target (what those may say depends on them): an order that
+  // doesn't is refused, and the app's own is asked. Edit, and steps opened on their own, go by the app's own
+  var ASKABLE = OB.filter(function (s) { return s.part && !s.intro; }).map(function (s) { return s.id; });
+  var MUST = ['goal', 'born', 'health', 'sore'], stepsBy = null;
+  // the module's order for these answers (default: the onboarding's), or null for the app's own
+  function order(d) {
+    d = d || draft;
+    if (!stepsBy || !d || d.edit || d.only) return null;
+    var got = guard(stepsBy.mod, 'steps', stepsBy.fn, [JSON.parse(JSON.stringify(d))]), seen = {};
+    var out = Array.isArray(got) ? got.filter(function (s) { var ok = ASKABLE.indexOf(s) !== -1 && !seen[s]; seen[s] = 1; return ok; }) : [];
+    var at = function (s) { return out.indexOf(s); };
+    if (MUST.every(function (s) { return at(s) !== -1; }) && ['height', 'weight', 'target'].every(function (s) { return at(s) === -1 || (at(s) > at('born') && at(s) > at('health')); })) return out;
+    var k = stepsBy.mod.name + ' steps';
+    if (!failed[k]) {
+      failed[k] = 1;
+      try { console.error('Wellness by Frank: module ' + stepsBy.mod.name + ' failed (steps): an order asks ' + MUST.join(', ') + ', and born and health before height, weight and target'); } catch (e) { /* no console */ }
+    }
+    return null;
+  }
+  // the step after this one in a list of steps, and the one before it. The target weight is never asked of anyone at
+  // risk. null: the list ends there, or the step isn't in it
+  function nextIn(list, from) {
+    var k = list.indexOf(from);
+    if (k === -1) return null;
+    for (k++; k < list.length; k++) if (list[k] !== 'target' || !atRisk(draft)) return list[k];
+    return null;
+  }
+  function prevIn(list, from) {
+    var k = list.indexOf(from);
+    for (k--; k >= 0; k--) if (list[k] !== 'target' || !atRisk(draft)) return list[k];
+    return null;
+  }
   var PARTS = {
     1: ['Part 1', 'Goal & <i>focus</i>', 'What you want from training.'],
     2: ['Part 2', 'Know your <i>body</i>', 'So the plan fits you, and stays safe.'],
@@ -846,6 +880,8 @@
              active: 1, push: null, level: null, days: 3, minutes: 20, kit: WBF.DEFAULT_KIT.slice(), name: '' };
   }
   function obNext(from) {
+    var o = order();
+    if (o && o.indexOf(from) !== -1) return nextIn(o, from) || 'build';    // a module's order, then the plan is built
     var i = OB_I[from] + 1;
     if (OB[i] && OB[i].intro && draft.edit) i++;     // Edit skips the Part intros, both ways (ob-back)
     // no weight target for anyone who may be under 18, is pregnant or has a medical condition (both ways too)
@@ -854,15 +890,21 @@
   }
   function obGo(id) { replaceTop('onboard', { step: id }); }
   function replaceTop(name, params) { stack[stack.length - 1] = { name: name, params: params }; render(true); }
+  // Back, and how far along: the app's own order has a bar for each of its three parts; a module's order, or a few steps
+  // opened on their own, one bar over them all (none for a single step on its own)
   function obTop(stepId) {
-    var st = OB[OB_I[stepId]], part = st.part || 3;
-    var inPart = OB.filter(function (s) { return s.part === part && !s.intro; });
-    var k = inPart.map(function (s) { return s.id; }).indexOf(stepId) + 1;
-    var bars = [1, 2, 3].map(function (p) {
-      var w = p < part ? 100 : p > part ? 0 : Math.round(k / inPart.length * 100);
-      return '<i><b style="width:' + w + '%"></b></i>';
-    }).join('');
-    return '<div class="ob-top"><button class="icon-btn" data-act="ob-back" aria-label="Back">' + ic('back') + '</button><div class="ob-prog" aria-hidden="true">' + bars + '</div><span style="width:44px"></span></div>';
+    var list = draft && draft.only ? draft.only : order(), at = list ? list.indexOf(stepId) : -1, bars = '', one = at !== -1;
+    if (one) bars = list.length > 1 ? '<i><b style="width:' + Math.round((at + 1) / list.length * 100) + '%"></b></i>' : '';
+    else {
+      var st = OB[OB_I[stepId]], part = st.part || 3;
+      var inPart = OB.filter(function (s) { return s.part === part && !s.intro; });
+      var k = inPart.map(function (s) { return s.id; }).indexOf(stepId) + 1;
+      bars = [1, 2, 3].map(function (p) {
+        var w = p < part ? 100 : p > part ? 0 : Math.round(k / inPart.length * 100);
+        return '<i><b style="width:' + w + '%"></b></i>';
+      }).join('');
+    }
+    return '<div class="ob-top"><button class="icon-btn" data-act="ob-back" aria-label="Back">' + ic('back') + '</button><div class="ob-prog' + (one ? ' one' : '') + '" aria-hidden="true">' + bars + '</div><span style="width:44px"></span></div>';
   }
   function coachLine(text) { return '<div class="coachline"><span class="av">F</span><p>' + text + '</p></div>'; }
   function opt(act, k, v, label, small, on, iconName) {
@@ -1081,7 +1123,8 @@
       } else if (id === 'name') {
         q = 'What should Frank <em>call</em> you?';
         body = '<div class="field"><label for="ob-name" class="sr">First name</label><input class="input" id="ob-name" autocomplete="given-name" maxlength="40" value="' + esc(d.name || '') + '" placeholder="First name (optional)"></div>';
-        foot = cta('Build my plan', 'ob-build');
+        // the plan is built after the last question; a name answered on its own, or before other questions, takes Next
+        foot = !d.only && obNext('name') === 'build' ? cta('Build my plan', 'ob-build') : cta();
       } else if (id === 'build') {
         return '<div class="ob"><div class="building"><div class="build-ring"><svg viewBox="0 0 200 200"><circle class="tr" cx="100" cy="100" r="88"/><circle class="fl" id="b-ring" cx="100" cy="100" r="88" stroke-dasharray="553" stroke-dashoffset="553"/></svg><b id="b-pct">0%</b></div>' +
           '<h1 class="ob-q" style="text-align:center;font-size:24px">Building your plan</h1><ul class="build-steps" id="b-steps">' + buildSteps(d).map(function (t) { return '<li>' + ic('check') + esc(t) + '</li>'; }).join('') + '</ul></div></div>';
@@ -1091,9 +1134,10 @@
       return '<div class="ob">' + obTop(id) + '<h1 class="ob-q">' + q + '</h1>' + (sub ? '<p class="ob-sub">' + sub + '</p>' : '') + body + foot + '</div>';
     },
     mount: function (p) {
-      var id = p.step || 'p1', d = draft;
+      var id = p.step || 'p1', d = draft, o = order(), sx = o ? o.indexOf('sex') - o.indexOf(id) : -1;
       $$('.ruler').forEach(function (r) { setupRuler(r); });
-      if ((id === 'p2' || id === 'sex') && WBF.fig3d && WBF.fig3d.load) { WBF.fig3d.load('m'); WBF.fig3d.load('f'); }
+      // both coaches, for "Who should demonstrate": from the Part screen before it, or two questions before it
+      if ((id === 'p2' || id === 'sex' || (o && o.indexOf(id) !== -1 && sx > 0 && sx <= 2)) && WBF.fig3d && WBF.fig3d.load) { WBF.fig3d.load('m'); WBF.fig3d.load('f'); }
       if (id === 'born') {
         var wh = $('#wheel');
         var on = $('button.on', wh) || $('button[data-year="' + (new Date().getFullYear() - 35) + '"]', wh);
@@ -1169,7 +1213,7 @@
     return out;
   }
   function runBuild() {
-    var ring = $('#b-ring'), pct = $('#b-pct'), steps = $$('#b-steps li'), t0 = Date.now(), dur = reduce ? 600 : 3600;
+    var ring = $('#b-ring'), pct = $('#b-pct'), steps = $$('#b-steps li'), t0 = Date.now(), dur = reduce ? 600 : 1500;
     (function step() {
       if (cur().name !== 'onboard' || cur().params.step !== 'build') return;
       var k = Math.min(1, (Date.now() - t0) / dur);
@@ -1180,9 +1224,17 @@
       else setTimeout(function () { if (cur().params.step === 'build') obGo('ready'); }, 350);
     })();
   }
+  // the summary's rows for what keeps someone safe: sore spots, gentle mode and pregnancy, with what the plan does about
+  // them (a module's summary shows the same rows: util.safeRows)
+  function safeRows(d) {
+    var inj = d.injuries || [];
+    return (inj.length ? '<div class="sum-row"><span>Sore spots</span><b>' + esc(inj.map(soreName).join(', ')) + '<small>' + (inj.indexOf('other') === -1 ? 'Moves that load them are left out' : soreKnown(inj).length ? 'Moves that load them, and jumps, are left out' : 'Jumps are left out') + '</small></b></div>' : '') +
+      (WBF.plan.avoidFor(d).gentle ? '<div class="sum-row"><span>Health</span><b>Gentle mode<small>Until your doctor clears you</small></b></div>' : '') +
+      (d.health && d.health.pregnant ? '<div class="sum-row"><span>Pregnancy</span><b>Pregnancy mode</b></div>' : '');
+  }
   function readyHtml() {
     var d = S.profile || draft, days = WBF.plan.days(d), train = days.filter(function (x) { return x.train; });
-    var a = ageNow(d), b = noBmi(d) ? null : bmiOf(d.kg, d.cm), av = WBF.plan.avoidFor(d);
+    var a = ageNow(d), b = noBmi(d) ? null : bmiOf(d.kg, d.cm);
     // the 28 days' real total: every session as the plan builds it, not days x the minutes picked
     var minutes = Math.round(planSecs(d).reduce(function (x, y) { return x + y; }, 0) / 60);
     var target = d.kg && d.targetKg && Math.abs(d.targetKg - d.kg) >= 0.5 ? (d.targetKg < d.kg ? '−' : '+') + kgShow(Math.abs(d.targetKg - d.kg)) + ' ' + wUnit() : 'Keep';
@@ -1193,10 +1245,7 @@
       '<div class="sum-row"><span>Goal</span><b>' + esc(WBF.GOALS[d.goal].name) + '</b></div>' +
       (atRisk(d) ? '' : '<div class="sum-row"><span>Target weight</span><b>' + target + '</b></div>') +
       '<div class="sum-row"><span>Level</span><b>' + WBF.LEVELS[WBF.plan.levelFor(d)] + '</b></div>' +
-      '<div class="sum-row"><span>Focus</span><b>' + esc(focusWords(d)) + '</b></div>' +
-      ((d.injuries || []).length ? '<div class="sum-row"><span>Sore spots</span><b>' + d.injuries.map(soreName).join(', ') + '<small>' + (d.injuries.indexOf('other') === -1 ? 'Moves that load them are left out' : soreKnown(d.injuries).length ? 'Moves that load them, and jumps, are left out' : 'Jumps are left out') + '</small></b></div>' : '') +
-      (av.gentle ? '<div class="sum-row"><span>Health</span><b>Gentle mode<small>Until your doctor clears you</small></b></div>' : '') +
-      (d.health && d.health.pregnant ? '<div class="sum-row"><span>Pregnancy</span><b>Pregnancy mode</b></div>' : '') + '</div>' +
+      '<div class="sum-row"><span>Focus</span><b>' + esc(focusWords(d)) + '</b></div>' + safeRows(d) + '</div>' +
       '<div class="summary"><p class="label" style="color:var(--ink-d2)">Plan overview</p><p class="h2" style="text-transform:uppercase">' + esc(planName(d)) + '</p>' +
       '<div class="trio"><div><b>' + train.length + '</b><span>Workouts</span></div><div><b>' + d.days + '</b><span>Days a week</span></div><div><b>' + minutes + '</b><span>Minutes</span></div></div>' +
       '<p style="margin:0;color:var(--ink-d2);font-size:14px">Four weeks: Foundation, Build, Push, Peak. Each week asks about 10% more, and your feedback after every session tunes it.</p></div>' +
@@ -1302,9 +1351,10 @@
         '<button class="avatar" data-act="tab" data-tab="me" aria-label="Me">' + esc(((p && p.name) || 'F').charAt(0).toUpperCase()) + '</button></div>' + slot('plan.top', params);
       var fromFrank = S.inbox.length ? frankCard() : '';
       if (!p) {
-        return '<div class="screen">' + top + fromFrank + '<div class="plan-card"><div class="pc-media is3d">' + figHtml('squat', { deco: true, note: false }) + '<span class="pc-badge">Free for ' + BILL.trialDays + ' days</span></div>' +
+        // a module's piece (plan.start) takes the place of the card that offers a plan
+        return '<div class="screen">' + top + fromFrank + (slot('plan.start', params) || '<div class="plan-card"><div class="pc-media is3d">' + figHtml('squat', { deco: true, note: false }) + '<span class="pc-badge">Free for ' + BILL.trialDays + ' days</span></div>' +
           '<div class="pc-body"><h2 class="pc-title">Your 28-day plan</h2><p class="lead">A few questions about your goal, body and time. Then every session is ready to press play.</p>' +
-          '<button class="btn block" data-act="ob-start">Get my plan</button></div></div>' + slot('plan.after-hero', params) + quickRail() + lessonCard() + '</div>';
+          '<button class="btn block" data-act="ob-start">Get my plan</button></div></div>') + slot('plan.after-hero', params) + quickRail() + lessonCard() + '</div>';
       }
       var nd = nextDay(), days = planDays(), trainN = days.filter(function (d) { return d.train; }).length;
       var doneN = days.filter(function (d) { return d.train && S.done[d.day]; }).length;
@@ -1913,7 +1963,7 @@
       var pr = S.profile, all = S.sessions, totalSec = all.reduce(function (a, r) { return a + r.sec; }, 0);
       var head = '<div class="profile-head"><span class="avatar">' + esc(((pr && pr.name) || 'F').charAt(0).toUpperCase()) + '</span><div class="grow"><h1 class="h2">' + esc((pr && pr.name) || 'Welcome') + '</h1>' +
         '<p class="meta">' + (pr ? esc(WBF.GOALS[pr.goal].name + ' · ' + WBF.LEVELS[WBF.plan.levelFor(pr)] + ' · ' + pr.days + ' days a week') : 'No plan yet') + '</p></div>' +
-        (pr ? '<button class="btn two small" data-act="ob-edit">Edit</button>' : '<button class="btn small" data-act="ob-start">Get my plan</button>') + '</div>';
+        (pr ? slot('me.edit', p) || '<button class="btn two small" data-act="ob-edit">Edit</button>' : '<button class="btn small" data-act="ob-start">Get my plan</button>') + '</div>';
       var tiles = '<div class="stats"><div><b>' + all.length + '</b><span>Workouts</span></div><div><b>' + Math.round(totalSec / 60) + '</b><span>Minutes</span></div>' +
         '<div><b>' + streakDays() + '</b><span>Day streak</span></div></div>';
       var off = p.m || 0, base = new Date(); base.setDate(1); base.setMonth(base.getMonth() + off);
@@ -2253,6 +2303,9 @@
   function finishProfile(then) {
     readObInputs();
     var old = S.profile, d = draft;
+    // the questions these answers come from, for the modules ('profile'): the steps opened on their own, else every one
+    // asked (someone new: their order; Edit: all of the app's). Nobody at risk is asked a target weight
+    var asked = (d.only || (!d.edit && order(d)) || ASKABLE).filter(function (s) { return s !== 'target' || !atRisk(d); });
     d.level = d.level || levelFromTest(d);
     d.days = +d.days || 3;
     d.minutes = +d.minutes || 20;
@@ -2279,7 +2332,7 @@
       S.profile = d;
       save();
       setCoachFigure();
-      emit('profile', old, d, updated);
+      emit('profile', old, d, updated, asked);
       if (then) then(updated);
     }
     if (renew && old && Object.keys(S.done).length) {
@@ -2287,6 +2340,14 @@
       var answer = function (fresh) { return function () { setTimeout(function () { commit(fresh); }, 0); }; };
       confirmBox('Restart your 28 days?', 'Restart', answer(true), { no: 'Keep my progress', onNo: answer(false) });
     } else commit(renew);
+  }
+
+  // steps answered on their own (Me, a module's card): on to the next of them, or after the last the answers saved and
+  // back to where they were opened. The toast says whether the sessions change
+  function onlyNext(id) {
+    var nx = nextIn(draft.only, id);
+    if (nx) { obGo(nx); return; }
+    finishProfile(function (updated) { if (updated) toast('Your plan was updated'); else if (savedOk) toast('Saved'); back(); });
   }
 
   var deferredInstall = null;
@@ -2310,16 +2371,28 @@
     'modal-extra': function () { var f = overlay._extra; closeOverlay(); if (f) f(); },
     browse: function () { tab('workouts'); },
     settings: function () { settingsSheet(); },
-    // onboarding
-    'ob-start': function () { draft = newDraft(); stack = [{ name: 'onboard', params: { step: 'p1' } }]; render(true); },
+    // onboarding. It opens over the tab it was started from (Welcome from anywhere else), so Back on its first step goes
+    // back there, the phone's Back too
+    'ob-start': function () {
+      draft = newDraft();
+      var o = order(), under = TABS.indexOf(cur().name) !== -1 ? cur().name : 'welcome';
+      setStack([{ name: under, params: {} }, { name: 'onboard', params: { step: o ? o[0] : 'p1' } }]);
+    },
     'ob-edit': function () { draft = newDraft(); draft.edit = true; go('onboard', { step: 'goal' }); },
-    'ob-edit-step': function (el) { draft = newDraft(); draft.edit = true; draft.only = el.getAttribute('data-step'); go('onboard', { step: draft.only }); },
+    // one step, or a few in a row (data-step="height,weight"), answered on their own: Next on the last saves the answers
+    // and goes back to where they were opened
+    'ob-edit-step': function (el) {
+      var list = String(el.getAttribute('data-step') || '').split(',').filter(function (s) { return ASKABLE.indexOf(s) !== -1; });
+      if (!list.length) return;
+      draft = newDraft(); draft.edit = true; draft.only = list; go('onboard', { step: list[0] });
+    },
     'ob-back': function () {
-      var id = cur().params.step || 'p1', i = OB_I[id];
+      var id = cur().params.step || 'p1', i = OB_I[id], o = order(), at = o ? o.indexOf(id) : -1;
       readObInputs();
-      if (draft && draft.only) { back(); return; }
-      if (id === 'ready' || id === 'build') { obGo('name'); return; }
-      if (i > 0) {
+      if (draft && draft.only) { var before = prevIn(draft.only, id); if (before) obGo(before); else back(); return; }
+      if (id === 'ready' || id === 'build') { obGo(o ? prevIn(o.concat('build'), 'build') : 'name'); return; }
+      if (at !== -1) { var pv = prevIn(o, id); if (pv) { obGo(pv); return; } }    // a module's order: its first step leaves
+      else if (i > 0) {
         var prev = OB[i - 1];
         if (prev.intro && draft && draft.edit) prev = OB[i - 2];
         if (prev && prev.id === 'target' && draft && atRisk(draft)) prev = OB[i - 2];      // skipped going forward too (obNext)
@@ -2337,14 +2410,14 @@
         if (!healthDone(draft)) return;                         // every question needs an answer (Next is off until then)
         draft.health.confirmed = iso();
       }
-      if (draft.only) { finishProfile(function (updated) { if (updated) toast('Your plan was updated'); back(); }); return; }
+      if (draft.only) { onlyNext(id); return; }
       obGo(obNext(id));
     },
     'ob-pick': function (el) {
       var k = el.getAttribute('data-k'), v = el.getAttribute('data-v');
       draft[k] = v;
       if (k === 'sex') setCoachFigure();
-      if (draft.only) { finishProfile(function () { back(); }); return; }
+      if (draft.only) { onlyNext(cur().params.step); return; }
       obGo(obNext(cur().params.step));
     },
     'ob-pick-stay': function (el) {
@@ -2380,8 +2453,14 @@
       }
       obGo('build');
     },
-    'ob-finish': function () {
+    // the end of the onboarding: the answers saved, then the price screen for someone new (the app's own summary), or
+    // with data-then the plan ("plan") or its first workout ("day", which starts the free trial)
+    'ob-finish': function (el) {
+      var then = el && el.getAttribute ? el.getAttribute('data-then') : null;
       finishProfile(function () {
+        var nd = then === 'day' ? nextDay() : null;
+        if (nd) { begin(session(nd.workoutId, nd)); return; }
+        if (then === 'day' || then === 'plan') { tab('plan'); return; }
         var st = status();
         if (st === 'client' || st === 'member' || st === 'trial') { tab('plan'); return; }
         stack = [{ name: 'plan', params: {} }, { name: 'pay', params: { fromOb: true } }];
@@ -2734,7 +2813,7 @@
   // had added taken back; one that throws later loses only that card, screen, action or event. Either way the console
   // names the module and the place, and the app carries on.
   var ONE = ['welcome.top', 'plan.top', 'workouts.top', 'today.top', 'me.top', 'frank.top', 'pay.top', 'done.next'];   // the card with the highest priority
-  var PLAIN = ['welcome.cta', 'plan.after-hero', 'done.after-stats', 'me.data', 'me.install', 'sheet.foot'];              // every module's piece, in order
+  var PLAIN = ['welcome.cta', 'plan.start', 'plan.after-hero', 'done.after-stats', 'me.edit', 'me.data', 'me.install', 'sheet.foot'];   // every module's piece, in order
   var EVENTS = ['boot', 'hash', 'screen', 'finish', 'profile', 'saved'];
   var SLOTS = {}, EV = {}, OWNER = {}, APP_KEYS = defaults(), failed = {}, hearing = {}, started = 0;
   // a module's function, run so that its error stays in the module: undefined comes back, the console says it once
@@ -2800,16 +2879,23 @@
   // The app's own functions: for the modules (each gets them with its own ways in, below), the tests and the showcase
   // captures (.claude/skills/frank-showcase). atRisk, noBmi and flags are the safety rules (.claude/skills/frank-safety):
   // a module asks them, it never makes its own copy. replace() puts a whole saved data in place of the phone's, cleanSpec()
-  // checks a session from Frank that came from outside, install() shows the browser's install prompt when canInstall()
+  // checks a session from Frank that came from outside, install() shows the browser's install prompt when canInstall().
+  // draft() gives a copy of the answers on the onboarding while it shows (null otherwise): a module that draws one of its
+  // steps reads them there, and the onboarding's own actions change them. util has the app's words for a plan and its answers
+  // (the plan's name, weight in the units picked, height, kit, focus areas, a sore spot) and the summary's safety rows, so a
+  // module says them the same way
   var base = W.WBF.app = {
     state: function () { return S; }, save: save, replace: replace, render: render, refresh: refresh, go: go, back: back, tab: tab, cur: cur,
+    draft: function () { return cur().name === 'onboard' && draft ? JSON.parse(JSON.stringify(draft)) : null; },
     toast: toast, openSheet: openSheet, closeOverlay: closeOverlay, confirmBox: confirmBox,
     status: status, daysLeft: daysLeft, planDays: planDays, nextDay: nextDay, session: session, kcalOf: kcalOf, kcal: kcalOf,
     atRisk: atRisk, noBmi: noBmi, flags: flags, mountFigures: mountFigures, cleanSpec: cleanSpec,
     canInstall: function () { return !!deferredInstall; }, install: promptInstall,
     sheet: function (id, tabName) { exerciseSheet(id); if (tabName && XS) { XS.tab = tabName; paintExMedia(); } },
     util: { esc: esc, iso: iso, fromIso: fromIso, addDays: addDays, monday: monday, mins: mins, mmss: mmss, plural: plural, ic: ic,
-            figHtml: figHtml, thumbHtml: thumbHtml, backBar: backBar, fmtShort: fmtShort, fmtLong: fmtLong }
+            figHtml: figHtml, thumbHtml: thumbHtml, backBar: backBar, fmtShort: fmtShort, fmtLong: fmtLong,
+            planName: planName, kgShow: kgShow, wUnit: wUnit, heightShow: heightShow, kitWords: kitWords, focusWords: focusWords, soreName: soreName,
+            safeRows: safeRows }
   };
   // starts one module: init(app) gets WBF.app plus its own ways in
   function use(init) {
@@ -2830,6 +2916,14 @@
     // fn(params) gives html, or '' for nothing
     me.html = function (name, fn) { known(PLAIN, name); add(SLOTS, name, fn); };
     me.on = function (name, fn) { known(EVENTS, name); add(EV, name, fn); };
+    // the onboarding's questions for someone new, in order: fn(answers) gives their ids (see order() for what an order
+    // must ask). One module sets it: a second is refused
+    me.steps = function (fn) {
+      if (typeof fn !== 'function') throw new Error('steps() takes a function');
+      if (stepsBy) throw new Error('module ' + stepsBy.mod.name + ' gives the onboarding its order already');
+      stepsBy = { mod: mod, fn: fn };
+      mod.undo.push(function () { stepsBy = null; });
+    };
     // data-act="<name>" runs fn(el, event). The names are shared with the app's own, so a clash is refused
     me.action = function (name, fn) {
       if (A[name]) throw new Error('the action "' + name + '" exists already');

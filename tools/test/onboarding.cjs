@@ -1,4 +1,6 @@
-// onboarding: the whole onboarding tapped through like a person, once in cm/kg and once in ft/lb, to a built plan.
+// onboarding: the whole onboarding tapped through like a person, once in cm/kg and once in ft/lb: the eight questions of
+// the fast start (js/onboard-flow.js), the plan built and its first week, then the rest from Make it yours (after Day 1)
+// and Me's Your answers, to every answer saved. Then Me's Your answers again: one answer at a time, each saved on its own.
 'use strict';
 const L = require('./lib.cjs');
 const { app } = L;
@@ -12,7 +14,6 @@ async function expectStep(t, p, want) {
     .catch(async () => { throw new Error('expected the step "' + want + '", got "' + (await question(p)) + '"'); });
 }
 const next = (p) => app.tap(p, '.ob-cta [data-act="ob-next"]');
-const cont = (p) => app.tap(p, '.part .btn');
 // an onboarding ruler as a screen reader says it: [its name, its value with the unit]
 const said = (p, id) => p.evaluate((i) => { const r = document.getElementById('rl-' + i); return [r.getAttribute('aria-label'), r.getAttribute('aria-valuetext')]; }, id);
 // popstate events in the next ms: Back may not keep going back by itself (the old Back loop fired about 1,100 a second)
@@ -46,66 +47,64 @@ function ticked(over, pOver) {
     moves: 12, total: 12, feel: 'right', adj: 0, loads: {}, kcal: 90 };
   return L.member(Object.assign({ start: L.isoDay(-2), kit: ['chair', 'table', 'db'] }, pOver || {}), Object.assign({ sessions: [rec], done: { 1: 'h1' } }, over || {}));
 }
-// Me > Edit tapped through like a person: the saved answer on every step, then "Build my plan". on(question) may change
-// something first; it returns true when its tap already moved on to the next step. A health question an older profile
-// never answered waits for an answer: it gets No, as from someone with nothing new to report.
-async function editAll(p, on) {
-  await app.tap(p, '.tab[data-tab="me"]');
-  await app.tap(p, '[data-act="ob-edit"]');
-  await expectStep(null, p, 'main goal');
-  const seen = [];
-  for (let i = 0; i < 30; i++) {
+
+// ---- Me > Your answers (js/onboard-flow.js): every answer, each opened on its own ---------------------------------------
+async function toAnswers(p) {
+  if ((await app.title(p)) !== 'Me') await app.tap(p, '.tab[data-tab="me"]');
+  await app.tap(p, '[data-act="flow-answers"]');
+  await app.waitTitle(p, 'Your answers');
+}
+// after a tap on a step: the next step, back where the row was opened (home), or a question box
+async function settled(p, before, home) {
+  await p.waitForFunction(([q, h]) => {
+    const o = document.getElementById('overlay'), e = document.querySelector('.ob-q');
+    return document.title.split(' · ')[0] === h || (o && !o.hidden) || (!!e && e.innerText.replace(/\s+/g, ' ').trim() !== q);
+  }, [before, home], { timeout: 10000 });
+}
+// One row of Your answers tapped through like a person: the saved answer on every step. on(question) may change something
+// first; it returns true when its tap already moved on. A health question an older profile never answered waits for an
+// answer: it gets No, as from someone with nothing new to report. Ends back on Your answers, or at a question box
+async function answerRow(p, id, on, seen) {
+  await app.tap(p, '#app [data-row="' + id + '"]');
+  for (let i = 0; i < 4; i++) {
+    await p.waitForFunction(() => !!document.querySelector('.ob-q'), null, { timeout: 10000 });
     const q = await question(p);
     seen.push(q);
-    if (on && await on(q)) continue;
-    if (/Before you/i.test(q)) for (const k of await openHealth(p)) await app.tap(p, '[data-act="ob-health"][data-k="' + k + '"][data-v="0"]');
-    if (await p.locator('[data-act="ob-build"]').count()) { await app.tap(p, '[data-act="ob-build"]'); return seen; }
-    if (await p.locator('.ob-cta [data-act="ob-next"]').count()) await next(p);
-    else await app.tap(p, '[data-act="ob-pick"][aria-pressed="true"]');
+    if (!(on && await on(q))) {
+      if (/Before you/i.test(q)) for (const k of await openHealth(p)) await app.tap(p, '[data-act="ob-health"][data-k="' + k + '"][data-v="0"]');
+      if (await p.locator('.ob-cta [data-act="ob-next"]').count()) await next(p);
+      else await app.tap(p, '[data-act="ob-pick"][aria-pressed="true"]');
+    }
+    await settled(p, q, 'Your answers');
+    if ((await app.title(p)) === 'Your answers' || await app.overlay(p)) return seen;
   }
-  throw new Error('Edit never reached "Build my plan": ' + seen.join(' › '));
+  throw new Error('the row ' + id + ' never came back to Your answers: ' + seen.join(' › '));
 }
-const pickGoal = (p, g) => async (q) => {
-  if (!/main goal/i.test(q)) return false;
-  await app.tap(p, '[data-act="ob-pick"][data-k="goal"][data-v="' + g + '"]');
-  return true;
-};
+// Me > Your answers, every row tapped through: every question again, as Edit used to ask them. Stops at a question box
+async function editAll(p, on) {
+  await toAnswers(p);
+  const rows = await p.$$eval('#app [data-row]', (bs) => bs.map((b) => b.getAttribute('data-row')));
+  const seen = [];
+  for (const id of rows) {
+    await answerRow(p, id, on, seen);
+    if (await app.overlay(p)) break;
+  }
+  return seen;
+}
 
-// One person from the welcome screen to a plan. o: the answers and the checks that depend on them.
+// One person from the welcome screen to their first week: the eight questions of the fast start. Nothing is saved yet.
+// o: the answers and the checks that depend on them
 async function walk(t, o) {
-  const p = await t.page();
+  const p = await t.page({ speed: 50 });
+  p.qa = {};
   t.step('welcome');
   await app.tap(p, '[data-act="ob-start"]');
-  await expectStep(t, p, 'Part 1');
-
-  t.step('part 1');
-  await cont(p);
   await expectStep(t, p, 'main goal');
+  t.equal(await p.locator('.part').count(), 0, 'Part screens');
   await t.look(p, 'goal');
   await app.tap(p, '[data-act="ob-pick"][data-k="goal"][data-v="' + o.goal + '"]');
-  await expectStep(t, p, 'focus');
-  t.check(await p.locator('.ob-cta [data-act="ob-next"]').isDisabled(), 'focus: Next works before anything is picked');
-  for (const f of o.focus) await app.tap(p, '[data-act="ob-multi"][data-k="focus"][data-v="' + f + '"]');
-  for (const f of o.focus) t.equal(await p.locator('[data-k="focus"][data-v="' + f + '"]').getAttribute('aria-checked'), 'true', 'focus ' + f + ' ticked');
-  await t.look(p, 'focus');
-  await next(p);
-  await expectStep(t, p, 'most');
-  for (const w of o.want) await app.tap(p, '[data-act="ob-multi"][data-k="want"][data-v="' + w + '"]');
-  // back keeps the answers
-  await app.tap(p, '[data-act="ob-back"]');
-  await expectStep(t, p, 'focus');
-  for (const f of o.focus) t.equal(await p.locator('[data-k="focus"][data-v="' + f + '"]').getAttribute('aria-checked'), 'true', 'focus ' + f + ' kept after Back');
-  await next(p);
-  await expectStep(t, p, 'most');
-  for (const w of o.want) t.equal(await p.locator('[data-k="want"][data-v="' + w + '"]').getAttribute('aria-checked'), 'true', 'want ' + w + ' kept after Back');
-  await next(p);
 
-  t.step('part 2');
-  await expectStep(t, p, 'Part 2');
-  await cont(p);
-  await expectStep(t, p, 'demonstrate');
-  await t.look(p, 'who demonstrates');
-  await app.tap(p, '[data-act="ob-pick"][data-k="sex"][data-v="' + o.sex + '"]');
+  t.step('year of birth');
   await expectStep(t, p, 'born');
   await t.look(p, 'year of birth');
   await app.tap(p, '#wheel button[data-year="' + o.born + '"]');
@@ -114,7 +113,7 @@ async function walk(t, o) {
   t.equal(await p.locator('#born-warn').isVisible(), o.born >= 2008, 'under-18 note showing (born ' + o.born + ')');
   await next(p);
 
-  // the health questions come before height and weight (a yes changes what those steps may say)
+  // the health questions come before anything else about the body (a yes changes what those steps may say)
   t.step('health');
   await expectStep(t, p, 'Before you');
   t.equal(await p.locator('[data-act="ob-health"][aria-pressed="true"]').count(), 0, 'health questions answered (Yes or No) before any tap');
@@ -129,37 +128,6 @@ async function walk(t, o) {
   await t.look(p, 'health questions');
   await next(p);
 
-  t.step('height');
-  await expectStep(t, p, 'tall');
-  if (o.imperial) {
-    await app.tap(p, '[data-act="hunits"][data-v="ft"]');
-    const shown = await p.evaluate(() => document.getElementById('rv-h').innerText.replace(/\s+/g, ' ').trim());
-    t.check(/^\d ?ft \d{1,2} ?in$/.test(shown), 'height in ft shows "' + shown + '"');
-  }
-  const h = await app.slideRuler(p, 'h', o.heightSteps);
-  t.equal(h.text.replace(/\s/g, ''), o.heightShows.replace(/\s/g, ''), 'height after sliding the ruler');
-  t.equal(await said(p, 'h'), ['Height', o.rulerSays.h], 'the height ruler for a screen reader [name, value]');
-  await t.look(p, 'height ' + (o.imperial ? 'ft' : 'cm'));
-  await next(p);
-
-  t.step('weight');
-  await expectStep(t, p, 'current');
-  if (o.imperial) await app.tap(p, '[data-act="units"][data-v="lb"]');
-  const w = await app.slideRuler(p, 'w', o.weightSteps);
-  t.equal(w.text.replace(/\s/g, ''), o.weightShows.replace(/\s/g, ''), 'weight after sliding the ruler');
-  t.equal(await said(p, 'w'), ['Weight', o.rulerSays.w], 'the weight ruler for a screen reader [name, value]');
-  t.has(await p.locator('#bmi-box').innerText(), o.bmiWord, 'BMI box');
-  await t.look(p, 'weight ' + (o.imperial ? 'lb' : 'kg'));
-  await next(p);
-
-  t.step('target');
-  await expectStep(t, p, 'target');
-  if (o.targetSteps) await app.slideRuler(p, 't', o.targetSteps);
-  t.equal(await said(p, 't'), ['Target weight', o.rulerSays.t], 'the target weight ruler for a screen reader [name, value]');
-  t.has(await p.locator('#tg-box').innerText(), o.targetSays, 'target box');
-  await t.look(p, 'target weight');
-  await next(p);
-
   t.step('sore spots');
   await expectStep(t, p, 'sore spots');
   if (!o.sore.length) await app.tap(p, '[data-act="ob-none"]');
@@ -168,9 +136,63 @@ async function walk(t, o) {
   await t.look(p, 'sore spots');
   await next(p);
 
-  t.step('part 3');
-  await expectStep(t, p, 'Part 3');
-  await cont(p);
+  t.step('days, minutes, kit');
+  await expectStep(t, p, 'days a week');
+  await app.tap(p, '[data-act="ob-pick-stay"][data-k="days"][data-v="' + o.days + '"]');
+  t.equal(await p.locator('[data-k="days"][aria-pressed="true"]').getAttribute('data-v'), String(o.days), 'days picked');
+  await next(p);
+  await expectStep(t, p, 'How long');
+  // 45 minutes is more than either person's first week fills: the step says how long their sessions really are
+  await app.tap(p, '[data-act="ob-pick-stay"][data-k="minutes"][data-v="45"]');
+  t.has(await p.locator('#min-real').innerText().catch(() => 'nothing'), /Your first sessions take \d+( to \d+)? minutes/, 'minutes step at 45');
+  await app.tap(p, '[data-act="ob-pick-stay"][data-k="minutes"][data-v="' + o.minutes + '"]');
+  // a beginner's first week (everyone starts at Beginner) fills 10 minutes, not 30
+  if (o.minutesLine) t.has(await p.locator('#min-real').innerText().catch(() => 'nothing'), /Your first sessions take \d+( to \d+)? minutes/, 'minutes step at ' + o.minutes + ', which a beginner\'s sessions don\'t fill');
+  else t.equal(await p.locator('#min-real').count(), 0, 'real-length line at ' + o.minutes + ' minutes, which the sessions fill');
+  await next(p);
+  await expectStep(t, p, 'home');
+  for (const k of o.kitTaps) await app.tap(p, '[data-act="ob-multi"][data-k="kit"][data-v="' + k + '"]');
+  await t.look(p, 'kit');
+  await next(p);
+
+  t.step('who demonstrates');
+  await expectStep(t, p, 'demonstrate');
+  await t.look(p, 'who demonstrates');
+  await app.tap(p, '[data-act="ob-pick"][data-k="sex"][data-v="' + o.sex + '"]');
+
+  t.step('build and first week');
+  await app.waitText(p, 'Building your plan', 5000);
+  const build = await p.locator('#b-steps').innerText();
+  for (const line of o.buildSays) t.has(build, line, 'build steps');
+  // the doses line names the level the plan really uses (before the fitness check: Beginner), in plain English
+  t.has(build, /Setting doses for beginners$/im, 'build steps');
+  t.lacks(build, /advanceds/i, 'build steps');
+  t.lacks(build, /moves for (lose|build|move|stay)/i, 'build steps');
+  const sched = /Scheduling (\d) days a week, (\d+)(?: to (\d+))? minutes each/.exec(build);
+  t.check(sched, () => 'build steps: no "Scheduling N days a week, M minutes each" line in "' + build.replace(/\s+/g, ' ') + '"');
+  await expectStep(t, p, 'Your first week');
+  const sum = await app.text(p);
+  for (const line of o.weekSays) t.has(sum, line, 'Your first week');
+  for (const line of o.weekLacks) t.lacks(sum, line, 'Your first week');
+  p.qa.shown = await p.$$eval('.wk1-day', (ds) => ds.map((d) => [+d.getAttribute('data-day'), parseInt(d.querySelector('.mins').textContent, 10)]));
+  p.qa.sched = sched ? [+sched[1], +sched[2], +(sched[3] || sched[2])] : null;
+  t.equal(((await app.stored(p)) || {}).profile || null, null, 'a profile saved before Your first week is left');
+  await t.look(p, 'your first week');
+  return p;
+}
+// once saved: week 1 as the plan builds it then, before the fitness check changes the level
+async function weekOne(p) {
+  const real = await p.evaluate(() => {
+    const pr = WBF.app.state().profile;
+    return WBF.plan.days(pr).filter((d) => d.train && d.week === 1).map((d) => [d.day, Math.max(1, Math.round(WBF.app.session(d.workoutId, d).estSec / 60))]);
+  });
+  p.qa.real = real;
+}
+
+// The questions after Day 1, from the card (Make it yours) or Me > Your answers. where: the screen they come back to
+async function fitness(t, p, o, open, where) {
+  t.step('the fitness check');
+  await open('fitness');
   await expectStep(t, p, 'active');
   await p.locator('#act-in').focus();
   for (let i = 0; i < Math.abs(o.activeRight); i++) { await p.keyboard.press(o.activeRight > 0 ? 'ArrowRight' : 'ArrowLeft'); await p.waitForTimeout(150); }
@@ -183,46 +205,80 @@ async function walk(t, o) {
   t.equal(await p.locator('[data-act="ob-level"][aria-pressed="true"]').innerText().then((s) => s.toLowerCase()), o.testLevel.toLowerCase(), 'level from the push-up test');
   await t.look(p, 'push-ups');
   await next(p);
-  await expectStep(t, p, 'days a week');
-  await app.tap(p, '[data-act="ob-pick-stay"][data-k="days"][data-v="' + o.days + '"]');
-  t.equal(await p.locator('[data-k="days"][aria-pressed="true"]').getAttribute('data-v'), String(o.days), 'days picked');
+  await app.waitTitle(p, where);
+}
+async function body(t, p, o, open, where) {
+  t.step('height');
+  await open('body');
+  await expectStep(t, p, 'tall');
+  if (o.imperial) {
+    await app.tap(p, '[data-act="hunits"][data-v="ft"]');
+    const shown = await p.evaluate(() => document.getElementById('rv-h').innerText.replace(/\s+/g, ' ').trim());
+    t.check(/^\d ?ft \d{1,2} ?in$/.test(shown), 'height in ft shows "' + shown + '"');
+  }
+  const h = await app.slideRuler(p, 'h', o.heightSteps);
+  t.equal(h.text.replace(/\s/g, ''), o.heightShows.replace(/\s/g, ''), 'height after sliding the ruler');
+  t.equal(await said(p, 'h'), ['Height', o.rulerSays.h], 'the height ruler for a screen reader [name, value]');
+  await t.look(p, 'height ' + (o.imperial ? 'ft' : 'cm'));
   await next(p);
-  await expectStep(t, p, 'How long');
-  // 45 minutes is more than either person's first week fills: the step says how long their sessions really are
-  await app.tap(p, '[data-act="ob-pick-stay"][data-k="minutes"][data-v="45"]');
-  t.has(await p.locator('#min-real').innerText().catch(() => 'nothing'), /Your first sessions take \d+( to \d+)? minutes/, 'minutes step at 45');
-  await app.tap(p, '[data-act="ob-pick-stay"][data-k="minutes"][data-v="' + o.minutes + '"]');
-  t.equal(await p.locator('#min-real').count(), 0, 'real-length line at ' + o.minutes + ' minutes, which the sessions fill');
+  t.step('weight');
+  await expectStep(t, p, 'current');
+  if (o.imperial) await app.tap(p, '[data-act="units"][data-v="lb"]');
+  const w = await app.slideRuler(p, 'w', o.weightSteps);
+  t.equal(w.text.replace(/\s/g, ''), o.weightShows.replace(/\s/g, ''), 'weight after sliding the ruler');
+  t.equal(await said(p, 'w'), ['Weight', o.rulerSays.w], 'the weight ruler for a screen reader [name, value]');
+  t.has(await p.locator('#bmi-box').innerText(), o.bmiWord, 'BMI box');
+  await t.look(p, 'weight ' + (o.imperial ? 'lb' : 'kg'));
   await next(p);
-  await expectStep(t, p, 'home');
-  for (const k of o.kitTaps) await app.tap(p, '[data-act="ob-multi"][data-k="kit"][data-v="' + k + '"]');
-  await t.look(p, 'kit');
+  await app.waitTitle(p, where);
+}
+async function rest(t, p, o, open, where) {
+  if (o.targetSays) {
+    t.step('target');
+    await open('target');
+    await expectStep(t, p, 'target');
+    if (o.targetSteps) await app.slideRuler(p, 't', o.targetSteps);
+    t.equal(await said(p, 't'), ['Target weight', o.rulerSays.t], 'the target weight ruler for a screen reader [name, value]');
+    t.has(await p.locator('#tg-box').innerText(), o.targetSays, 'target box');
+    await t.look(p, 'target weight');
+    await next(p);
+    await app.waitTitle(p, where);
+  }
+  t.step('focus');
+  await open('focus');
+  await expectStep(t, p, 'focus');
+  const tap = (f) => app.tap(p, '[data-act="ob-multi"][data-k="focus"][data-v="' + f + '"]');
+  if (!o.focus.includes('full')) {
+    // a part picked, then taken off again: nothing picked, and Next waits
+    await tap(o.focus[0]); await tap(o.focus[0]);
+    t.check(await p.locator('.ob-cta [data-act="ob-next"]').isDisabled(), 'focus: Next works with nothing picked');
+  }
+  for (const f of o.focus) if (f !== 'full') await tap(f);
+  for (const f of o.focus) t.equal(await p.locator('[data-k="focus"][data-v="' + f + '"]').getAttribute('aria-checked'), 'true', 'focus ' + f + ' ticked');
+  await t.look(p, 'focus');
   await next(p);
-  await expectStep(t, p, 'coach');
-  await t.look(p, 'meet your coach');
+  await app.waitTitle(p, where);
+  t.step('what you want most');
+  await open('want');
+  await expectStep(t, p, 'most');
+  for (const w of o.want) await app.tap(p, '[data-act="ob-multi"][data-k="want"][data-v="' + w + '"]');
+  // Back leaves without saving; then the answers again, and Next
+  await app.tap(p, '[data-act="ob-back"]');
+  await app.waitTitle(p, where);
+  t.equal((await app.stored(p)).profile.want, [], 'what you want most, after Back');
+  await open('want');
+  await expectStep(t, p, 'most');
+  for (const w of o.want) await app.tap(p, '[data-act="ob-multi"][data-k="want"][data-v="' + w + '"]');
+  for (const w of o.want) t.equal(await p.locator('[data-k="want"][data-v="' + w + '"]').getAttribute('aria-checked'), 'true', 'want ' + w + ' ticked');
   await next(p);
+  await app.waitTitle(p, where);
+  t.step('name');
+  await open('name');
   await expectStep(t, p, 'call');
+  t.equal(await p.locator('[data-act="ob-build"]').count(), 0, 'the name on its own: Build my plan');
   if (o.name) await p.fill('#ob-name', o.name);
-  await app.tap(p, '[data-act="ob-build"]');
-
-  t.step('build and summary');
-  await app.waitText(p, 'Building your plan', 5000);
-  const build = await p.locator('#b-steps').innerText();
-  for (const line of o.buildSays) t.has(build, line, 'build steps');
-  // the doses line names the level the plan really uses (a PAR-Q yes keeps it at beginner), in plain English
-  t.has(build, new RegExp('Setting doses for ' + { b: 'beginners', i: 'intermediates', a: 'advanced' }[o.planLevel] + '$', 'im'), 'build steps');
-  t.lacks(build, /advanceds/i, 'build steps');
-  t.lacks(build, /moves for (lose|build|move|stay)/i, 'build steps');
-  const sched = /Scheduling (\d) days a week, (\d+)(?: to (\d+))? minutes each/.exec(build);
-  t.check(sched, () => 'build steps: no "Scheduling N days a week, M minutes each" line in "' + build.replace(/\s+/g, ' ') + '"');
-  await expectStep(t, p, 'Your plan is ready');
-  const sum = await app.text(p);
-  for (const line of o.summarySays) t.has(sum, line, 'summary');
-  const sumMin = await p.evaluate(() => { const s = [...document.querySelectorAll('.summary .trio span')].find((x) => x.textContent === 'Minutes'); return s ? +s.previousElementSibling.textContent : null; });
-  await t.look(p, 'summary');
-  await app.tap(p, '[data-act="ob-finish"]');
-  p.qa = { sched: sched ? [+sched[1], +sched[2], +(sched[3] || sched[2])] : null, sumMin };
-  return p;
+  await next(p);
+  await app.waitTitle(p, where);
 }
 
 // what was saved, and the plan it makes
@@ -248,6 +304,7 @@ async function checkSaved(t, p, o) {
   t.equal(pr.kit.slice().sort(), o.kit.slice().sort(), 'saved kit');
   t.equal(pr.name || '', o.name || '', 'saved name');
   t.equal(pr.start, L.TODAY, 'plan start');
+  t.equal(Object.keys(pr.asked || {}).sort(), o.asked.slice().sort(), 'the questions answered after the plan was built (asked)');
   t.equal(s.settings.units, o.imperial ? 'lb' : 'kg', 'weight units');
   t.equal(s.settings.hunits, o.imperial ? 'ft' : 'cm', 'height units');
   t.check((s.weights || []).some((x) => x.date === L.TODAY && Math.abs(x.kg - o.kg) < 0.3), 'the weight was not logged for today');
@@ -267,9 +324,10 @@ async function checkSaved(t, p, o) {
   t.equal(plan.level, o.planLevel, 'plan level');
   t.equal(plan.unsafe, [], 'moves the answers rule out, still in the plan');
   if (o.healthYes.length) t.equal(plan.cardio, 0, 'cardio days in gentle mode');
-  // real lengths: the summary's minutes are the 28 days' sessions added up; the build step names week 1's shortest and longest
-  const all = await realSecs(p), wk1 = minutesOf(await realSecs(p, 1));
-  t.near(p.qa.sumMin, all.reduce((a, b) => a + b, 0) / 60, 1, 'summary minutes against the sessions the plan builds');
+  // real lengths: Your first week shows the sessions the plan built (before the fitness check), and the build step names
+  // week 1's shortest and longest
+  t.equal(p.qa.shown, p.qa.real, "Your first week's sessions [day, minutes] against the sessions the plan built");
+  const wk1 = (p.qa.real || []).map((x) => x[1]);
   t.equal(p.qa.sched, [o.days, Math.min(...wk1), Math.max(...wk1)], 'build step "Scheduling N days a week, M to M minutes" against week 1 [days, shortest, longest]');
 }
 
@@ -282,72 +340,93 @@ const METRIC = {
   healthYes: [], healthNone: true, sore: [], soreSays: null,
   activeRight: -1, activeSays: 'I sit most of the day',
   push: 2, testLevel: 'Intermediate', planLevel: 'i',
-  days: 4, minutes: 30, kitTaps: ['db'], kit: ['chair', 'table', 'db'], name: 'Sam',
-  buildSays: ['Choosing moves to lose fat', 'Setting doses for intermediates', 'Scheduling 4 days a week', 'abs and legs & glutes'],
-  // the minutes are the real total, checked against the plan in checkSaved (not 16 workouts x 30 = 480)
-  summarySays: ['Done, Sam', '180', '79', 'Age', '36', 'BMI 24.4', 'Lose fat', 'Target weight', '−6 kg', 'Intermediate', 'Abs, Legs & glutes', '28-day fat burner']
+  days: 4, minutes: 30, minutesLine: true, kitTaps: ['db'], kit: ['chair', 'table', 'db'], name: 'Sam',
+  buildSays: ['Choosing moves to lose fat', 'Scheduling 4 days a week'],
+  weekSays: ['28-day fat burner', 'Week 1: Foundation', '4 workouts', 'You start at Beginner. The fitness check after Day 1 sets your level.', 'Your 7-day free trial starts with your first workout.'],
+  weekLacks: ['Target weight', 'BMI', 'Gentle mode'],
+  asked: ['body', 'target', 'focus', 'want', 'fitness', 'name']
 };
 const IMPERIAL = {
   imperial: true, goal: 'strength', focus: ['full'], want: [], sex: 'f', born: 1958,
   heightSteps: 2, heightShows: '5ft7in', cm: 67 * 2.54,             // 165 cm is 65 in (5 ft 5 in); two marks up: 5 ft 7 in
   weightSteps: 4, weightShows: '147lb', kg: 147 / 2.20462, bmiWord: 'Healthy',      // 65 kg is 143 lb
-  targetSteps: 0, targetSays: 'Keep your weight',
-  rulerSays: { h: '5 feet 7 inches', w: '147 pounds', t: '147 pounds' },
+  targetSays: null,                                                 // a PAR-Q yes: no target weight (js/onboard-flow.js)
+  rulerSays: { h: '5 feet 7 inches', w: '147 pounds' },
   healthYes: ['joint'], sore: ['knee', 'other'], soreSays: 'Moves that load your knee are left out or swapped, and jumps are left out. For the other spot',
   activeRight: 1, activeSays: "I'm on my feet and moving a lot",
   push: 3, testLevel: 'Advanced', planLevel: 'b',
-  days: 2, minutes: 10, kitTaps: ['table'], kit: ['chair'], name: '',
-  buildSays: ['Choosing moves to build strength', 'Leaving out moves that load your knee', 'Leaving out jumps for your other sore spot', 'Setting doses for beginners', 'Scheduling 2 days a week'],
-  summarySays: ['Your plan is ready', '5′7″', '147', '68', 'Build strength', 'Keep', 'Beginner', 'Full body', 'Knee, Other', 'Gentle mode', '28-day strength builder']
+  days: 2, minutes: 10, minutesLine: false, kitTaps: ['table'], kit: ['chair'], name: '',
+  buildSays: ['Choosing moves to build strength', 'Leaving out moves that load your knee', 'Leaving out jumps for your other sore spot', 'Scheduling 2 days a week'],
+  weekSays: ['28-day strength builder', 'Week 1: Foundation', '2 workouts', 'Gentle mode', 'Until your doctor clears you', 'Knee, Other', 'Moves that load them, and jumps, are left out'],
+  weekLacks: ['Target weight', 'BMI', 'The fitness check after Day 1'],
+  asked: ['body', 'focus', 'want', 'fitness', 'name']
 };
 
 module.exports = {
   name: 'onboarding',
-  about: 'the whole onboarding by tapping, in cm/kg and in ft/lb, to a built plan, with real session lengths and the rulers as a screen reader says them; Me: change sore spots, Edit and Back, Edit after an old Change, Edit keeps the health answers and leaves an older profile\'s unanswered ones open, Edit all the way, Edit keeps weights and ticks, a new goal or new days ask first; the name step across a coach load, the map on the focus step when the coach comes in late',
+  about: 'the whole onboarding by tapping, in cm/kg and in ft/lb: the eight questions of the fast start, the plan built and its first week with real session lengths, Start Day 1 or See my plan, then Make it yours and Your answers to every answer, the rulers as a screen reader says them; Me\'s Your answers: change sore spots, Back, an old Change\'s bookkeeping, the health answers kept and an older profile\'s unanswered ones open, every answer again, weights and ticks kept, a new goal or new days ask first; the name across a coach load, the map on the focus step when the coach comes in late',
   async run(t) {
     await t.flow('metric (cm, kg)', async () => {
       const o = METRIC;
       const p = await walk(t, o);
-      t.step('paywall and plan');
-      await app.waitTitle(p, 'Membership');
-      t.has(await app.text(p), 'Get your personal plan', 'paywall after onboarding');
-      await app.tap(p, '[data-act="pay-trial"]');
+      t.step('Start Day 1');
+      await app.tap(p, '[data-act="ob-finish"][data-then="day"]');
+      await app.waitTitle(p, 'Workout');
+      await weekOne(p);
+      t.equal(((await app.stored(p)).access || {}).trialStart, L.TODAY, 'trial start after Start Day 1');
+      await app.runWorkout(p);
+      t.step('make it yours, on the finish screen');
+      const from = (id) => app.tap(p, '[data-card="flow-yours"] [data-row="' + id + '"]');
+      t.has(await p.locator('[data-card="flow-yours"]').innerText().catch(() => ''), 'Make it yours', 'the finish screen of Day 1');
+      await fitness(t, p, o, from, 'Workout complete');
+      t.has(await app.toast(p), 'Your plan was updated', 'toast after the fitness check');
+      await body(t, p, o, from, 'Workout complete');
+      await rest(t, p, o, from, 'Workout complete');
+      t.equal(await p.locator('[data-card="flow-yours"]').count(), 0, 'the finish screen once every question is answered: Make it yours');
+      t.step('the plan');
+      await app.tap(p, '.dock [data-act="tab"][data-tab="plan"]');
       await app.waitTitle(p, 'Plan');
-      t.has(await app.toast(p), '7-day free trial has started', 'toast');
       const txt = await app.text(p);
-      t.has(txt, 'Start day 1', 'plan');
+      t.has(txt, 'Start day 2', 'plan after Day 1');
       t.has(txt, '28-day fat burner', 'plan');
       // the plan card gives the next session's real length, not the minutes picked
-      const day1 = minutesOf((await realSecs(p, 1)).slice(0, 1))[0];
-      t.has(await p.locator('.pc-grid').innerText(), new RegExp('\\b' + day1 + ' min\\s+Next session', 'i'), 'plan card');
+      const day2 = await p.evaluate(() => { const d = WBF.app.nextDay(); return Math.max(1, Math.round(WBF.app.session(d.workoutId, d).estSec / 60)); });
+      t.has(await p.locator('.pc-grid').innerText(), new RegExp('\\b' + day2 + ' min\\s+Next session', 'i'), 'plan card');
       t.equal(await p.locator('.wk-days button.dd').count(), o.days * 4, 'training days on the 28-day grid');
+      t.equal(await p.locator('[data-card="flow-yours"]').count(), 0, 'the Plan once every question is answered: Make it yours');
       await t.look(p, 'plan after onboarding');
       await checkSaved(t, p, o);
-      const s = await app.stored(p);
-      t.equal(s.access && s.access.trialStart, L.TODAY, 'trial start');
     });
 
     await t.flow('imperial (ft, lb)', async () => {
       const o = IMPERIAL;
       const p = await walk(t, o);
-      t.step('paywall closed, plan');
-      await app.waitTitle(p, 'Membership');
-      await app.tap(p, '[data-act="pay-close"]');
+      t.step('See my plan');
+      await app.tap(p, '[data-act="ob-finish"][data-then="plan"]');
       await app.waitTitle(p, 'Plan');
+      await weekOne(p);
       t.has(await app.text(p), 'Beginner', 'plan level in gentle mode');
       t.equal(await p.locator('.wk-days button.dd').count(), o.days * 4, 'training days on the 28-day grid');
-      await checkSaved(t, p, o);
+      t.equal(await p.locator('[data-card="flow-yours"]').count(), 0, 'the Plan before a workout: Make it yours');
       const s = await app.stored(p);
-      t.check(!s.access || !s.access.trialStart, 'closing the paywall started the trial');
+      t.check(!s.access || !s.access.trialStart, 'See my plan started the trial');
       await app.tap(p, '.tab[data-tab="me"]');
       const me = await app.text(p);
       t.has(me, 'trial starts with your first workout', 'Me membership');
       t.has(me, 'Cleared by a doctor', 'Me health switch');
       t.has(me, 'Sore spots: Knee, Other', 'Me');
       await t.look(p, 'me after onboarding');
+      t.step('your answers');
+      await toAnswers(p);
+      t.equal(await p.locator('[data-row="target"]').count(), 0, 'Your answers with a PAR-Q yes: Your target');
+      const from = (id) => app.tap(p, '#app [data-row="' + id + '"]');
+      await body(t, p, o, from, 'Your answers');
+      await fitness(t, p, o, from, 'Your answers');
+      await rest(t, p, o, from, 'Your answers');
+      await checkSaved(t, p, o);
     });
 
-    // Me can reopen the onboarding: one step (sore spots) or the whole profile (Edit)
+    // Me's Your answers opens one answer at a time; Me's Sore spots, Change, opens that step too
     await t.flow('Me: change sore spots', async () => {
       const p = await t.page({ state: L.member() });
       await app.tap(p, '.tab[data-tab="me"]');
@@ -373,56 +452,60 @@ module.exports = {
       t.equal((await app.stored(p)).profile.injuries, ['shoulder'], 'sore spots after Back (nothing saved)');
     });
 
-    await t.flow('Me: Edit, then back', async () => {
-      // the back arrow and the phone's Back step back through Edit to Me, once: no Back loop
+    await t.flow('Me: Your answers, then Back', async () => {
+      // the back arrow and the phone's Back step back through an answer to Your answers, then Me, once: no Back loop
       const p = await t.page({ state: L.member() });
       await app.tap(p, '.tab[data-tab="me"]');
-      await app.tap(p, '[data-act="ob-edit"]');
+      t.equal(await p.locator('[data-act="ob-edit"]').count(), 0, 'Me: Edit (every question again)');
+      await toAnswers(p);
+      await app.tap(p, '[data-row="goal"]');
       await expectStep(t, p, 'main goal');
       await app.tap(p, '[data-act="ob-back"]');
+      await app.waitTitle(p, 'Your answers', 5000);
+      t.equal(await popsIn(p), 0, 'popstate events once back on Your answers');
+      await app.tap(p, '[data-act="back"]');
       await app.waitTitle(p, 'Me', 5000);
       t.equal(await popsIn(p), 0, 'popstate events once back on Me');
       t.step("the phone's Back");
-      await app.tap(p, '[data-act="ob-edit"]');
-      await expectStep(t, p, 'main goal');
-      await app.tap(p, '[data-act="ob-pick"][data-k="goal"][aria-pressed="true"]');
-      await expectStep(t, p, 'focus');
+      await toAnswers(p);
+      await app.tap(p, '[data-row="body"]');
+      await expectStep(t, p, 'tall');
+      await next(p);
+      await expectStep(t, p, 'current');
       await p.evaluate(() => history.back());
-      await expectStep(t, p, 'main goal');
+      await expectStep(t, p, 'tall');
+      await p.evaluate(() => history.back());
+      await app.waitTitle(p, 'Your answers', 5000);
       await p.evaluate(() => history.back());
       await app.waitTitle(p, 'Me', 5000);
       t.equal(await popsIn(p), 0, 'popstate events once back on Me');
       t.equal(bookkeeping((await app.stored(p)).profile), [], 'onboarding bookkeeping saved in the profile');
     });
 
-    await t.flow('Me: Edit after an old Change', async () => {
-      // phones that used Change before the fix saved only:"sore" in the profile. Edit must not act as a one-step edit:
-      // the goal goes on to the next step (the old code saved there and looped), Back twice returns to Me, and the next save drops it
+    await t.flow("Me: an old Change's bookkeeping goes with the next answer", async () => {
+      // phones that used Change before the fix saved only:"sore" in the profile. An answer must not act on it: the goal is
+      // saved on its own and comes back to Your answers, and that save drops it
       const p = await t.page({ state: L.member({ only: 'sore', soreDone: true }) });
-      await app.tap(p, '.tab[data-tab="me"]');
-      await app.tap(p, '[data-act="ob-edit"]');
+      await toAnswers(p);
+      await app.tap(p, '[data-row="goal"]');
       await expectStep(t, p, 'main goal');
       await app.tap(p, '[data-act="ob-pick"][data-k="goal"][aria-pressed="true"]');
-      await expectStep(t, p, 'focus');
-      await app.tap(p, '[data-act="ob-back"]');
-      await expectStep(t, p, 'main goal');
-      await app.tap(p, '[data-act="ob-back"]');
-      await app.waitTitle(p, 'Me', 5000);
-      await app.tap(p, '[data-act="ob-edit-step"][data-step="sore"]');
+      await app.waitTitle(p, 'Your answers', 5000);
+      t.equal(bookkeeping((await app.stored(p)).profile), [], 'onboarding bookkeeping left in the profile');
+      await app.tap(p, '[data-row="sore"]');
       await expectStep(t, p, 'sore spots');
       await next(p);
-      await app.waitTitle(p, 'Me', 5000);
-      t.equal(bookkeeping((await app.stored(p)).profile), [], 'onboarding bookkeeping left in the profile');
+      await app.waitTitle(p, 'Your answers', 5000);
+      t.equal(bookkeeping((await app.stored(p)).profile), [], 'onboarding bookkeeping left in the profile after the sore spots');
     });
 
-    await t.flow('Me: Edit keeps the health answers; the minutes step gives real lengths', async () => {
+    await t.flow('Me: Your answers keeps the health answers; the minutes step gives real lengths', async () => {
       // a beginner who picked 45 minutes; one PAR-Q yes (cleared by a doctor), saved by an older version: it stored only
-      // the questions tapped, so the other seven were never answered, and Edit must not answer them No by itself
+      // the questions tapped, so the other seven were never answered, and the health step must not answer them No itself
       const p = await t.page({ state: L.member({ level: 'b', push: 0, goal: 'fat', days: 4, minutes: 45, focus: ['full'], health: { joint: true, cleared: true } }) });
-      await app.tap(p, '.tab[data-tab="me"]');
-      await app.tap(p, '[data-act="ob-edit"]');
-      await expectStep(t, p, 'main goal');
-      await p.evaluate(() => WBF.app.go('onboard', { step: 'health' }));
+      await toAnswers(p);
+      t.has(await p.locator('[data-row="health"]').innerText(), 'Cleared by a doctor', 'Your answers: Health of an older profile');
+      await app.tap(p, '[data-row="health"]');
       await expectStep(t, p, 'Before you');
       t.equal(await healthKeys(p), HQ, 'the health questions (HQ in this file)');
       t.equal(await shownHealth(p), HQ.map((k) => (k === 'joint' ? 'Yes' : '-')), 'older profile: answers on the health step (' + HQ.join(', ') + '; - is none)');
@@ -432,9 +515,11 @@ module.exports = {
       t.check(await healthNextOff(p), 'older profile: Next works with one question (pregnant) still open');
       await app.tap(p, '[data-act="ob-health"][data-k="pregnant"][data-v="0"]');
       t.check(!(await healthNextOff(p)), 'older profile: Next is off once every question is answered');
-      await t.look(p, 'Edit: health step of an older profile, answered');
+      await t.look(p, 'Your answers: health step of an older profile, answered');
       t.step('minutes');
-      await p.evaluate(() => WBF.app.go('onboard', { step: 'minutes' }));
+      await app.tap(p, '[data-act="ob-back"]');
+      await app.waitTitle(p, 'Your answers');
+      await app.tap(p, '[data-row="minutes"]');
       await expectStep(t, p, 'How long');
       const wk1 = minutesOf(await realSecs(p, 1));
       const range = Math.min(...wk1) === Math.max(...wk1) ? Math.min(...wk1) + ' minutes' : Math.min(...wk1) + ' to ' + Math.max(...wk1) + ' minutes';
@@ -443,75 +528,65 @@ module.exports = {
       await t.look(p, 'minutes step with real lengths');
       await p.context().close();
       t.step('confirmed answers');
-      // saved by this version: every answer stored, so Edit shows them all, No included, and Next is on
+      // saved by this version: every answer stored, so the health step shows them all, No included, and Next is on
       const c = await t.page({ state: L.member({ health: Object.assign(confirmedHealth(['joint']), { cleared: true }) }) });
-      await app.tap(c, '.tab[data-tab="me"]');
-      await app.tap(c, '[data-act="ob-edit"]');
-      await expectStep(t, c, 'main goal');
-      await c.evaluate(() => WBF.app.go('onboard', { step: 'health' }));
+      await toAnswers(c);
+      await app.tap(c, '[data-row="health"]');
       await expectStep(t, c, 'Before you');
       t.equal(await shownHealth(c), HQ.map((k) => (k === 'joint' ? 'Yes' : 'No')), 'confirmed: answers on the health step (' + HQ.join(', ') + ')');
       t.check(!(await healthNextOff(c)), 'confirmed: Next is off although every answer is saved');
     });
 
-    await t.flow('Me: Edit, all the way', async () => {
+    await t.flow('Me: every answer again, new days', async () => {
       // every step shows the saved answer (health too: a profile this version saved); Next through all of them, change
-      // the days, build: the plan follows
+      // the days: the plan follows, and nothing else changes
       const before = L.profile({ health: confirmedHealth() });
       const p = await t.page({ state: L.member({ health: before.health }) });
-      await app.tap(p, '.tab[data-tab="me"]');
-      await app.tap(p, '[data-act="ob-edit"]');
-      await expectStep(t, p, 'main goal');
-      const steps = [];
-      for (let i = 0; i < 30; i++) {
-        const q = await question(p);
-        steps.push(q.split(' ').slice(0, 5).join(' '));
-        if (await p.locator('[data-act="ob-build"]').count()) { await app.tap(p, '[data-act="ob-build"]'); break; }
-        if (await p.locator('.part').count()) { await cont(p); continue; }
+      const seen = await editAll(p, async (q) => {
         if (/days a week/i.test(q)) await app.tap(p, '[data-act="ob-pick-stay"][data-k="days"][data-v="5"]');
         const nx = p.locator('.ob-cta [data-act="ob-next"]');
-        if (await nx.count()) {
-          t.check(await nx.isEnabled(), 'Next is off on "' + q.slice(0, 40) + '" although the answer is saved');
-          await next(p);
-        } else {                                              // goal, who demonstrates: tap the saved answer again
-          const on = p.locator('[data-act="ob-pick"][aria-pressed="true"]');
-          t.check(await on.count(), 'no saved answer marked on "' + q.slice(0, 40) + '"');
-          await (await on.count() ? on.first() : p.locator('[data-act="ob-pick"]').first()).click();
-          await p.waitForTimeout(150);
-        }
-      }
-      t.log(steps.join(' › '));
-      t.check(!steps.some((s) => /^part \d/i.test(s)), () => 'Edit shows a Part intro going forward (going back it skips them): ' + steps.join(' › '));
-      await app.waitTitle(p, 'Plan');
-      t.has(await app.toast(p), 'Your plan was updated', 'toast after Edit');
+        if (await nx.count()) t.check(await nx.isEnabled(), 'Next is off on "' + q.slice(0, 40) + '" although the answer is saved');
+        else t.check(await p.locator('[data-act="ob-pick"][aria-pressed="true"]').count(), 'no saved answer marked on "' + q.slice(0, 40) + '"');
+        return false;
+      });
+      t.log(seen.join(' › '));
+      t.equal(seen.length, 16, 'questions through Your answers (two each for Your body and the fitness check): ' + seen.map((q) => q.split(' ').slice(0, 3).join(' ')).join(' › '));
+      t.check(!seen.some((s) => /^part \d/i.test(s)), () => 'a Part intro among the answers: ' + seen.join(' › '));
+      await app.waitTitle(p, 'Your answers');
+      t.has((await app.toasts(p)).join(' | '), 'Your plan was updated', 'toasts after new days');
       const pr = (await app.stored(p)).profile;
-      t.equal(pr.days, 5, 'days after Edit');
+      t.equal(pr.days, 5, 'days after every answer again');
       t.equal([pr.goal, pr.sex, pr.birthYear, pr.cm, pr.kg, pr.focus, pr.kit, pr.name], [before.goal, before.sex, before.birthYear, before.cm, before.kg, before.focus, before.kit, before.name],
-        'answers kept by Edit [goal, sex, born, cm, kg, focus, kit, name]');
-      t.equal(Object.keys(pr).filter((k) => ['only', 'edit', 'soreDone'].includes(k)), [], 'onboarding bookkeeping saved in the profile');
-      t.equal(await p.locator('.wk-days button.dd').count(), 20, 'training days on the 28-day grid after Edit');
+        'answers kept [goal, sex, born, cm, kg, focus, kit, name]');
+      t.equal(Object.keys(pr).filter((k) => ['only', 'edit', 'soreDone', 'asked'].includes(k)), [], 'onboarding bookkeeping (or asked, on an older profile) saved in the profile');
+      await app.tap(p, '[data-act="back"]');
+      await app.tap(p, '.tab[data-tab="plan"]');
+      t.equal(await p.locator('.wk-days button.dd').count(), 20, 'training days on the 28-day grid after new days');
     });
 
-    await t.flow('Me: Edit with no changes keeps the weights and the ticks', async () => {
-      // 76.4 kg logged by hand today; the onboarding said 80. Tapping through Edit changes nothing but the date the
+    await t.flow('Me: every answer again with no changes keeps the weights and the ticks', async () => {
+      // 76.4 kg logged by hand today; the onboarding said 80. Every answer saved again changes nothing but the date the
       // health answers were confirmed, which doesn't count as a change (healthSig)
       const st = ticked({ weights: [{ date: L.isoDay(-7), kg: 80 }, { date: L.TODAY, kg: 76.4 }] }, { health: confirmedHealth() });
       const p = await t.page({ state: st });
       let ruler = null;
       await editAll(p, async (q) => { if (/current weight/i.test(q)) ruler = await p.locator('#rv-w').innerText(); });
       t.equal((ruler || '').replace(/\s/g, ''), '76.5kg', 'weight step after 76.4 kg was logged today (the ruler\'s nearest mark)');
-      await app.waitTitle(p, 'Plan');
-      t.equal(await app.toast(p), 'Saved', 'toast after an Edit with no changes');
+      await app.waitTitle(p, 'Your answers');
+      t.equal(await app.toast(p), 'Saved', 'toast after an answer with no changes');
+      t.lacks((await app.toasts(p)).join(' | '), 'Your plan was updated', 'toasts after answers with no changes');
       const s = await app.stored(p);
-      t.equal([s.weights, s.profile.start, s.done], [st.weights, st.profile.start, st.done], 'after an Edit with no changes [weights, plan start, ticks]');
-      t.equal(sorted(s.profile.health), sorted(Object.assign({}, st.profile.health, { confirmed: L.TODAY })), 'saved health answers after an Edit with no changes');
-      t.equal(await p.locator('.wk-days button.dd.done').count(), 1, 'days ticked on the 28-day grid after an Edit with no changes');
+      t.equal([s.weights, s.profile.start, s.done], [st.weights, st.profile.start, st.done], 'after every answer with no changes [weights, plan start, ticks]');
+      t.equal(sorted(s.profile.health), sorted(Object.assign({}, st.profile.health, { confirmed: L.TODAY })), 'saved health answers after every answer with no changes');
+      await app.tap(p, '[data-act="back"]');
+      await app.tap(p, '.tab[data-tab="plan"]');
+      t.equal(await p.locator('.wk-days button.dd.done').count(), 1, 'days ticked on the 28-day grid after answers with no changes');
     });
 
-    await t.flow('Me: Edit of an older profile: its open health questions answered No keep the plan', async () => {
-      // saved by an older version: a PAR-Q yes, cleared by a doctor, and no No stored. Edit asks the seven open
-      // questions; answered No, the plan is the same one, so the ticks and the plan start stay and the toast says
-      // "Saved" (finishProfile compares the answers with healthSig: a missing one is a No)
+    await t.flow('Me: an older profile: its open health questions answered No keep the plan', async () => {
+      // saved by an older version: a PAR-Q yes, cleared by a doctor, and no No stored. The health step asks the seven open
+      // questions; answered No, the plan is the same one, so the ticks and the plan start stay and the toast says "Saved"
+      // (finishProfile compares the answers with healthSig: a missing one is a No)
       const st = ticked({}, { health: { joint: true, cleared: true } });
       const p = await t.page({ state: st });
       let open = null, off = null;
@@ -521,16 +596,18 @@ module.exports = {
       });
       t.equal(open, HQ.filter((k) => k !== 'joint'), 'open questions on the health step');
       t.equal(off, true, 'Next disabled on the health step with open questions');
-      await app.waitTitle(p, 'Plan');
-      t.equal(await app.overlay(p), '', 'a question after an Edit that changes nothing');
-      t.equal(await app.toast(p), 'Saved', 'toast after an Edit that changes nothing');
+      await app.waitTitle(p, 'Your answers');
+      t.equal(await app.overlay(p), '', 'a question after answers that change nothing');
+      t.equal(await app.toast(p), 'Saved', 'toast after answers that change nothing');
       const s = await app.stored(p);
-      t.equal([s.done, s.profile.start, s.profile.round], [st.done, st.profile.start, st.profile.round], 'after the Edit [ticks, plan start, round]');
+      t.equal([s.done, s.profile.start, s.profile.round], [st.done, st.profile.start, st.profile.round], 'after the answers [ticks, plan start, round]');
       t.equal(sorted(s.profile.health), sorted(Object.assign(confirmedHealth(['joint']), { cleared: true, confirmed: L.TODAY })), 'saved health answers');
-      t.equal(await p.locator('.wk-days button.dd.done').count(), 1, 'days ticked on the 28-day grid after the Edit');
+      await app.tap(p, '[data-act="back"]');
+      await app.tap(p, '.tab[data-tab="plan"]');
+      t.equal(await p.locator('.wk-days button.dd.done').count(), 1, 'days ticked on the 28-day grid after the answers');
     });
 
-    await t.flow('Me: Edit with the kit reordered, the open health questions answered and new minutes keeps the ticks', async () => {
+    await t.flow('Me: the kit reordered, the open health questions answered and new minutes keep the ticks', async () => {
       // an older profile that never stored its No answers (editAll answers them); the last weight is from yesterday
       const st = ticked({ weights: [{ date: L.isoDay(-1), kg: 79 }] }, { health: {} });
       const p = await t.page({ state: st });
@@ -539,41 +616,55 @@ module.exports = {
         if (/How long/i.test(q)) await app.tap(p, '[data-act="ob-pick-stay"][data-k="minutes"][data-v="30"]');
         return false;
       });
-      await app.waitTitle(p, 'Plan');
-      t.equal(await app.overlay(p), '', 'a question after an Edit that keeps the goal and the days');
-      t.equal(await app.toast(p), 'Your plan was updated', 'toast after new minutes');
+      await app.waitTitle(p, 'Your answers');
+      t.equal(await app.overlay(p), '', 'a question after answers that keep the goal and the days');
+      t.has((await app.toasts(p)).join(' | '), 'Your plan was updated', 'toasts after new minutes');
       const s = await app.stored(p);
       t.equal([s.done, s.profile.start, s.profile.minutes, s.profile.kit.slice().sort(), s.weights], [st.done, st.profile.start, 30, ['chair', 'db', 'table'], st.weights],
-        'after the Edit [ticks, plan start, minutes, kit, weights]');
-      t.equal(await p.locator('.wk-days button.dd.done').count(), 1, 'days ticked on the 28-day grid after the Edit');
+        'after the answers [ticks, plan start, minutes, kit, weights]');
+      await app.tap(p, '[data-act="back"]');
+      await app.tap(p, '.tab[data-tab="plan"]');
+      t.equal(await p.locator('.wk-days button.dd.done').count(), 1, 'days ticked on the 28-day grid after the answers');
     });
 
-    await t.flow('Me: Edit with a new goal or new days asks first', async () => {
+    await t.flow('Me: a new goal or new days ask first', async () => {
       const st = ticked();
       const p = await t.page({ state: st });
       t.step('a new goal: Keep my progress');
-      await editAll(p, pickGoal(p, 'strength'));
+      await toAnswers(p);
+      await app.tap(p, '[data-row="goal"]');
+      await expectStep(t, p, 'main goal');
+      await app.tap(p, '[data-act="ob-pick"][data-k="goal"][data-v="strength"]');
       t.has(await app.overlay(p), 'Restart your 28 days?', 'question after a new goal');
       t.equal(await p.$$eval('#overlay button', (bs) => bs.map((b) => b.textContent)), ['Keep my progress', 'Restart'], 'the question\'s buttons');
       await t.look(p, 'restart question');
       await app.tap(p, '[data-act="modal-no"]');
-      await app.waitTitle(p, 'Plan');
+      await app.waitTitle(p, 'Your answers');
       t.equal(await app.toast(p), 'Your plan was updated', 'toast after Keep my progress');
       let s = await app.stored(p);
       t.equal([s.profile.goal, s.done, s.profile.start], ['strength', st.done, st.profile.start], 'Keep my progress [goal, ticks, plan start]');
+      t.has(await p.locator('[data-row="goal"]').innerText(), 'Build strength', 'Your answers after a new goal');
+      await app.tap(p, '[data-act="back"]');
+      await app.tap(p, '.tab[data-tab="plan"]');
       t.equal(await p.locator('.wk-days button.dd.done').count(), 1, 'days ticked on the 28-day grid after Keep my progress');
       t.step('new days: Restart');
-      await editAll(p, async (q) => { if (/days a week/i.test(q)) await app.tap(p, '[data-act="ob-pick-stay"][data-k="days"][data-v="5"]'); return false; });
+      await toAnswers(p);
+      await app.tap(p, '[data-row="days"]');
+      await expectStep(t, p, 'days a week');
+      await app.tap(p, '[data-act="ob-pick-stay"][data-k="days"][data-v="5"]');
+      await next(p);
       t.has(await app.overlay(p), 'Restart your 28 days?', 'question after new days');
       await app.tap(p, '[data-act="modal-yes"]');
-      await app.waitTitle(p, 'Plan');
+      await app.waitTitle(p, 'Your answers');
       t.equal(await app.toast(p), 'Your plan was updated', 'toast after Restart');
       s = await app.stored(p);
       t.equal([s.profile.days, s.done, s.profile.start, s.sessions.length], [5, {}, L.TODAY, 1], 'Restart [days, ticks, plan start, workouts kept]');
+      await app.tap(p, '[data-act="back"]');
+      await app.tap(p, '.tab[data-tab="plan"]');
       t.equal(await p.locator('.wk-days button.dd.done').count(), 0, 'days ticked on the 28-day grid after Restart');
     });
 
-    await t.flow('Me: Edit with new days, Keep my progress goes on from the same week', async () => {
+    await t.flow('Me: new days, Keep my progress goes on from the same week', async () => {
       // two full weeks on 3 days a week (days 1, 3, 5, 8, 10 and 12 ticked off), so day 15 in week 3 is next. With
       // fewer or more days, the new plan's days before day 15 count as done: the plan goes on from day 15
       const ticks = [1, 3, 5, 8, 10, 12];
@@ -584,10 +675,17 @@ module.exports = {
       for (const [days, before] of [[2, [1, 4, 8, 11]], [4, [1, 2, 4, 5, 8, 9, 11, 12]]]) {
         t.step(days + ' days a week');
         const p = await t.page({ state: st });
-        t.has(await app.text(p), 'Round 1 · 6/12 done', 'control: the plan before the Edit');
-        await editAll(p, async (q) => { if (/days a week/i.test(q)) await app.tap(p, '[data-act="ob-pick-stay"][data-k="days"][data-v="' + days + '"]'); return false; });
+        t.has(await app.text(p), 'Round 1 · 6/12 done', 'control: the plan before the change');
+        await toAnswers(p);
+        await app.tap(p, '[data-row="days"]');
+        await expectStep(t, p, 'days a week');
+        await app.tap(p, '[data-act="ob-pick-stay"][data-k="days"][data-v="' + days + '"]');
+        await next(p);
         t.has(await app.overlay(p), 'Restart your 28 days?', 'question after new days');
         await app.tap(p, '[data-act="modal-no"]');
+        await app.waitTitle(p, 'Your answers');
+        await app.tap(p, '[data-act="back"]');
+        await app.tap(p, '.tab[data-tab="plan"]');
         await app.waitTitle(p, 'Plan');
         const txt = await app.text(p);
         t.has(txt, 'Round 1 · ' + before.length + '/' + days * 4 + ' done', 'plan after Keep my progress');
@@ -602,50 +700,58 @@ module.exports = {
       }
     });
 
-    await t.flow('Me: Edit with no changes in ft and lb keeps the height and the target', async () => {
+    await t.flow('Me: no changes in ft and lb keep the height and the target', async () => {
       // the rulers show 5 ft 11 in, 168 lb and 172 lb: passing them by keeps 180 cm, 76.4 kg and 78 kg exactly
       const st = L.member({ cm: 180, kg: 80, targetKg: 78, health: confirmedHealth() }, { weights: [{ date: L.isoDay(-7), kg: 80 }, { date: L.TODAY, kg: 76.4 }] });
       st.settings = Object.assign({}, st.settings, { units: 'lb', hunits: 'ft' });
       const p = await t.page({ state: st });
       const shown = {};
-      await editAll(p, async (q) => {
+      const look = async (q) => {
         if (/tall/i.test(q)) shown.h = await p.locator('#rv-h').innerText();
+        if (/current weight/i.test(q)) shown.w = await p.locator('#rv-w').innerText();
         if (/target/i.test(q)) shown.t = await p.locator('#rv-t').innerText();
         return false;
-      });
-      t.equal([shown.h, shown.t].map((x) => (x || '').replace(/\s/g, '')), ['5ft11in', '172lb'], 'rulers [height, target]');
-      await app.waitTitle(p, 'Plan');
-      t.equal(await app.toast(p), 'Saved', 'toast after an Edit with no changes');
+      };
+      await toAnswers(p);
+      t.has(await p.locator('[data-row="body"]').innerText(), '5′11″ · 168 lb', 'Your answers: Your body in ft and lb (the summary\'s 5′11″)');
+      for (const id of ['body', 'target']) await answerRow(p, id, look, []);
+      t.equal([shown.h, shown.w, shown.t].map((x) => (x || '').replace(/\s/g, '')), ['5ft11in', '168lb', '172lb'], 'rulers [height, weight, target]');
+      await app.waitTitle(p, 'Your answers');
+      t.equal(await app.toast(p), 'Saved', 'toast after answers with no changes');
       const s = await app.stored(p);
-      t.equal([s.profile.cm, s.profile.kg, s.profile.targetKg, s.weights], [180, 76.4, 78, st.weights], 'after an Edit with no changes [cm, kg, target kg, weights]');
+      t.equal([s.profile.cm, s.profile.kg, s.profile.targetKg, s.weights], [180, 76.4, 78, st.weights], 'after answers with no changes [cm, kg, target kg, weights]');
     });
 
-    await t.flow("Me: Edit, the phone's Back on the restart question", async () => {
-      // Back closes the question as "Keep my progress", once: the next Back leaves the app from the plan
+    await t.flow("Me: the phone's Back on the restart question", async () => {
+      // Back closes the question as "Keep my progress", once: Back again goes to Me, and the next Back leaves the app
       const st = ticked();
       const p = await t.page({ state: st });
       const inApp = () => p.url().startsWith(p.srv.url);
-      await editAll(p, pickGoal(p, 'move'));
+      await toAnswers(p);
+      await app.tap(p, '[data-row="goal"]');
+      await app.tap(p, '[data-act="ob-pick"][data-k="goal"][data-v="move"]');
       t.has(await app.overlay(p), 'Restart your 28 days?', 'question after a new goal');
       await p.evaluate(() => history.back());
-      await app.waitTitle(p, 'Plan', 5000);
+      await app.waitTitle(p, 'Your answers', 5000);
       t.equal(await app.overlay(p), '', 'the question after the phone\'s Back');
       const s = await app.stored(p);
       t.equal([s.profile.goal, s.done, s.profile.start], ['move', st.done, st.profile.start], "the phone's Back on the question [goal, ticks, plan start]");
+      t.equal(await popsIn(p), 0, 'popstate events once back on Your answers');
+      await p.evaluate(() => history.back());
+      await app.waitTitle(p, 'Me', 5000);
       await p.waitForFunction(() => history.state && history.state.wbf === 1, null, { timeout: 5000 }).catch(() => null);
       await p.goBack({ timeout: 5000 }).catch(() => null);
       await p.waitForURL((u) => !u.href.startsWith(p.srv.url), { timeout: 5000 }).catch(() => null);
-      t.check(!inApp(), () => "the phone's Back on the plan did not leave the app (still on " + p.url() + ')');
+      t.check(!inApp(), () => "the phone's Back on Me did not leave the app (still on " + p.url() + ')');
     });
 
     await t.flow('name step: a coach loading keeps the name', async () => {
-      // 'wbf-three' fires each time a coach finishes loading (the female one a few seconds after "Who should demonstrate"),
-      // on whichever step is showing then: the figures change, what the person typed stays
-      const p = await t.page();
+      // 'wbf-three' fires each time a coach finishes loading (the female one a few questions before "Who should
+      // demonstrate"), on whichever step is showing then: the figures change, what the person typed stays
+      const p = await t.page({ state: L.member({ name: '' }) });
       await p.evaluate(() => window.dispatchEvent(new Event('wbf-three')));
-      await t.look(p, 'welcome after a coach load');
-      await app.tap(p, '[data-act="ob-start"]');
-      await p.evaluate(() => WBF.app.go('onboard', { step: 'name' }));
+      await toAnswers(p);
+      await app.tap(p, '[data-row="name"]');
       await expectStep(t, p, 'call');
       await p.locator('#ob-name').click();
       await p.keyboard.type('Mari', { delay: 40 });
@@ -653,22 +759,20 @@ module.exports = {
       await p.keyboard.type('ana', { delay: 40 });
       t.equal(await p.locator('#ob-name').inputValue(), 'Mariana', 'name typed across a coach load');
       t.equal(await p.evaluate(() => document.activeElement && document.activeElement.id), 'ob-name', 'keyboard focus after a coach load');
-      await app.tap(p, '[data-act="ob-back"]');
-      await expectStep(t, p, 'coach');
       await next(p);
-      await expectStep(t, p, 'call');
-      t.equal(await p.locator('#ob-name').inputValue(), 'Mariana', 'name after Back and Next');
+      await app.waitTitle(p, 'Your answers');
+      t.equal((await app.stored(p)).profile.name, 'Mariana', 'name saved after Next');
+      t.has(await p.locator('[data-row="name"]').innerText(), 'Mariana', 'Your answers after the name');
     });
 
     await t.flow('focus step: the muscle map shows when the coach comes in late', async () => {
       // a slow phone: the coach comes in after the person reaches the focus step, so the map waits for it
-      const p = await t.page({ go: false });
+      const p = await t.page({ state: L.member({ focus: ['full'] }), go: false });
       const coachIn = await app.holdCoach(p);
       await p.goto(p.srv.home + 'index.html');
       await L.settle(p, { threeD: false });
-      await app.tap(p, '[data-act="ob-start"]');
-      await cont(p);
-      await app.tap(p, '[data-act="ob-pick"][data-k="goal"][data-v="fit"]');
+      await toAnswers(p);
+      await app.tap(p, '[data-row="focus"]');
       await expectStep(t, p, 'focus');
       await app.tap(p, '[data-act="ob-multi"][data-k="focus"][data-v="legs"]');
       t.equal([await p.evaluate(() => WBF.fig3d.ready()), await app.maps(p)], [false, [false]], 'before the coach is let in [coach in, map showing]');
