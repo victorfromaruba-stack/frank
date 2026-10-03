@@ -36,7 +36,7 @@ function contactSheet(t) {
 
 module.exports = {
   name: 'screens',
-  about: 'a screenshot of every screen and main state at 390x844 (and an index.html contact sheet) for visual review, with an iPhone status bar, toasts, the BMI bar and long titles',
+  about: 'a screenshot of every screen and main state at 390x844 (and an index.html contact sheet) for visual review, with an iPhone status bar, toasts, the BMI bar and long titles, and keep my progress (Instagram\'s browser, a backup, the move sheet, the Home Screen sheet, the moved banner)',
   timeout: 900,
   async run(t) {
     fs.rmSync(t.out, { recursive: true, force: true });
@@ -311,6 +311,53 @@ module.exports = {
       await app.tap(p, '[data-act="water"][data-n="2"]');
       await tab(p, 'me');
       await snap(p, 'me when the phone cannot save');
+    });
+
+    await t.flow('keep my progress', async () => {
+      // Welcome in Instagram's browser, Bring your plan, the box before a plan comes, the Plan with Undo, Me's data card,
+      // the move sheet, the Home Screen sheet after a first workout (iPhone, Android), the banner once the app moved
+      let p = await t.page({ ua: L.UA.instagramIphone });
+      await snap(p, "welcome in Instagram's browser (iPhone)", { full: false });
+      p = await t.page({ ua: L.UA.instagramAndroid });
+      await snap(p, "welcome in Instagram's browser (Android)", { full: false });
+      p = await t.page();
+      await app.tap(p, '[data-act="keep-have"]');
+      await snap(p, 'bring your plan');
+      const file = { app: 'wellness-by-frank', v: 1, made: L.TODAY + 'T09:00:00.000Z', origin: 'http://127.0.0.1', data: history() };
+      const [chooser] = await Promise.all([p.waitForEvent('filechooser', { timeout: 10000 }), app.tap(p, '[data-act="keep-restore"]')]);
+      await chooser.setFiles({ name: 'wellness-by-frank-2026-10-13.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) });
+      await p.waitForFunction(() => !!document.querySelector('#overlay:not([hidden]) .modal'), null, { timeout: 10000 });
+      await snap(p, 'bring your plan here? (a backup picked)', { full: false });
+      await app.tap(p, '[data-act="modal-yes"]');
+      await app.waitTitle(p, 'Plan');
+      await snap(p, 'plan with Undo after a backup came', { full: false });
+      await tab(p, 'me');
+      await p.evaluate(() => document.querySelector('[data-act="keep-move"]').scrollIntoView({ block: 'center' }));
+      await snap(p, 'me: your data, the backup and the move', { full: false });
+      await app.tap(p, '[data-act="keep-move"]');
+      await p.waitForSelector('#keep-link', { timeout: 10000 });
+      await snap(p, 'move my plan sheet', { full: false });
+      // the Home Screen sheet after a first workout: on an iPhone, then on Android (Chrome's own install prompt)
+      for (const [ua, name] of [[L.UA.iphone, 'iPhone'], [L.UA.android, 'Android']]) {
+        p = await t.page({ ua, state: L.member(), speed: 50 });
+        if (name === 'Android') await p.evaluate(() => { const e = new Event('beforeinstallprompt', { cancelable: true }); e.prompt = () => Promise.resolve(); window.dispatchEvent(e); });
+        await app.tap(p, '[data-act="start-day"]');
+        await app.waitTitle(p, 'Workout');
+        await p.waitForFunction(() => document.querySelector('[data-act="pl-done"]') || document.querySelectorAll('.pl-segs i.on').length > 0);
+        if (await p.locator('[data-act="pl-done"]').count()) await app.tap(p, '[data-act="pl-done"]');
+        await p.waitForFunction(() => document.querySelectorAll('.pl-segs i.on').length > 0);
+        await app.tap(p, '[data-act="quit"]');
+        await app.tap(p, '[data-act="modal-yes"]');
+        await app.waitTitle(p, 'Workout complete');
+        await p.waitForFunction(() => /Keep your progress/.test((document.querySelector('#overlay:not([hidden]) .sheet') || {}).innerText || ''), null, { timeout: 10000 });
+        await snap(p, 'home screen sheet after the first workout (' + name + ')', { full: false });
+      }
+      await app.tap(p, '#overlay [data-act="close"]');
+      await snap(p, 'finish screen with Keep your progress');
+      // the app moved to Frank's own address (an example address: FRANK.home is empty until the move)
+      p = await t.page({ state: L.member() });
+      await p.evaluate(() => { WBF.FRANK.home = 'https://app.example.org/'; WBF.app.tab('plan'); });
+      await snap(p, 'plan after the app moved to a new address', { full: false });
     });
 
     await t.flow('personal prototype', async () => {

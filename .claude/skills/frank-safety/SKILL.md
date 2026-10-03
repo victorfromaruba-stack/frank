@@ -3,7 +3,7 @@ name: frank-safety
 description: Who may see what in the Wellness by Frank app. The rules for members who may be under 18, are pregnant or gave birth recently, answered yes to a PAR-Q question, have a medical condition, are 60 or over, or have a sore spot, and the GDPR rule for health data. Use it before you build or change anything that shows food, drink, calories, weight, height, BMI, a target or any number about someone's body; anything that asks for a maximum effort (a fitness test, "as many as you can", a timed hold to failure); anything that picks, swaps or suggests moves (the plan generator, workouts, the exercise sheet); the onboarding health questions or Me's health switches; and anything that puts health answers in a message to Frank, a link, a file or anywhere off the phone. Also use it whenever someone mentions teens, pregnancy, postpartum, PAR-Q, a doctor's OK, older members, injuries, sore spots, diet advice, GDPR or health data in Frank's app, even if they never say "safety".
 metadata:
   owner: victor
-  version: "1.0"
+  version: "1.1"
 ---
 # Wellness by Frank: who gets what
 
@@ -120,11 +120,13 @@ data (article 9): the PAR-Q answers, pregnancy, sore spots, the food card's swit
 weight, height, BMI, a target weight, and fitness test results. Sending them anywhere
 needs the person's explicit consent for that one purpose (article 9(2)(a)).
 
-Today nothing leaves the phone. Me > Your data says "Nothing is sent to Frank or anyone
-else." The Instagram button opens a chat with nothing filled in, and the WhatsApp button
-(only once `FRANK.whatsapp` is filled in) fills in a hello with no health data. "Tell me
-when it opens" on the price screen copies a message with no health data for the person
-to paste in Frank's chat.
+The app sends nothing anywhere. Data leaves the phone only when the person takes it: a
+backup file they save, or a move link they copy or share (`js/keep.js`), which says where
+it's made who can see it. Me > Your data says "Everything you enter stays in this browser
+on this phone. Nothing is sent to Frank or anyone else." The Instagram button opens a
+chat with nothing filled in, and the WhatsApp button (only once `FRANK.whatsapp` is
+filled in) fills in a hello with no health data. "Tell me when it opens" on the price
+screen copies a message with no health data for the person to paste in Frank's chat.
 
 A feature that lets someone tell Frank about their health:
 

@@ -3,7 +3,7 @@ name: frank-module
 description: How to add a feature to the Wellness by Frank app in its own file, js/<feature>.js, through the module seam (WBF.ext) instead of editing js/app.js. Use it whenever a feature is added to Frank's app, and whenever a card, banner, button, sheet, screen, link (#name.…) or saved setting is added to Plan, Today, Me, Frank, Welcome, the price screen, the finish screen or the exercise sheet. Use it for every roadmap feature (keep my progress and backups, the fast start, your week and reminders, the honest trial, the finish screen and story cards, train with Frank, Frank in the app, the day-28 proof, a faster coach), and whenever you touch WBF.ext, WBF.app, a js/*.js module, the script list in index.html or a module's test. Use it even when the change looks small enough to drop into app.js: that's how nine features end up colliding in one file.
 metadata:
   owner: victor
-  version: "1.1"
+  version: "1.2"
 ---
 # Wellness by Frank: a feature in its own file
 
@@ -16,10 +16,11 @@ left out while the app carries on.
 
 - The template to copy, with the test it needs: [template.js](template.js).
 - A real module, small enough to read in a minute: `js/links.js` (#ex.<move> and
-  #w.<workout> links). It changes none of the app's screens.
-- The seam itself: "modules" at the end of `js/app.js`. Its tests: the `modules:` flow
-  in `tools/test/smoke.cjs` (it runs the template), the links flow next to it (for
-  `js/links.js`), and the `modules:` flow in `tools/test/static.cjs`.
+  #w.<workout> links). It changes none of the app's screens. A big one: `js/keep.js`
+  (keep my progress: cards in several slots, a screen, a link, events, its own data).
+- The seam itself: "modules" at the end of `js/app.js`. Its tests: the `modules:` flows
+  in `tools/test/smoke.cjs` (the first runs the template), the links flow next to them
+  (for `js/links.js`), and the `modules:` flow in `tools/test/static.cjs`.
 
 ## Add a feature
 
@@ -79,6 +80,7 @@ The app's own functions (also `WBF.app`, which the tests and the showcase captur
 |---|---|
 | `state()` | the saved data (`wbf.v1`). Ask for it each time: another window's save or Delete my data puts a new object there |
 | `save()` | writes it; `true` when the phone saved. No "Saved" toast on `false` |
+| `replace(data)` | puts a whole saved data in place of the phone's (a backup or a move link brought in, or its Undo: `js/keep.js`), read the way the app reads its own (what's missing from the defaults, an older profile brought up to date), and saves it. The coach follows the new profile and the modules hear `profile`. `false`: nothing saved (the phone refused, or a workout is running: never replace during one). Check what you pass first: it's taken as it is |
 | `refresh()` | draws the screen again where it is: the scroll, typed text and the focus stay. Use it after a tap in your card |
 | `render()` | draws the screen again, at the scroll it was left at (the top, on a tab). The app's own taps use it |
 | `go(name, params)`, `back()`, `tab(name, params)`, `cur()` | screens: open one, Back, a tab afresh, the one showing (`{ name, params }`). A name that isn't a screen throws |
@@ -87,6 +89,8 @@ The app's own functions (also `WBF.app`, which the tests and the showcase captur
 | `planDays()`, `nextDay()`, `session(workoutId, day)`, `kcalOf(session, seconds)` | the 28 days, the next one to train, a session as the plan builds it, its calories (always shown with "est.") |
 | `atRisk(p)`, `noBmi(p)`, `flags(p)` | the safety rules (`.claude/skills/frank-safety/`), for the saved profile or `p`: no food, drink or weight advice and no weight target when `atRisk()`; no BMI when `noBmi()`; `flags()` says why (`pregnant`, `child`, `medical`). They follow the answers, Me's switches and the food card's: ask each time you draw, never copy the rule |
 | `sheet(moveId, tab)`, `mountFigures(root)` | a move's sheet; draws the coach, thumbnails and muscle maps in html you put on screen yourself |
+| `cleanSpec(o)` | a session from Frank that came from outside (a link, a file), made safe: only real moves, doses and lengths in range; `null` when it isn't one. Pass every session from outside through it |
+| `canInstall()`, `install()` | the browser's own install prompt (Chrome on Android): whether it's there, and showing it (once; `false` when there's none). Me's Install the app uses the same one |
 
 `app.util`: `esc` (escape every text you put in html), `iso`, `fromIso`, `addDays`,
 `monday`, `mins`, `mmss`, `plural`, `ic` (the app's icons), `figHtml`, `thumbHtml`,
@@ -126,8 +130,10 @@ modules.
 | Slot | Kind | Where | `fn` gets |
 |---|---|---|---|
 | `welcome.top` | card | Welcome, under the coach, above "Your personal plan". A light screen | the screen's params |
+| `welcome.cta` | html | Welcome, among its buttons, in the row with "Look around first": a small text button (`.ob-skip`). A light screen | the screen's params |
 | `plan.top` | card | Plan, under the date, above Frank's session and the plan card; with or without a plan | the screen's params |
 | `plan.after-hero` | html | Plan, under the plan card | the screen's params |
+| `workouts.top` | card | Workouts, under the heading, above the search | the screen's params |
 | `today.top` | card | Today, under the heading, above the week strip | the screen's params |
 | `me.top` | card | Me, under the name, above the numbers | the screen's params |
 | `me.data` | html | Me, inside Your data, above "Delete my data and start over" | the screen's params |
@@ -166,6 +172,13 @@ drawn in a `screen` handler) isn't passed on to any module, so nothing loops.
   no IndexedDB): Delete my data and the merge with other windows work on `wbf.v1` only.
   Change the app's own data (`profile`, `access`, `done`, …) only when the feature needs it,
   and say so in the commit with a test.
+- **A backup or a move link** (`js/keep.js`) carries the whole of `wbf.v1` to another
+  browser or phone. The app's fields are checked one by one; a module's key, and a field
+  a later version adds to the profile or a workout, come along as plain values (text
+  without markup, numbers, true or false, short lists) and only to a phone that has none
+  of that key. So read your data like anything from outside: check each field's type
+  before you use it. A field that must never move (like `paid`) needs a rule in
+  `js/keep.js`.
 - **Links** are `#<name>.<rest>`, for links from outside the app (Frank's messages, a
   story card). The app takes a link out of the address bar before it hands it over, so a
   reload doesn't open it twice. Open a link's screen with one `app.go()`, over the screen

@@ -117,6 +117,22 @@ module.exports = {
         t.check(d && d.w === want[0] && d.h === want[1], 'manifest icon ' + i.src + ' is ' + (d ? d.w + 'x' + d.h : 'not a PNG') + ', the manifest says ' + i.sizes);
       }
       t.check((m.icons || []).some((i) => /maskable/.test(i.purpose || '')), 'manifest has no maskable icon');
+      // one install per address: the id is the start (Chrome would otherwise take start_url, which may change)
+      t.equal(m.id, './', 'manifest id');
+      // Android's richer install dialog shows phone-shaped screenshots. They are for that dialog only: installed phones
+      // never need them, so they stay out of SHELL and LAZY in sw.js
+      const sw = swInfo(read('sw.js'));
+      const shots = m.screenshots || [];
+      t.check(shots.length >= 1, 'manifest has no screenshots: Android shows its plain install dialog');
+      for (const s of shots) {
+        if (!exists(s.src)) { t.fail('manifest screenshot ' + s.src + ' does not exist'); continue; }
+        const d = png(s.src), want = String(s.sizes || '').split('x').map(Number);
+        t.check(d && d.w === want[0] && d.h === want[1], 'manifest screenshot ' + s.src + ' is ' + (d ? d.w + 'x' + d.h : 'not a PNG') + ', the manifest says ' + s.sizes);
+        t.check(s.form_factor === 'narrow' && d && d.w < d.h && Math.min(d.w, d.h) >= 320 && Math.max(d.w, d.h) <= 3840 && Math.max(d.w, d.h) / Math.min(d.w, d.h) <= 2.3,
+          'manifest screenshot ' + s.src + ': narrow, taller than wide, 320 to 3840 px a side, at most 2.3 times as tall as wide (Chrome skips others)');
+        t.check(s.label, 'manifest screenshot ' + s.src + ' has no label for a screen reader');
+        t.check(sw.shell && !sw.shell.includes(s.src) && !sw.lazy.includes(s.src), 'manifest screenshot ' + s.src + ' is in SHELL or LAZY in sw.js: installed phones would download it for nothing');
+      }
     });
 
     await t.flow('nothing from other sites', async () => {

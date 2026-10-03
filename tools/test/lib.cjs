@@ -495,6 +495,14 @@ const codeHash = (code, prefix = 'wbf:') => require('crypto').createHash('sha256
 const coachHash = (code) => codeHash(code, 'wbf-coach:');
 const pack = (obj) => Buffer.from(JSON.stringify(obj)).toString('base64url');
 const unpack = (code) => JSON.parse(Buffer.from(code, 'base64url').toString('utf8'));
+// browsers as their user agent names them (t.page({ ua })): js/keep.js tells an iPhone, Android and the browsers inside
+// Instagram apart by it
+const UA = {
+  iphone: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1',
+  android: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36',
+  instagramIphone: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/22F76 Instagram 361.0.0.35.82 (iPhone15,3; iOS 18_5; en_GB; en-GB; scale=3.00; 1290x2796)',
+  instagramAndroid: 'Mozilla/5.0 (Linux; Android 14; Pixel 8 Build/AP2A.240805.005; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/129.0.6668.81 Mobile Safari/537.36 Instagram 349.0.0.39.106 Android (34/14; 420dpi; 1080x2400; Google/google; Pixel 8)'
+};
 
 // ---- the run: one browser, servers, output folders, problems -----------------------------------------------------------
 class Env {
@@ -581,13 +589,14 @@ class Test {
   // index.html), hash, width, height, scale, now (false: real clock), speed, prefix ('/frank/'), sw (allow the
   // service worker; then other sites are watched, not blocked), server (one from serve(), e.g. with Pages' caching),
   // site (a published copy such as L.SITE instead of the local server: fetched through Node, see viaNode),
-  // href (open this URL), threeD (false: don't wait for the coach), go (false: don't open the page yet).
+  // href (open this URL), threeD (false: don't wait for the coach), go (false: don't open the page yet),
+  // ua (the browser's user agent: an iPhone's Safari, Instagram's own browser; L.UA has some).
   async page(o = {}) {
     const env = this.env;
     const srv = o.site ? { url: o.site, home: o.site } : (o.server || await env.server(o.prefix || ''));
     const browser = await env.browser();
     const ctx = await browser.newContext({ viewport: { width: o.width || 390, height: o.height || 844 }, deviceScaleFactor: o.scale || this.opts.scale || 1,
-      serviceWorkers: o.sw && !o.site ? 'allow' : 'block', locale: 'en-GB', timezoneId: TZ, colorScheme: 'dark' });
+      serviceWorkers: o.sw && !o.site ? 'allow' : 'block', locale: 'en-GB', timezoneId: TZ, colorScheme: 'dark', userAgent: o.ua || undefined });
     this.contexts.push(ctx);
     const local = srv.url;
     const outside = new Set();
@@ -819,5 +828,5 @@ async function main(suites) {
 
 module.exports = {
   REPO, KEY, TODAY, NOW, TZ, SITE, playwright, launch, serve, fetchSite, viaNode, settle, blankFigures, screenProblems, a11yScan, nameProblems,
-  isoDay, profile, state, member, spec, pack, unpack, QA_CODE, QA_COACH, codeHash, coachHash, app, Env, Test, short, parseArgs, options, runSuites, main, loadKnown
+  isoDay, profile, state, member, spec, pack, unpack, UA, QA_CODE, QA_COACH, codeHash, coachHash, app, Env, Test, short, parseArgs, options, runSuites, main, loadKnown
 };

@@ -3,7 +3,7 @@ name: frank-device-check
 description: A 15-minute check of Wellness by Frank on a real iPhone and a real Android phone, for everything the headless test browser can't see. Use it after any release that touched storage, sw.js, the installed app, the player, sound or the voice, Frank's clips, calendar files, sharing, the status bar or the light screens; before anyone tells Frank or Victor that something "works on phones"; and whenever someone reports a phone problem with Frank's app ("my plan is gone", "no sound", "the screen turns off", "the clock is invisible", "can't add it to my calendar", "share doesn't work", "it doesn't open at the gym"), even if nobody asks for a device check. You hand the checklist to a person with the phones and read the results they paste back.
 metadata:
   owner: victor
-  version: "1.0"
+  version: "1.1"
 ---
 # Wellness by Frank: the 15-minute phone check
 
@@ -35,8 +35,8 @@ build has it" are for features still on their way: skip them, and they answer n/
    Install app (or Add to Home screen). Open it from the new icon, go to Today. Does it
    say "(30 min today)"?
    On iPhone, expect no: a home-screen app keeps its own storage, apart from Safari.
-   That's iOS, not a bug, and why the app needs a move link or a backup. On Android,
-   expect yes.
+   That's iOS, not a bug, and why the app has a move link and a backup (part 6). On
+   Android, expect yes.
 3. **Instagram's browser.** Send the site's link in an Instagram DM (or open Frank's bio
    link) and tap it there. Look around first, Today, +10 min. Then open the site in
    Safari or Chrome again: 30 or 40? Expect 30: Instagram keeps its own storage.
@@ -114,6 +114,38 @@ Voice guidance, Sound effects and Vibration are on unless someone switched them 
    app: open it from the home screen and stay on Plan, Today or Me. "New version ready"
    comes up; Update reloads. Check the top line of `sw.js` again: the new number.
 
+## 6. Keep my progress (5 minutes)
+
+The backup file, the move link and the Home Screen sheet (`js/keep.js`). Do it with a
+plan that has a workout or two, made in Safari (Android: Chrome).
+
+1. **Instagram's browser.** Open the site from an Instagram DM. Welcome shows "You're in
+   Instagram's browser". iPhone: does the ••• menu at the top have "Open in external
+   browser", and does it open Safari? Android: does "Open in Chrome" open Chrome (or the
+   phone's browser without Chrome)?
+2. **The Home Screen sheet.** In Safari or Chrome, with a plan that has never finished
+   a workout there (Look around first works: any workout), finish or end a workout: does
+   "Keep your progress" come up, once? iPhone: tap Copy my plan. Are the drawn Share and
+   Add to Home Screen buttons the ones Safari shows? Android: does Install the app open
+   Chrome's own install box (or the menu steps, when Chrome offers none)?
+3. **Into the Home Screen app (iPhone).** After Copy my plan and Add to Home Screen, open
+   the new icon: Welcome > I already have a plan > Paste. Does the phone ask to paste
+   (a Paste bubble), and does "Bring your plan here?" show the plan and the workouts?
+   Bring it here: the plan, history and free trial are there.
+4. **Save a backup.** Me > Your data > Save a backup, in Safari, then in the Home Screen
+   app. Safari: is there a "Download?" question, and is the file in Files > Downloads?
+   Home Screen app: does the share sheet come up with Save to Files? Android: is the file
+   in Downloads?
+5. **Restore it.** On the other phone (or after Delete my data): Me > Restore from a
+   backup, pick the file. The same "Bring your plan here?", then the same plan.
+6. **Protected.** In the Home Screen app (Android: the installed app), Me > Your data
+   says "Protected from automatic clearing." after a workout. In Safari it may say "Not
+   protected yet: save a backup.": note which.
+7. **A move link by message, if you have time.** Me > Move my plan > Share to WhatsApp or
+   Messages on your own other phone, and open it there. Does the app open with "Bring
+   your plan here?" Does the chat app show a preview of the link (it must not show the
+   plan: the plan is after the #)?
+
 ## Reading the results
 
 - A "no" where the step says what to expect is a bug. Reproduce what you can in the
@@ -153,6 +185,13 @@ Answers: yes / no / n/a (not in this build) / ? (couldn't tell). A note for ever
 5.1 Opens and works with no signal                              ___      ___
 5.2 A whole workout offline, still saved after                  ___      ___
 5.3 New version ready bar, Update shows the new VERSION         ___      ___
+6.1 Instagram: the warning; external browser / Open in Chrome   ___      ___
+6.2 Keep your progress sheet once; the drawn buttons match      ___      ___
+6.3 Home Screen app: I already have a plan, Paste, plan there   ___      n/a
+6.4 Save a backup: Safari / Home Screen app (share sheet)       ___      ___
+6.5 Restore from a backup brings the same plan                  ___      ___
+6.6 Me: Protected (Home Screen app) / Safari or Chrome says     ___      ___
+6.7 A move link by message opens Bring your plan here?          ___      ___
 
 Notes:
 -

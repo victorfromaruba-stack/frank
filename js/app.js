@@ -105,18 +105,22 @@
     if (!p.focus) p.focus = ['full'];
     return p;
   }
+  // saved data as the app reads it, into d (default: a fresh one): what's missing comes from defaults(), and an older
+  // profile and the food card's older switches are brought up to date
+  function normal(got, d) {
+    d = d || defaults();
+    for (var k in got) if (got[k] != null) d[k] = got[k];
+    d.settings = Object.assign(defaults().settings, got.settings || {});
+    d.profile = migrate(d.profile);
+    // the food card's switches: older versions kept them mixed with what the profile said; every one that was on stays on
+    if (d.flags && !d.flags.manual) d.flags = { manual: { pregnant: !!d.flags.pregnant, child: !!d.flags.child, medical: !!d.flags.medical } };
+    return d;
+  }
   function load() {
     var d = defaults();
     try {
       var raw = W.localStorage.getItem(KEY);
-      if (raw) {
-        var got = JSON.parse(raw);
-        for (var k in got) if (got[k] != null) d[k] = got[k];
-        d.settings = Object.assign(defaults().settings, got.settings || {});
-        d.profile = migrate(d.profile);
-        // the food card's switches: older versions kept them mixed with what the profile said; every one that was on stays on
-        if (d.flags && !d.flags.manual) d.flags = { manual: { pregnant: !!d.flags.pregnant, child: !!d.flags.child, medical: !!d.flags.medical } };
-      }
+      if (raw) normal(JSON.parse(raw), d);
     } catch (e) { /* private mode: start fresh */ }
     return d;
   }
@@ -156,6 +160,18 @@
     });
     if (more.access) base.access = Object.assign({}, more.access, base.access || {});
     S = base;
+  }
+  // A whole saved data in place of this phone's (a backup or a move brought in, or its Undo: js/keep.js), read the way
+  // the phone's own is (normal) and saved. The coach follows it, and the modules hear 'profile' when it brings another
+  // profile. Not during a workout. Gives what save() gives: false when nothing was saved
+  function replace(data) {
+    if (PL || !data || typeof data !== 'object') return false;
+    var old = S.profile;
+    S = normal(JSON.parse(JSON.stringify(data)));
+    var ok = save();
+    setCoachFigure();
+    if (S.profile && JSON.stringify(old) !== JSON.stringify(S.profile)) emit('profile', old, S.profile, true);
+    return ok;
   }
 
   // units
@@ -290,9 +306,10 @@
       return JSON.parse(new TextDecoder().decode(bytes));
     } catch (e) { return null; }
   }
+  // a session from a link or a backup, made safe (null: it isn't one). A move is one of EX's own: never 'toString'
   function cleanSpec(o) {
     if (!o || typeof o !== 'object' || !Array.isArray(o.x)) return null;
-    var x = o.x.filter(function (m) { return Array.isArray(m) && typeof m[0] === 'string' && EX[m[0]] && isFinite(+m[1]); })
+    var x = o.x.filter(function (m) { return Array.isArray(m) && typeof m[0] === 'string' && Object.prototype.hasOwnProperty.call(EX, m[0]) && isFinite(+m[1]); })
       .slice(0, 30).map(function (m) { return [m[0], Math.round(+m[1])]; });
     if (!x.length) return null;
     return { i: String(o.i || Date.now().toString(36)).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 20) || Date.now().toString(36),
@@ -770,7 +787,7 @@
         '<div class="welcome-text"><h1>Your personal plan</h1><p>Built on Frank\'s method and the research. Every move shown by a moving coach, with the why behind it.</p></div>' +
         '<div class="ob-cta"><button class="btn dark block" data-act="ob-start">Get my plan</button>' +
         '<button class="btn white block" data-act="join">I train with Frank</button>' +
-        '<button class="ob-skip" data-act="browse" style="align-self:center">Look around first</button>' +
+        '<div class="rowx wrap" style="justify-content:center;gap:0 20px"><button class="ob-skip" data-act="browse">Look around first</button>' + slot('welcome.cta', p) + '</div>' +
         '<p class="ob-note">Your answers and progress stay on this phone.</p></div></div>';
     }
   };
@@ -1390,7 +1407,7 @@
         return '<button class="prog" data-act="open-workout" data-id="' + w.id + '"><img src="' + img(w.img) + '" alt="' + esc(w.phrase) + '">' +
           '<span class="cap"><b class="display m">' + esc(w.title) + '</b><span class="meta">' + metaLine(s) + '</span></span></button>';
       }).join('');
-      return '<div class="screen"><h1 class="h1">Workouts</h1>' +
+      return '<div class="screen"><h1 class="h1">Workouts</h1>' + slot('workouts.top', p) +
         '<div class="search">' + ic('search') + '<label for="wq" class="sr">Search workouts and moves</label><input class="input" id="wq" type="search" placeholder="Search workouts and moves" autocomplete="off"></div>' +
         '<div id="wq-results" hidden></div><div id="wq-main" class="stack loose">' +
         '<div class="body-grid" role="group" aria-label="Body part">' + WBF.BODY.map(function (b) {
@@ -2004,7 +2021,7 @@
       membershipCard() + install +
       '<section class="card"><p class="label">The science</p><p class="small">How the plans follow the research on strength, cardio, balance and safety, with every source.</p>' +
       '<button class="btn two block" data-act="science">Why the plans work</button></section>' +
-      '<section class="card quiet"><p class="label">Your data</p>' + (savedOk ? '' : '<p class="warnbox" id="save-fail">' + esc(SAVE_FAIL) + '</p>') + '<p class="small">Everything you enter stays on this phone. Nothing is sent to Frank or anyone else. Clearing your browser data clears it too.</p>' +
+      '<section class="card quiet"><p class="label">Your data</p>' + (savedOk ? '' : '<p class="warnbox" id="save-fail">' + esc(SAVE_FAIL) + '</p>') + '<p class="small">Everything you enter stays in this browser on this phone. Nothing is sent to Frank or anyone else. Clearing your browser data clears it too.</p>' +
       slot('me.data', p) + '<button class="link" data-act="reset">Delete my data and start over</button></section>';
   }
   function membershipCard() {
@@ -2261,6 +2278,14 @@
 
   var deferredInstall = null;
   W.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferredInstall = e; });
+  // the browser's own install prompt (Chrome on Android): it shows once, then it's gone. false: there is none to show
+  function promptInstall() {
+    if (!deferredInstall) return false;
+    var ask = deferredInstall.prompt();
+    deferredInstall = null;
+    if (ask && ask.catch) ask.catch(function () { /* the browser said no */ });
+    return true;
+  }
 
   var A = {
     tab: function (el) { tab(el.getAttribute('data-tab')); },
@@ -2537,7 +2562,7 @@
         navigator.clipboard.writeText(v).then(function () { toast(v.length > 40 ? 'Copied' : 'Copied ' + v); }, function () { toast('Copy it from the line above'); });
       } catch (e) { toast('Copy it from the line above'); }
     },
-    install: function () { if (deferredInstall) { deferredInstall.prompt(); deferredInstall = null; } },
+    install: function () { promptInstall(); },
     'sw-update': function () { W.location.reload(); },
     reset: function () {
       confirmBox('Delete everything?', 'Delete', function () {
@@ -2695,8 +2720,8 @@
   // and a template to copy: .claude/skills/frank-module/SKILL.md. A module that throws as it starts is left out, with all it
   // had added taken back; one that throws later loses only that card, screen, action or event. Either way the console
   // names the module and the place, and the app carries on.
-  var ONE = ['welcome.top', 'plan.top', 'today.top', 'me.top', 'frank.top', 'pay.top', 'done.next'];   // the card with the highest priority
-  var PLAIN = ['plan.after-hero', 'done.after-stats', 'me.data', 'sheet.foot'];                        // every module's piece, in order
+  var ONE = ['welcome.top', 'plan.top', 'workouts.top', 'today.top', 'me.top', 'frank.top', 'pay.top', 'done.next'];   // the card with the highest priority
+  var PLAIN = ['welcome.cta', 'plan.after-hero', 'done.after-stats', 'me.data', 'sheet.foot'];                            // every module's piece, in order
   var EVENTS = ['boot', 'hash', 'screen', 'finish', 'profile', 'saved'];
   var SLOTS = {}, EV = {}, OWNER = {}, APP_KEYS = defaults(), failed = {}, hearing = {}, started = 0;
   // a module's function, run so that its error stays in the module: undefined comes back, the console says it once
@@ -2761,12 +2786,14 @@
   }
   // The app's own functions: for the modules (each gets them with its own ways in, below), the tests and the showcase
   // captures (.claude/skills/frank-showcase). atRisk, noBmi and flags are the safety rules (.claude/skills/frank-safety):
-  // a module asks them, it never makes its own copy
+  // a module asks them, it never makes its own copy. replace() puts a whole saved data in place of the phone's, cleanSpec()
+  // checks a session from Frank that came from outside, install() shows the browser's install prompt when canInstall()
   var base = W.WBF.app = {
-    state: function () { return S; }, save: save, render: render, refresh: refresh, go: go, back: back, tab: tab, cur: cur,
+    state: function () { return S; }, save: save, replace: replace, render: render, refresh: refresh, go: go, back: back, tab: tab, cur: cur,
     toast: toast, openSheet: openSheet, closeOverlay: closeOverlay, confirmBox: confirmBox,
     status: status, daysLeft: daysLeft, planDays: planDays, nextDay: nextDay, session: session, kcalOf: kcalOf, kcal: kcalOf,
-    atRisk: atRisk, noBmi: noBmi, flags: flags, mountFigures: mountFigures,
+    atRisk: atRisk, noBmi: noBmi, flags: flags, mountFigures: mountFigures, cleanSpec: cleanSpec,
+    canInstall: function () { return !!deferredInstall; }, install: promptInstall,
     sheet: function (id, tabName) { exerciseSheet(id); if (tabName && XS) { XS.tab = tabName; paintExMedia(); } },
     util: { esc: esc, iso: iso, fromIso: fromIso, addDays: addDays, monday: monday, mins: mins, mmss: mmss, plural: plural, ic: ic,
             figHtml: figHtml, thumbHtml: thumbHtml, backBar: backBar, fmtShort: fmtShort, fmtLong: fmtLong }

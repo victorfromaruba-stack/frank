@@ -3,7 +3,7 @@ name: frank-release
 description: Shipping Wellness by Frank to the live site, rolling a release back, and the one-time move to Frank's own domain. Use it whenever a change to Frank's app is about to be committed for a push to the app branch, when someone says ship, release, deploy, publish, push, go live or "put it on the site", when the live site or an installed phone shows something wrong or old ("roll back", "undo the last release", "phones still show the old version", "the update didn't arrive"), when you touch sw.js (VERSION, SHELL, LAZY) or add a file the app loads, and whenever Frank's own domain, a new host, Netlify, Cloudflare Pages or leaving GitHub Pages comes up, even if nobody says "release".
 metadata:
   owner: victor
-  version: "1.0"
+  version: "1.1"
 ---
 # Wellness by Frank: shipping, rolling back, moving
 
@@ -97,27 +97,18 @@ origin and so one storage: one more reason to move.)
 
 Before the move:
 
-1. **A way to carry the data.** A backup file, or a move link (`#move.<code>`, the
-   keep-my-progress feature). Check it's in: `grep -n "#move\|backup" js/*.js`. Without
-   it, everyone's progress stays behind, so the move waits.
+1. **A way to carry the data.** It's in `js/keep.js`: a backup file (Me > Your data) and
+   a move link (`#move.<code>`) that bring the plan, history, free trial, client access
+   and Frank's saved sessions. Without it, everyone's progress stays behind, so the move
+   waits.
 2. **Links from any host.** A session link Frank sent from the old address must still
    work pasted on the new one, and the other way round (`client.cjs` pastes links from
    several hosts).
 3. **Test the move across two local origins.** Two servers on two ports are two origins,
-   each with its own storage, like the old and the new address:
-
-   ```js
-   await t.flow('moving to a new address', async () => {
-     const a = await L.serve(), b = await L.serve();              // 127.0.0.1:<port A> and :<port B>
-     const old = await t.page({ server: a, state: L.member() });
-     // make the move link on A the way a person does, then read it: <steps>
-     const link = '<the move link>';
-     const now = await t.page({ server: b, href: link.replace(a.url, b.url) });
-     // confirm on B: the same plan, history, trial, client access and Frank's saved sessions
-     // a phone that already has a plan on B merges, nothing is overwritten
-     await a.close(); await b.close();
-   });
-   ```
+   each with its own storage, like the old and the new address. `node tools/test/run.cjs
+   keep` does it: a move link made on one opens on the other ("move:"), and with
+   `FRANK.home` set in the page, every tab of the old one shows the banner and its button
+   takes the progress to the new one ("the app moved:").
 
 On the day:
 
@@ -130,11 +121,14 @@ On the day:
      Cache-Control: no-cache
    ```
 
-3. **The moved banner on the old address.** The old address runs the same code and
-   shows, on every tab screen, that the app has moved, with one button that brings the
-   person's progress (the move link to the new address). The new home is one setting in
-   `js/programs.js` (keep-my-progress plans `FRANK.home`). Leave the old site up: people
-   come back late, and old installs work offline.
+3. **The moved banner on the old address.** Put the new address in `home` in `FRANK`
+   (`js/programs.js`), bump `VERSION` and ship it to both hosts: the same code shows
+   "Frank's app has moved" on every tab of the old address (Welcome too), with a button
+   that takes the person's progress to the new one in a move link, and nothing at the new
+   address itself. In an iPhone's Home Screen app the button shows the steps instead
+   (copy the plan, open Safari at the new address, Add to Home Screen, I already have a
+   plan), because that app can't open a new one. Leave the old site up: people come back
+   late, and old installs work offline.
 4. **The address in the files.** `og:url` and any `og:image` hold the new absolute
    address (`index.html` has no `og:` tags today; add them with the move if the link
    previews are wanted). `manifest.webmanifest` needs no new address: `start_url` and

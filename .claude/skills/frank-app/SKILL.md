@@ -3,7 +3,7 @@ name: frank-app
 description: How the Wellness by Frank workout app is built and how to change it safely. Use it whenever you add or edit an exercise, its animation, video or coaching text, a workout or program, the 28-day plan generator, the 3D coach (models, poses, muscle view), Frank's filmed clips, the onboarding, the membership/paywall, Frank's coach tools or client links, or the app's look; and whenever someone mentions Frank's app, wellnessbyfrank, the 3D coach or demos, "the generated plans", or "the science behind the plans", even without naming a file.
 metadata:
   owner: victor
-  version: "2.1"
+  version: "2.2"
 ---
 # Wellness by Frank: the app
 
@@ -19,7 +19,9 @@ CSS and JavaScript, no build step, no server code. Modelled on Leap Fitness's
   Coach tools open only on a phone where Frank typed his coach code.
 
 Read `README.md` first. Everything a person enters is stored in their browser
-(`localStorage` key `wbf.v1`).
+(`localStorage` key `wbf.v1`), one browser at a time: on an iPhone, Safari, Instagram's
+own browser and the Home Screen app each keep their own. A backup file or a move link
+(`js/keep.js`) carries it to another browser or phone.
 
 The other project skills, each for one job:
 
@@ -47,6 +49,7 @@ The other project skills, each for one job:
 | `js/science.js` | the science screen: rules and 36 sources. Mirrors `references/science.md` |
 | `js/app.js` | screens and navigation, onboarding, paywall, plan, workouts, exercise sheet, player, Today, Me, Frank, coach tools, access; at its end the module seam (`WBF.ext`, `WBF.app`) |
 | `js/links.js` | a module: links to one move (`#ex.<move>`) or one workout (`#w.<workout>`) for Frank to send. The example to read before writing one (`.claude/skills/frank-module/`) |
+| `js/keep.js` | a module, keep my progress: the backup file and the move link (`#move.<code>`, made and checked here, merged into the phone's data with `WBF.app.replace`), "I already have a plan", the warning in Instagram's browser, the Home Screen sheet after a workout, `navigator.storage.persist()`, and the "Frank's app has moved" banner once `FRANK.home` is set |
 | `js/sound.js` | beeps, voice coach, vibration, screen wake lock |
 | `app.css` | Frank's look; tokens at the top. Light screens (welcome, onboarding, paywall) use `body.light` |
 | `vendor/` | three.js r170 and its GLTF loader (MIT). Single-file builds load them from jsDelivr |
@@ -128,8 +131,14 @@ api, the template and the test it needs.
   the `#`). A session Frank changes and sends again shows as new. A link opened on
   the phone that made it (Frank trying his own) adds the session, not client access.
 - Other links belong to modules (`#<name>.<rest>`): `js/links.js` opens `#ex.<move>`
-  and `#w.<workout>`. The app takes a link out of the address bar before it opens
-  it, and no link ends a workout (`.claude/skills/frank-module/`).
+  and `#w.<workout>`, `js/keep.js` opens `#move.<code>` (a person's whole data, packed:
+  it waits for a yes, and during a workout for its end). The app takes a link out of
+  the address bar before it opens it, and no link ends a workout
+  (`.claude/skills/frank-module/`).
+- A move link or a backup never brings `paid`, nor Coach tools (`coachMode`): Frank types
+  his coach code again on a new address. It brings client access, the earlier free
+  trial, Frank's sessions and his saved ones. `FRANK.home` in `js/programs.js` stays
+  empty until Frank's own address exists (`.claude/skills/frank-release/`).
 - Client codes: `FRANK.codes` in `js/programs.js` holds SHA-256 hashes of
   `'wbf:' + code` (lower case, no spaces), so the codes can't be read in the
   public repo. `node tools/client-code.mjs <code>` prints the line to add. A
@@ -167,7 +176,8 @@ node tools/build.mjs
   move, reps move, rest, switch sides, pause, quit), the finish screen, Workouts
   (body parts, filters, search), Today, Me, Frank, Coach tools (locked without the
   coach code, then build, send, open the link in a fresh browser, press Back), the
-  links to a move or a workout, the modules, the keyboard and a screen reader's
+  links to a move or a workout, the modules, keep my progress (a backup, a move link
+  from one address to another, Instagram's browser), the keyboard and a screen reader's
   names, and an expired trial (`access.trialStart` 10 days back). After the full
   run, look at every screen you touched in `<out>/screens/index.html`.
 - What a headless browser can't test (the silent switch, Safari's storage, the

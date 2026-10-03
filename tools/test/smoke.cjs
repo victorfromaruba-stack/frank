@@ -6,7 +6,7 @@ const { app } = L;
 
 module.exports = {
   name: 'smoke',
-  about: 'every tab, the exercise sheet, a workout, the player starts, logging walks, water, meals and weight, delete my data, a phone that can\'t save, other options in the sheet, muscle maps when the coach comes in late, Back after a tab switch, the scroll after Back and after a workout, the activity slider, the keyboard\'s focus (new screens, Back, choices, an open sheet, Space in the player), toasts clear of the main button, the BMI bar\'s colours, the iPhone status bar on light screens, feature modules (the template, slots, events, broken modules, a screen wrapped by one, a screen that is not there, the safety rules and every change to the profile), links to a move or a workout, a link while a box asks, a source number on the science screen, the focus ring on a light and a dark screen, the Personal prototype',
+  about: 'every tab, the exercise sheet, a workout, the player starts, logging walks, water, meals and weight, delete my data, a phone that can\'t save, other options in the sheet, muscle maps when the coach comes in late, Back after a tab switch, the scroll after Back and after a workout, the activity slider, the keyboard\'s focus (new screens, Back, choices, an open sheet, Space in the player), toasts clear of the main button, the BMI bar\'s colours, the iPhone status bar on light screens, feature modules (the template, slots, events, broken modules, a screen wrapped by one, a screen that is not there, the safety rules and every change to the profile, Welcome\'s buttons and a card on Workouts, a whole saved data replaced, a session checked, the install prompt), links to a move or a workout, a link while a box asks, a source number on the science screen, the focus ring on a light and a dark screen, the Personal prototype',
   async run(t) {
     await t.flow('first visit', async () => {
       const p = await t.page();
@@ -786,6 +786,48 @@ module.exports = {
       await q.goBack({ timeout: 5000 }).catch(() => null);
       await q.waitForURL((u) => !u.href.startsWith(q.srv.url), { timeout: 5000 }).catch(() => null);
       t.check(!q.url().startsWith(q.srv.url), () => "the phone's Back after a screen that is not there did not leave the app (still on " + q.url() + ')');
+    });
+
+    await t.flow("modules: Welcome's buttons, a card on Workouts, a whole saved data replaced, a session checked, the install prompt", async () => {
+      // ways in that came with js/keep.js, open to every module: welcome.cta (next to Look around first), workouts.top,
+      // replace() (a backup or a move: read like the phone's own data, saved, 'profile' heard; never in a workout),
+      // cleanSpec() (a session from outside, made safe) and the browser's install prompt (canInstall(), install())
+      const p = await t.page({ speed: 50, go: false });
+      await p.addInitScript(() => {
+        const ext = (window.WBF = window.WBF || {}).ext = window.WBF.ext || [];
+        const heard = window.__mods = { profile: [] };
+        ext.push(function qaWays(app) {
+          app.html('welcome.cta', () => '<button class="ob-skip" data-act="qa-cta">QA button</button>');
+          app.card('workouts.top', () => ({ id: 'qa-wo', html: '<section class="card"><p class="small">QA workouts card</p></section>' }));
+          app.on('profile', (old, now, changed) => heard.profile.push([old ? old.name : null, now.name, changed]));
+        });
+      });
+      await p.goto(p.srv.home + 'index.html');
+      await L.settle(p);
+      t.equal(await p.locator('.ob-cta [data-act="qa-cta"]').count(), 1, "a module's button among Welcome's");
+      await t.look(p, "welcome with a module's button");
+      const st = L.member({ name: 'Rae', goal: 'strength' }, { settings: { units: 'lb' } });
+      const ok = await p.evaluate((x) => { const r = WBF.app.replace(x); WBF.app.tab('plan'); return r; }, st);
+      const s = await app.stored(p);
+      t.equal([ok, s.profile.name, s.settings.units, s.settings.ready, s.v], [true, 'Rae', 'lb', 15, 2],
+        'replace() [saved, the name, a setting it brought, a setting it lacked (the default), v]');
+      t.equal(await p.evaluate(() => window.__mods.profile), [[null, 'Rae', true]], "'profile' after replace() [the old name, the new one, the sessions change]");
+      t.has(await app.text(p), '28-day strength builder', 'the Plan after replace()');
+      await app.tap(p, '[data-act="start-day"]');
+      await app.waitTitle(p, 'Workout');
+      t.equal(await p.evaluate(() => WBF.app.replace({ v: 2, profile: null })), false, 'replace() during a workout');
+      t.equal((await app.stored(p)).profile.name, 'Rae', 'saved after replace() during a workout');
+      await app.tap(p, '[data-act="quit"]');
+      await app.tap(p, '[data-act="modal-yes"]');
+      await app.tap(p, '.tab[data-tab="workouts"]');
+      t.has(await p.locator('[data-card="qa-wo"]').innerText().catch(() => ''), 'QA workouts card', 'a card on Workouts');
+      await t.look(p, "workouts with a module's card");
+      t.equal(await p.evaluate(() => [WBF.app.cleanSpec({ i: 'q1', x: [['squat', 12.4]] }).x, WBF.app.cleanSpec({ x: [['toString', 3], ['constructor', 2]] }), WBF.app.cleanSpec('nope')]),
+        [[['squat', 12]], null, null], 'cleanSpec() [a dose rounded, names that are no move, not a session]');
+      t.equal(await p.evaluate(() => WBF.app.canInstall()), false, "canInstall() without the browser's prompt");
+      await p.evaluate(() => { const e = new Event('beforeinstallprompt', { cancelable: true }); e.prompt = () => { window.__prompted = (window.__prompted || 0) + 1; return Promise.resolve(); }; window.dispatchEvent(e); });
+      t.equal(await p.evaluate(() => [WBF.app.canInstall(), WBF.app.install(), window.__prompted, WBF.app.canInstall(), WBF.app.install()]), [true, true, 1, false, false],
+        "the browser's install prompt [canInstall(), install(), shown, canInstall() after, install() again]");
     });
 
     await t.flow('a link while a box asks: the box answers like its Cancel, then the link opens', async () => {

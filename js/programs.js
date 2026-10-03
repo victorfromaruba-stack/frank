@@ -13,6 +13,10 @@
     instagram: 'https://www.instagram.com/wellnessbyfrank/',
     dm: 'https://ig.me/m/wellnessbyfrank',
     whatsapp: '',
+    // The app's address on Frank's own domain, once it moves there: the whole address, ending in '/'. Empty: it
+    // stays where it is. Set, the old address shows "Frank's app has moved" on every tab, with a button that takes the
+    // person's progress there in a move link (js/keep.js). Victor sets it on the day of the move (frank-release skill)
+    home: '',
     city: 'The Hague',
     // what his certificate says (NHA Fitness Trainer level 3, which covers sports nutrition and biomechanics);
     // keep claims to what he holds: neuroscience is his own interest, not a qualification

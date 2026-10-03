@@ -55,7 +55,7 @@ Two kinds of users:
   is a goal), no lesson about food or drink and no 250 minutes.
 - **Me**: workouts, minutes, streak, minutes per week, weight trend with the
   goal, a calendar, history, dumbbell weights, settings, health switches,
-  membership, the science, delete my data.
+  membership, the science, a backup file and Move my plan, delete my data.
 - **Frank**: his bio, the method, "Train with Frank in person" (Instagram DM),
   and **Coach tools**: Frank builds a session from the library (moves, reps or
   seconds, circuit or sets, rest, warm-up, cool-down, a note) and sends it on
@@ -63,6 +63,19 @@ Two kinds of users:
   coach code (make one with `node tools/client-code.mjs --coach <code>`).
 - **Links to one move or one workout**, for Frank to send: `#ex.goblet-squat`
   opens that move's sheet, `#w.desk-reset` that workout.
+- **Keep my progress** (`js/keep.js`): everything lives in one browser, and an
+  iPhone keeps Safari, Instagram's own browser and the Home Screen app apart. So Me
+  > Your data saves a **backup file** and restores one, and **Move my plan** makes a
+  private link (`#move.<code>`) that brings the plan, history, free trial, Frank's
+  sessions and client access to another browser or phone ("I already have a plan" on
+  Welcome takes a pasted link or a file). What comes in is checked field by field,
+  shown first ("Bring your plan here?"), merged with what the phone has (nothing is
+  lost, nothing doubles, a membership never comes along) and can be undone for 10
+  seconds. Instagram's, Facebook's and TikTok's browsers get a warning on Welcome; a
+  phone gets a "Keep your progress" sheet once after a workout (Add to Home Screen, or
+  Chrome's install button); the browser is asked to keep the data; and once `FRANK.home`
+  is set, the old address shows "Frank's app has moved" on every tab, with a button
+  that brings each person's progress along.
 - **Membership**: a 7-day free trial that starts with the first workout, then €15
   a month. The price screen shows only prices Frank said yes to. Until payments
   are connected, "Tell me when it opens" copies a message for Frank and opens his
@@ -70,7 +83,9 @@ Two kinds of users:
 - **The science** screen: every rule the plans follow, with 36 sources.
 
 Everything a person enters stays in their own browser (localStorage). Nothing is
-sent anywhere.
+sent anywhere. A backup file or a move link carries it to another browser only when
+the person saves or shares it themselves: the link holds the data after the `#`,
+which browsers never send to a server, and the app says who can see it.
 
 ## The 3D coach
 
@@ -125,7 +140,9 @@ are in `fonts/` and three.js is in `vendor/`.
 
 Before members pay:
 - **Frank's own domain first.** The app keeps each person's data per web
-  address, so moving it to a new address later leaves their progress behind.
+  address. When it moves, `home` in `FRANK` (`js/programs.js`) turns on the "Frank's
+  app has moved" banner at the old address, and its button takes each person's
+  progress to the new one in a move link (`.claude/skills/frank-release`).
 - **A host that allows paid apps.** GitHub Pages isn't for running a paid
   service; Cloudflare Pages and Netlify are, with the same files.
 
@@ -158,8 +175,9 @@ phones pick up the update. The `static` suite fails until you do.
 | `js/science.js` | the science screen and its sources |
 | `js/app.js` | screens, onboarding, the player, access (trial, member, client), coach tools, Today, Me, and the seam modules plug into (`WBF.ext`) |
 | `js/links.js` | links to one move or one workout: a module, a feature in its own file (`.claude/skills/frank-module`) |
+| `js/keep.js` | keep my progress: the backup file, the move link (`#move.`), the Instagram warning, the Home Screen sheet, storage the browser keeps, the moved banner (a module) |
 | `js/sound.js` | beeps, voice, vibration, keeping the screen on |
-| `img/` | Frank's four graphics and the app icons |
+| `img/` | Frank's four graphics, the app icons, and the two screenshots Android's install dialog shows (`screenshot-*.png`, not cached offline) |
 | `img/brand/`, `tools/brand/` | the "W by Frank" marks (SVG) and the scripts that draw them and the app icons |
 | `personal/`, `tools/build-personal.mjs` | the Personal prototype: the client's app and Frank's Coach mode on example data |
 | `manifest.webmanifest`, `sw.js` | home-screen install and offline cache |
@@ -177,7 +195,8 @@ phones pick up the update. The `static` suite fails until you do.
 
 ## Not in this version
 
-- Accounts and syncing between phones (data lives on one phone).
+- Accounts and syncing between phones (data lives in one browser; a backup file or a
+  move link carries it to another).
 - Real payments: the paywall and checkout link are ready, the server that
   checks who paid is not. Until then the paywall, client codes and the coach
   code are checks on the phone, not locks.
