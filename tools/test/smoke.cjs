@@ -149,6 +149,9 @@ module.exports = {
       await app.tap(p, '.tab[data-tab="today"]');
       await app.tap(p, '[data-act="water"][data-n="2"]');
       t.equal(await app.toast(p), fail, 'toast after a save that failed');
+      // a long toast uses the screen's width less 16 px a side, not half of it: two lines, not a tall blob
+      const tb = await p.evaluate(() => { const r = document.getElementById('toast').getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; });
+      t.check(tb[0] > 300 && tb[1] < 70, 'toast after a save that failed: ' + tb[0] + ' x ' + tb[1] + ' px, expected about 358 px wide and two lines');
       await app.tap(p, '[data-act="walk"][data-m="10"]');
       t.equal((await app.toasts(p)).filter((x) => x === fail).length, 1, 'warnings after two saves that failed (the first one only)');
       await app.tap(p, '[data-act="walk"][data-m="20"]');
@@ -169,6 +172,9 @@ module.exports = {
       if (await p.locator('[data-act="pl-done"]').count()) await app.tap(p, '[data-act="pl-done"]');
       await p.waitForFunction(() => document.querySelectorAll('.pl-segs i.on').length > 0);
       await app.tap(p, '[data-act="quit"]');
+      const quitBox = await app.overlay(p);
+      t.has(quitBox, fail, 'quit box when nothing can be saved');
+      t.lacks(quitBox, /is saved|end and save/i, 'quit box when nothing can be saved');
       await app.tap(p, '[data-act="modal-yes"]');
       await app.waitTitle(p, 'Workout complete');
       const label = await p.locator('#app .label').first().innerText();

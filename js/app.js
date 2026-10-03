@@ -1591,8 +1591,9 @@
     var wasPaused = PL.paused;
     PL.paused = true; SND.hush();
     var any = Object.keys(PL.did).length > 0;
-    confirmBox('End this workout?', any ? 'End and save' : 'End', function () { finish(false); }, {
-      body: any ? 'What you have done so far is saved.' : 'Nothing is saved yet.',
+    // while the phone refuses to save, the box says so instead of promising a save
+    confirmBox('End this workout?', any && savedOk ? 'End and save' : 'End', function () { finish(false); }, {
+      body: !savedOk ? SAVE_FAIL : any ? 'What you have done so far is saved.' : 'Nothing is saved yet.',
       no: 'Keep going', onNo: function () { if (PL) { PL.paused = wasPaused; PL.last = now(); paintPlayer(); } }
     });
   }
