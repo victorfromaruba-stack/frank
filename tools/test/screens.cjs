@@ -229,6 +229,11 @@ module.exports = {
       await snap(p, 'plan without a profile');
       await tab(p, 'today');
       await snap(p, 'today without a profile');
+      // a new version took over (the first takeover is the worker's first install, the second a deploy)
+      p = await t.page({ state: L.member() });
+      await p.evaluate(() => { for (let i = 0; i < 2; i++) navigator.serviceWorker.dispatchEvent(new Event('controllerchange')); });
+      t.equal(await p.locator('#update-bar').count(), 1, 'update bars on Plan after a new version');
+      await snap(p, 'plan with a new version', { full: false });
     });
 
     await t.flow('personal prototype', async () => {

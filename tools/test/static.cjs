@@ -14,10 +14,10 @@ const list = (dir, re) => (exists(dir) ? fs.readdirSync(path.join(R, dir)).filte
 const git = (args) => { try { return cp.execFileSync('git', args, { cwd: R, stdio: ['ignore', 'pipe', 'ignore'] }).toString(); } catch (e) { return null; } };
 const stripComments = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
-// the offline list and VERSION of a sw.js source
+// the offline lists and VERSION of a sw.js source: SHELL is kept at install, LAZY the first time the app uses it
 function swInfo(src) {
-  const m = /const\s+SHELL\s*=\s*(\[[\s\S]*?\]);/.exec(src), v = /const\s+VERSION\s*=\s*'([^']+)'/.exec(src);
-  return { shell: m ? vm.runInNewContext(m[1]) : null, version: v ? v[1] : null };
+  const m = /const\s+SHELL\s*=\s*(\[[\s\S]*?\]);/.exec(src), z = /const\s+LAZY\s*=\s*(\[[\s\S]*?\]);/.exec(src), v = /const\s+VERSION\s*=\s*'([^']+)'/.exec(src);
+  return { shell: m ? vm.runInNewContext(m[1]) : null, lazy: z ? vm.runInNewContext(z[1]) : [], version: v ? v[1] : null };
 }
 function png(file) {
   const b = fs.readFileSync(path.join(R, file));
@@ -48,6 +48,10 @@ module.exports = {
       const sw = swInfo(read('sw.js'));
       if (!t.check(sw.shell && sw.version, 'sw.js: could not read SHELL and VERSION')) return;
       for (const f of sw.shell) if (f !== './' && !exists(f)) t.fail('sw.js lists ' + f + ', which does not exist: installing the app offline fails');
+      for (const f of sw.lazy) {
+        if (!exists(f)) t.fail('sw.js LAZY lists ' + f + ', which does not exist');
+        if (sw.shell.includes(f)) t.fail(f + ' is in both SHELL and LAZY in sw.js: keep it in one');
+      }
       // everything the page needs to start must be in the offline list
       const html = read('index.html');
       const need = new Set();
@@ -59,14 +63,19 @@ module.exports = {
       }
       for (const f of need) {
         if (!exists(f)) t.fail(f + ' is used by the app but does not exist');
-        else if (!sw.shell.includes(f) && !/^img\/icon-(180|192)\.png$|^media\//.test(f)) t.fail(f + ' is used by the app but missing from SHELL in sw.js: it breaks offline');
+        else if (!sw.shell.includes(f) && !sw.lazy.includes(f) && !/^img\/icon-(180|192)\.png$|^media\//.test(f)) t.fail(f + ' is used by the app but missing from SHELL and LAZY in sw.js: it breaks offline');
       }
-      for (const m of read('fonts/fonts.css').matchAll(/url\(([^)]+)\)/g)) if (!exists('fonts/' + m[1].replace(/['"]/g, ''))) t.fail('fonts/fonts.css: ' + m[1] + ' does not exist');
+      // a font loads when a letter needs it, maybe for the first time offline: every font is kept at install
+      for (const m of read('fonts/fonts.css').matchAll(/url\(([^)]+)\)/g)) {
+        const f = 'fonts/' + m[1].replace(/['"]/g, '');
+        if (!exists(f)) t.fail('fonts/fonts.css: ' + m[1] + ' does not exist');
+        else if (!sw.shell.includes(f)) t.fail(f + ' is missing from SHELL in sw.js: offline, a name like Łucja shows in another font');
+      }
 
       // a changed cached file needs a new VERSION, or installed phones keep the old one
       const base = git(['rev-parse', '--verify', '--quiet', 'origin/app']) ? 'origin/app' : git(['rev-parse', '--verify', '--quiet', 'HEAD']) ? 'HEAD' : null;
       if (!base) { t.note('not a git checkout: VERSION bump not checked'); return; }
-      const files = sw.shell.filter((f) => f !== './');
+      const files = sw.shell.concat(sw.lazy).filter((f) => f !== './');
       const changed = (git(['diff', '--name-only', base, '--', ...files]) || '').split('\n').filter(Boolean);
       const untracked = (git(['ls-files', '--others', '--exclude-standard', '--', ...files]) || '').split('\n').filter(Boolean);
       const old = swInfo(git(['show', base + ':sw.js']) || '');

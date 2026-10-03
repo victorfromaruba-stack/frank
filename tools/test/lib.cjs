@@ -43,12 +43,18 @@ const MIME = {
   '.woff2': 'font/woff2', '.mp4': 'video/mp4', '.webm': 'video/webm', '.txt': 'text/plain'
 };
 // prefix '' serves the repo at /, '/frank/' serves it the way GitHub Pages does. cache: the Cache-Control header
-// (Pages sends max-age=600). overlay: { 'path/in/repo': text } replaces files, to play a new deploy.
-// Every 404 is recorded in .missing.
-function serve({ prefix = '', cache = 'no-store' } = {}) {
-  const missing = [], overlay = {};
+// (Pages sends max-age=600). etag: an ETag on every file, and 304 when a browser's copy still matches (Pages does it).
+// overlay: { 'path/in/repo': text } replaces files, to play a new deploy.
+// Every request is listed in .hits ({ url, status }), every 404 in .missing. stop() takes the server off the network
+// like a phone without signal (Playwright's setOffline doesn't reach the service worker; this does), start() puts it
+// back at the same address.
+function serve({ prefix = '', cache = 'no-store', etag = false } = {}) {
+  const missing = [], overlay = {}, hits = [];
   return new Promise((resolve) => {
     const srv = http.createServer((req, res) => {
+      const hit = { url: req.url, status: 0 };
+      hits.push(hit);
+      res.on('finish', () => { hit.status = res.statusCode; });
       let p = decodeURIComponent(new URL(req.url, 'http://x').pathname);
       if (prefix) {
         if (p === prefix.replace(/\/$/, '')) { res.writeHead(301, { location: prefix }); res.end(); return; }
@@ -61,7 +67,12 @@ function serve({ prefix = '', cache = 'no-store' } = {}) {
       try { if (fs.statSync(file).isDirectory()) file = path.join(file, 'index.html'); } catch (e) { /* 404 below */ }
       const rel = path.relative(REPO, file).split(path.sep).join('/');
       const send = (data) => {
-        res.writeHead(200, { 'content-type': MIME[path.extname(file).toLowerCase()] || 'application/octet-stream', 'cache-control': cache });
+        const head = { 'content-type': MIME[path.extname(file).toLowerCase()] || 'application/octet-stream', 'cache-control': cache };
+        if (etag) {
+          head.etag = '"' + require('crypto').createHash('sha1').update(data).digest('hex').slice(0, 20) + '"';
+          if (req.headers['if-none-match'] === head.etag) { res.writeHead(304, head); res.end(); return; }
+        }
+        res.writeHead(200, head);
         res.end(data);
       };
       if (overlay[rel] != null) { send(overlay[rel]); return; }
@@ -71,8 +82,10 @@ function serve({ prefix = '', cache = 'no-store' } = {}) {
       });
     });
     srv.listen(0, '127.0.0.1', () => {
-      const url = 'http://127.0.0.1:' + srv.address().port;
-      resolve({ url, home: url + (prefix || '/'), missing, overlay,
+      const port = srv.address().port, url = 'http://127.0.0.1:' + port;
+      resolve({ url, home: url + (prefix || '/'), missing, overlay, hits,
+        stop: () => new Promise((r) => { srv.close(() => r()); if (srv.closeAllConnections) srv.closeAllConnections(); }),
+        start: () => new Promise((r, j) => { srv.once('error', j); srv.listen(port, '127.0.0.1', () => { srv.off('error', j); r(); }); }),
         close: () => new Promise((r) => { if (srv.closeAllConnections) srv.closeAllConnections(); srv.close(() => r()); }) });
     });
   });

@@ -313,6 +313,10 @@ a { color: var(--sky); }
 .modal .rowx .btn { width: 100%; padding-left: 10px; padding-right: 10px; font-size: 14px; letter-spacing: 0.06em; }
 .toast { position: fixed; left: 50%; bottom: calc(var(--tabbar) + var(--safe-b) + 16px); z-index: 70; transform: translate(-50%, 20px); opacity: 0; pointer-events: none; background: var(--sky); color: var(--on-sky); border-radius: 999px; padding: 12px 18px; font: 800 14px/1.2 var(--f-body); max-width: calc(100% - 32px); text-align: center; transition: opacity 0.2s ease, transform 0.2s ease; }
 .toast.on { opacity: 1; transform: translate(-50%, 0); }
+/* a new version is in: Plan, Today and Me offer the reload */
+.update-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 5px 5px 5px 18px; border-radius: 999px; background: var(--ground-2); border: 1px solid var(--line-2); }
+.update-bar b { font: 800 15px/1.25 var(--f-body); color: var(--ink); min-width: 0; }
+.update-bar .btn { flex: none; }
 
 /* ---- exercise sheet ---- */
 .xs { display: flex; flex-direction: column; gap: 16px; }

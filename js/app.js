@@ -450,6 +450,7 @@
     var meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', LIGHT[c.name] ? '#F2F6F3' : '#012D12');
     app.innerHTML = scr.html(c.params || {});
+    updateBar();
     var isTab = TABS.indexOf(c.name) !== -1;
     tabsEl.hidden = !isTab;
     $$('.tab', tabsEl).forEach(function (t) {
@@ -2354,6 +2355,7 @@
       } catch (e) { toast('Copy it from the line above'); }
     },
     install: function () { if (deferredInstall) { deferredInstall.prompt(); deferredInstall = null; } },
+    'sw-update': function () { W.location.reload(); },
     reset: function () {
       confirmBox('Delete everything?', 'Delete', function () {
         try { W.localStorage.removeItem(KEY); } catch (e) { /* ignore */ }
@@ -2427,10 +2429,43 @@
   });
   $$('.tab', tabsEl).forEach(function (t) { t.addEventListener('click', function () { tab(t.getAttribute('data-tab')); }); });
 
-  // offline support when the app is hosted on its own
-  if ('serviceWorker' in navigator && !framed && /^https?:$/.test(location.protocol)) {
-    W.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () { /* offline cache is optional */ }); });
+  // ---- offline and new versions (sw.js) --------------------------------------------------------------
+  // A new version takes over in the background. Plan, Today and Me then offer the reload that shows it; a workout,
+  // the onboarding and every other screen never do.
+  var swNew = false, UPDATE_ON = { plan: 1, today: 1, me: 1 };
+  function updateBar() {
+    var s = $('.screen', app);
+    if (!swNew || !UPDATE_ON[cur().name] || !s || $('#update-bar', app)) return;
+    s.insertAdjacentHTML('afterbegin', '<div class="update-bar" id="update-bar" role="status"><b>New version ready</b><button class="btn small" data-act="sw-update">Update</button></div>');
   }
+  // offline support when the app is hosted on its own. The worker comes once the coach is in (or 15 s after load),
+  // so a first visit doesn't download the app's files twice at the same time.
+  if ('serviceWorker' in navigator && !framed && /^https?:$/.test(location.protocol)) (function (SW) {
+    var asked = false, had = !!SW.controller, early = !had;
+    function register() {
+      if (asked) return;
+      asked = true;
+      SW.register('sw.js').catch(function () { /* offline cache is optional */ });
+    }
+    // A page that opened before the worker took over loaded files without it (the other coach, Frank's photos). It
+    // lists what it loaded, when the worker takes over and when a coach comes in, so the worker keeps those too.
+    function keepLoaded() {
+      if (early && SW.controller && W.performance && performance.getEntriesByType) {
+        SW.controller.postMessage({ used: performance.getEntriesByType('resource').map(function (r) { return r.name; }) });
+      }
+    }
+    W.addEventListener('wbf-three', function () { if (WBF.fig3d && WBF.fig3d.ready()) { register(); keepLoaded(); } });
+    W.addEventListener('load', function () { setTimeout(register, 15000); });
+    // back on screen: is there a new version?
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) SW.getRegistration().then(function (r) { return r && r.update(); }).catch(function () { /* offline */ });
+    });
+    SW.addEventListener('controllerchange', function () {
+      if (had) { swNew = true; updateBar(); return; }
+      had = true;                     // the first worker took over: nothing new to show
+      keepLoaded();
+    });
+  })(navigator.serviceWorker);
 
   if (useHistory) { try { W.history.replaceState({ wbf: 1 }, ''); } catch (e) { useHistory = false; } }
   // The 3D coach is in (or the other coach loaded): the figures swap in place. A full render would wipe what the

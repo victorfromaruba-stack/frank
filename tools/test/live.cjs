@@ -28,7 +28,8 @@ function expected() {
   const ids = {};
   if (ref) for (const line of String(git(['ls-tree', '-r', ref]) || '').split('\n')) { const m = /^\d+ blob ([0-9a-f]{40})\t(.+)$/.exec(line); if (m) ids[m[2]] = m[1]; }
   const sw = String(read('sw.js') || '');
-  const shell = vm.runInNewContext((/const\s+SHELL\s*=\s*(\[[\s\S]*?\]);/.exec(sw) || [])[1] || '[]');
+  const list = (name) => vm.runInNewContext((new RegExp('const\\s+' + name + '\\s*=\\s*(\\[[\\s\\S]*?\\]);').exec(sw) || [])[1] || '[]');
+  const shell = list('SHELL').concat(list('LAZY'));           // LAZY: kept offline from their first use
   const version = (/const\s+VERSION\s*=\s*'([^']+)'/.exec(sw) || [])[1];
   let manifest = {};
   try { manifest = JSON.parse(String(read('manifest.webmanifest'))); } catch (e) { /* reported by the file check */ }
