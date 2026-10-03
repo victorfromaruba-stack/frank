@@ -127,8 +127,11 @@ module.exports = {
       await snap(p, 'workout program (Gravity)');
       await go(p, 'workout', { coach: 'in1' });
       await snap(p, 'workout from Frank');
+      // one sheet, its three tabs tapped like a finger (WBF.app.sheet again on an open sheet loses the tab: see known.cjs)
+      await p.evaluate(() => WBF.app.sheet('goblet-squat'));
       for (const tb of ['video', 'muscle', 'howto']) {
-        await p.evaluate((x) => WBF.app.sheet('goblet-squat', x), tb);
+        await app.tap(p, '#overlay [data-act="xs-tab"][data-v="' + tb + '"]');
+        t.equal(await p.locator('#overlay [data-act="xs-tab"][aria-pressed="true"]').getAttribute('data-v'), tb, 'exercise sheet tab');
         await snap(p, 'exercise sheet ' + tb, { full: false });
       }
       await app.tap(p, '#overlay .xs-foot [data-act="close"]');

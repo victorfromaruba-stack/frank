@@ -78,6 +78,36 @@ function serve({ prefix = '', cache = 'no-store' } = {}) {
   });
 }
 
+// ---- a real website, through Node ----------------------------------------------------------------------------------
+// The published site (live suite). Chromium in a sandbox may not trust the sandbox's proxy certificate, and TLS checks
+// stay on, so pages fetch through Node's fetch (which reads NODE_EXTRA_CA_CERTS). Same answers, any machine.
+const SITE = (process.env.FRANK_QA_SITE || 'https://victorfromaruba-stack.github.io/frank/').replace(/\/?$/, '/');
+const fetched = new Map();                                   // url -> { status, headers, body }: the 1 MB coaches once per run
+async function fetchSite(url, { method = 'GET', headers = {}, fresh = false } = {}) {
+  const key = method + ' ' + url;
+  if (!fresh && fetched.has(key)) return fetched.get(key);
+  const res = await fetch(url, { method, headers, redirect: 'manual', signal: AbortSignal.timeout(60000) });
+  const out = { status: res.status, headers: {}, body: Buffer.from(await res.arrayBuffer()) };
+  res.headers.forEach((v, k) => { out.headers[k] = v; });
+  if (method === 'GET' && res.status < 500) fetched.set(key, out);
+  return out;
+}
+// a Playwright route handler: requests inside `base` go out through Node, the rest are blocked (and listed by t.page)
+function viaNode(base) {
+  return async (route) => {
+    const req = route.request(), url = req.url();
+    if (!url.startsWith(base) || !['GET', 'HEAD'].includes(req.method())) return route.abort('blockedbyclient');
+    try {
+      const keep = {};
+      for (const [k, v] of Object.entries(req.headers())) if (/^(accept|accept-language|range)$/i.test(k)) keep[k] = v;
+      const r = await fetchSite(url, { method: req.method(), headers: keep, fresh: !!keep.range });
+      const headers = {};
+      for (const [k, v] of Object.entries(r.headers)) if (!/^(content-encoding|content-length|transfer-encoding|connection|keep-alive)$/i.test(k)) headers[k] = v;
+      await route.fulfill({ status: r.status, headers, body: r.body });
+    } catch (e) { await route.abort('internetdisconnected').catch(() => null); }
+  };
+}
+
 // ---- what runs in the page before the app ------------------------------------------------------------------------
 // o.state: seeded into localStorage once per browser context (a reload keeps what the app saved since).
 // o.now: the clock starts there and keeps ticking. o.speed: performance.now runs that many times faster and the app's
@@ -197,6 +227,10 @@ function spec(over) {
   return Object.assign({ i: 'qa1', t: 'Test session', n: 'Slow on the way down.', c: 'Sam', r: 1, f: 'c', rs: 15, w: 0, k: 0,
     x: [['squat', 3], ['plank', 10]], d: TODAY }, over || {});
 }
+// A client code that exists only in tests: its hash goes into FRANK.codes in the page (app.addCode), so no real
+// client's code is ever written in this public repo. Typed with capitals and spaces, it must still work.
+const QA_CODE = 'qatest7';
+const codeHash = (code) => require('crypto').createHash('sha256').update('wbf:' + String(code).trim().toLowerCase().replace(/\s+/g, '')).digest('hex');
 const pack = (obj) => Buffer.from(JSON.stringify(obj)).toString('base64url');
 const unpack = (code) => JSON.parse(Buffer.from(code, 'base64url').toString('utf8'));
 
@@ -208,6 +242,7 @@ class Env {
     this._servers = {};
   }
   async browser() {
+    if (this._browser && !this._browser.isConnected()) this._browser = null;    // crashed (out of memory?): start again
     if (!this._browser) this._browser = await launch();
     return this._browser;
   }
@@ -281,15 +316,16 @@ class Test {
 
   // A fresh phone-sized browser context with one page. Records page errors, console errors, 404s and anything
   // the app tries to load from another site. Options: state (seeded once), url (path under the server, default
-  // index.html), width, height, scale, now (false: real clock), speed, prefix ('/frank/'), sw (allow the
+  // index.html), hash, width, height, scale, now (false: real clock), speed, prefix ('/frank/'), sw (allow the
   // service worker; then other sites are watched, not blocked), server (one from serve(), e.g. with Pages' caching),
-  // href (open this URL), go (false: don't open the page yet).
+  // site (a published copy such as L.SITE instead of the local server: fetched through Node, see viaNode),
+  // href (open this URL), threeD (false: don't wait for the coach), go (false: don't open the page yet).
   async page(o = {}) {
     const env = this.env;
-    const srv = o.server || await env.server(o.prefix || '');
+    const srv = o.site ? { url: o.site, home: o.site } : (o.server || await env.server(o.prefix || ''));
     const browser = await env.browser();
     const ctx = await browser.newContext({ viewport: { width: o.width || 390, height: o.height || 844 }, deviceScaleFactor: o.scale || this.opts.scale || 1,
-      serviceWorkers: o.sw ? 'allow' : 'block', locale: 'en-GB', timezoneId: TZ, colorScheme: 'dark' });
+      serviceWorkers: o.sw && !o.site ? 'allow' : 'block', locale: 'en-GB', timezoneId: TZ, colorScheme: 'dark' });
     this.contexts.push(ctx);
     const local = srv.url;
     const outside = new Set();
@@ -297,7 +333,8 @@ class Test {
       const u = r.url();
       if (!u.startsWith(local) && !/^(data|blob|about):/.test(u)) outside.add(u.slice(0, 120));
     });
-    if (!o.sw) await ctx.route(/^https?:\/\/(?!127\.0\.0\.1[:/])/, (r) => r.abort());
+    if (o.site) await ctx.route('**/*', viaNode(o.site));
+    else if (!o.sw) await ctx.route(/^https?:\/\/(?!127\.0\.0\.1[:/])/, (r) => r.abort());
     ctx.on('response', (r) => { if (r.status() >= 400 && r.url().startsWith(local)) this.fail('HTTP ' + r.status() + ' for ' + r.url().slice(local.length)); });
     const where = this.where;
     ctx.on('close', () => { if (outside.size) this.problems.push((where ? where + ': ' : '') + 'loaded from other sites (the app must not): ' + [...outside].join(', ')); });
@@ -349,6 +386,8 @@ const app = {
   toast: (page) => page.evaluate(() => { const l = (window.__qa && window.__qa.toasts) || []; return l[l.length - 1] || ''; }),
   toasts: (page) => page.evaluate(() => (window.__qa && window.__qa.toasts) || []),
   overlay: (page) => page.evaluate(() => { const o = document.getElementById('overlay'); return o && !o.hidden ? o.innerText : ''; }),
+  // make a client code valid on this page (default: QA_CODE); call again after a reload
+  addCode: (page, code = QA_CODE) => page.evaluate((h) => { if (WBF.FRANK.codes.indexOf(h) === -1) WBF.FRANK.codes.push(h); }, codeHash(code)),
   // tap like a finger: the element must be visible and enabled; then let the screen redraw
   async tap(page, selector, { wait = 120, nth = 0 } = {}) {
     const loc = page.locator(selector).nth(nth);
@@ -418,7 +457,8 @@ function parseArgs(argv) {
       const eq = a.indexOf('=');
       const k = a.slice(2, eq === -1 ? undefined : eq);
       if (eq !== -1) o[k] = a.slice(eq + 1);
-      else if (argv[i + 1] != null && !argv[i + 1].startsWith('--') && ['out', 'scale', 'timeout'].includes(k)) o[k] = argv[++i];
+      else if (argv[i + 1] != null && !argv[i + 1].startsWith('--') && ['out', 'scale', 'timeout', 'site'].includes(k)) o[k] = argv[++i];
+      else if (k === 'wait' && /^\d+(\.\d+)?$/.test(argv[i + 1] || '')) o[k] = argv[++i];
       else o[k] = true;
     } else if (/^-[a-z]$/i.test(a)) o[a.slice(1)] = true;
     else o._.push(a);
@@ -432,7 +472,9 @@ function options(args) {
     timeout: args.timeout ? +args.timeout : 20000,
     verbose: !!(args.verbose || args.v),
     shots: !!args.shots,
-    strict: !!args.strict
+    strict: !!args.strict,
+    site: args.site ? String(args.site).replace(/\/?$/, '/') : SITE,            // live: the published copy to check
+    wait: args.wait === true ? 5 : args.wait ? +args.wait : 0                     // live: minutes to wait for a deploy
   };
 }
 
@@ -445,6 +487,7 @@ async function runSuites(suites, opts) {
   for (const suite of suites) {
     const t = new Test(suite, env);
     const t0 = Date.now();
+    try { for (const f of fs.readdirSync(t.out)) if (/^FAILED-.*\.png$/.test(f)) fs.rmSync(path.join(t.out, f)); } catch (e) { /* no folder yet */ }
     process.stdout.write('  ' + suite.name.padEnd(width) + '  ');
     if (opts.verbose) process.stdout.write('\n');
     let timer = null;
@@ -483,6 +526,6 @@ async function main(suites) {
 }
 
 module.exports = {
-  REPO, KEY, TODAY, NOW, TZ, playwright, launch, serve, settle, blankFigures, screenProblems,
-  isoDay, profile, state, member, spec, pack, unpack, app, Env, Test, short, parseArgs, options, runSuites, main, loadKnown
+  REPO, KEY, TODAY, NOW, TZ, SITE, playwright, launch, serve, fetchSite, viaNode, settle, blankFigures, screenProblems,
+  isoDay, profile, state, member, spec, pack, unpack, QA_CODE, codeHash, app, Env, Test, short, parseArgs, options, runSuites, main, loadKnown
 };

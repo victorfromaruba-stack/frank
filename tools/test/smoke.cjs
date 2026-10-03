@@ -5,7 +5,7 @@ const { app } = L;
 
 module.exports = {
   name: 'smoke',
-  about: 'every tab, the exercise sheet, a workout, the player starts, the Personal prototype opens',
+  about: 'every tab, the exercise sheet, a workout, the player starts, logging walks, water, meals and weight, delete my data, easier options, the Personal prototype',
   async run(t) {
     await t.flow('first visit', async () => {
       const p = await t.page();
@@ -90,6 +90,69 @@ module.exports = {
       await app.tap(p, '[data-act="coach"]');
       await app.waitTitle(p, 'Coach tools');
       await t.look(p, 'coach tools');
+    });
+
+    await t.flow('what people log: walks, water, meals, weight, delete my data', async () => {
+      const p = await t.page({ state: L.member() });
+      const saved = () => app.stored(p);
+      await app.tap(p, '.tab[data-tab="today"]');
+      t.step('walks');
+      await app.tap(p, '[data-act="walk"][data-m="10"]');
+      t.has(await app.toast(p), 'Activity logged: 10 min', 'toast');
+      await app.tap(p, '[data-act="walk"][data-m="20"]');
+      t.has(await app.text(p), '30 min today', 'Today after +10 and +20');
+      t.has(await app.text(p), '30 of 150', 'moving minutes this week');
+      t.equal((await saved()).walks, { [L.TODAY]: 30 }, 'saved walks');
+      await app.tap(p, '[data-act="walk"][data-m="0"]');
+      t.lacks(await app.text(p), 'min today', 'Today after Clear');
+      t.step('water');
+      await app.tap(p, '[data-act="water"][data-n="3"]');
+      t.has(await app.text(p), '3 of 8 glasses', 'water');
+      await app.tap(p, '[data-act="water"][data-n="3"]');
+      t.has(await app.text(p), '2 of 8 glasses', 'water after tapping the last glass again');
+      t.step('meals');
+      await p.fill('#meal-in', 'Oats with berries');
+      await p.press('#meal-in', 'Enter');
+      await p.waitForTimeout(150);
+      await app.tap(p, '[data-act="meal-tag"][data-i="0"][data-k="protein"]');
+      t.has(await app.text(p), '1 meal: 1 with protein, 0 with vegetables', 'meals today');
+      const food = (await saved()).food[L.TODAY] || {};
+      t.equal([food.water, (food.meals || []).map((m) => [m.text, m.protein, m.veg])], [2, [['Oats with berries', true, false]]], 'saved food [water, meals]');
+      await t.look(p, 'today with a walk, water and a meal');
+      await app.tap(p, '[data-act="meal-del"][data-i="0"]');
+      t.has(await app.text(p), 'Write down what you eat', 'meals after removing the only one');
+      t.step('weight');
+      await app.tap(p, '.tab[data-tab="me"]');
+      await p.fill('#w-in', 'heavy');
+      await p.press('#w-in', 'Enter');
+      t.has(await app.toast(p), 'Enter your weight as a number', 'a weight that is not a number');
+      await p.fill('#w-in', '79,5');
+      await p.press('#w-in', 'Enter');
+      await p.waitForTimeout(150);
+      t.equal((await saved()).weights, [{ date: L.TODAY, kg: 79.5 }], 'saved weight (typed with a decimal comma)');
+      await t.look(p, 'me with a weight');
+      t.step('delete my data');
+      await app.tap(p, '[data-act="reset"]');
+      t.has(await app.overlay(p), 'Delete everything?', 'confirm box');
+      await app.tap(p, '[data-act="modal-yes"]');
+      await app.waitTitle(p, 'Wellness by Frank');
+      const left = await p.evaluate((k) => localStorage.getItem(k), L.KEY);
+      t.check(!left || !JSON.parse(left).profile, 'a profile is still stored after "Delete everything"');
+    });
+
+    await t.flow('easier options in the sheet', async () => {
+      // "Easier options" in a sheet open the easier move's sheet; its tabs must work like the first sheet's
+      const p = await t.page({ state: L.member() });
+      await p.evaluate(() => WBF.app.sheet('push-up'));
+      const first = await p.evaluate(() => WBF.EX['push-up'].name);
+      await app.tap(p, '#overlay [data-act="ex"]', { nth: 0 });
+      const name = await p.locator('#overlay h2').first().innerText();
+      t.check(name !== first, 'Easier options did not open another move');
+      for (const tab of ['muscle', 'howto']) {
+        await app.tap(p, '#overlay [data-act="xs-tab"][data-v="' + tab + '"]');
+        t.equal(await p.locator('#overlay [data-act="xs-tab"][aria-pressed="true"]').getAttribute('data-v'), tab, 'tab in the sheet of an easier option (' + name + ')');
+      }
+      await t.look(p, 'sheet of an easier option');
     });
 
     await t.flow('personal prototype', async () => {

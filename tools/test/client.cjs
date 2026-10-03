@@ -15,13 +15,15 @@ module.exports = {
       await app.tap(p, '[data-act="join"]');
       await app.waitTitle(p, "Frank's clients");
       await t.look(p, 'join screen');
+      // a test-only code (L.QA_CODE, added to FRANK.codes in this page): real clients' codes stay out of the repo
+      await app.addCode(p);
       await p.fill('#join-in', 'Bob');
       await submit(p);
       t.has(await app.toast(p), "didn't work", 'wrong code');
       t.check(!((await app.stored(p)) || {}).access, 'a wrong code gave access');
-      await p.fill('#join-in', ' Victor ');
+      await p.fill('#join-in', ' ' + L.QA_CODE.toUpperCase().replace(/^(.{3})/, '$1 ') + ' ');
       await submit(p);
-      t.check((((await app.stored(p)) || {}).access || {}).client, 'the code "Victor" (with spaces) gave no access');
+      t.check((((await app.stored(p)) || {}).access || {}).client, 'a client code typed with capitals and spaces gave no access');
       t.has(await app.toast(p), 'The whole app is open to you', 'code accepted');
       await app.waitTitle(p, 'Your plan');                    // no profile yet: onboarding starts
     });
@@ -30,7 +32,8 @@ module.exports = {
       const p = await t.page({ state: L.state({ profile: L.profile({ start: L.isoDay(-10) }), access: { trialStart: L.isoDay(-10) } }) });
       await app.tap(p, '.tab[data-tab="me"]');
       await app.tap(p, '.card [data-act="join"]');
-      await p.fill('#join-in', 'VICTOR');
+      await app.addCode(p);
+      await p.fill('#join-in', L.QA_CODE);
       await submit(p);
       await app.waitTitle(p, 'Plan');
       await app.tap(p, '[data-act="start-day"]');

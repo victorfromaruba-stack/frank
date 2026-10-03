@@ -218,7 +218,7 @@ const IMPERIAL = {
 
 module.exports = {
   name: 'onboarding',
-  about: 'the whole onboarding by tapping, in cm/kg and in ft/lb, to a built plan; then editing a step from Me',
+  about: 'the whole onboarding by tapping, in cm/kg and in ft/lb, to a built plan; Me: change sore spots, Edit and Back, Edit all the way',
   async run(t) {
     await t.flow('metric (cm, kg)', async () => {
       const o = METRIC;
@@ -237,18 +237,6 @@ module.exports = {
       await checkSaved(t, p, o);
       const s = await app.stored(p);
       t.equal(s.access && s.access.trialStart, L.TODAY, 'trial start');
-
-      t.step('edit sore spots from Me');
-      await app.tap(p, '.tab[data-tab="me"]');
-      t.has(await app.text(p), 'Sore spots: none', 'Me');
-      await app.tap(p, '[data-act="ob-edit-step"][data-step="sore"]');
-      await expectStep(t, p, 'sore spots');
-      await app.tap(p, '[data-act="ob-multi"][data-k="injuries"][data-v="shoulder"]');
-      await next(p);
-      await app.waitTitle(p, 'Me');
-      t.has(await app.toast(p), 'Your plan was updated', 'toast after the edit');
-      t.has(await app.text(p), 'Sore spots: Shoulder', 'Me after the edit');
-      t.equal((await app.stored(p)).profile.injuries, ['shoulder'], 'saved sore spots after the edit');
     });
 
     await t.flow('imperial (ft, lb)', async () => {
@@ -269,6 +257,68 @@ module.exports = {
       t.has(me, 'Cleared by a doctor', 'Me health switch');
       t.has(me, 'Sore spots: Knee, Other', 'Me');
       await t.look(p, 'me after onboarding');
+    });
+
+    // Me can reopen the onboarding: one step (sore spots) or the whole profile (Edit)
+    await t.flow('Me: change sore spots', async () => {
+      const p = await t.page({ state: L.member() });
+      await app.tap(p, '.tab[data-tab="me"]');
+      t.has(await app.text(p), 'Sore spots: none', 'Me');
+      await app.tap(p, '[data-act="ob-edit-step"][data-step="sore"]');
+      await expectStep(t, p, 'sore spots');
+      await app.tap(p, '[data-act="ob-multi"][data-k="injuries"][data-v="shoulder"]');
+      await next(p);
+      const pr = (await app.stored(p)).profile;
+      t.equal(pr.injuries, ['shoulder'], 'saved sore spots after the change');
+      t.equal(Object.keys(pr).filter((k) => ['only', 'edit', 'soreDone'].includes(k)), [], 'onboarding bookkeeping saved in the profile');
+      await app.waitTitle(p, 'Me');
+      t.has(await app.toast(p), 'Your plan was updated', 'toast after the change');
+      t.has(await app.text(p), 'Sore spots: Shoulder', 'Me after the change');
+    });
+
+    await t.flow('Me: Edit, then back', async () => {
+      const p = await t.page({ state: L.member() });
+      await app.tap(p, '.tab[data-tab="me"]');
+      await app.tap(p, '[data-act="ob-edit"]');
+      await expectStep(t, p, 'main goal');
+      await app.tap(p, '[data-act="ob-back"]');
+      await app.waitTitle(p, 'Me', 5000);
+    });
+
+    await t.flow('Me: Edit, all the way', async () => {
+      // every step shows the saved answer; Next through all of them, change the days, build: the plan follows
+      const before = L.profile();
+      const p = await t.page({ state: L.member() });
+      await app.tap(p, '.tab[data-tab="me"]');
+      await app.tap(p, '[data-act="ob-edit"]');
+      await expectStep(t, p, 'main goal');
+      const steps = [];
+      for (let i = 0; i < 30; i++) {
+        const q = await question(p);
+        steps.push(q.split(' ').slice(0, 5).join(' '));
+        if (await p.locator('[data-act="ob-build"]').count()) { await app.tap(p, '[data-act="ob-build"]'); break; }
+        if (await p.locator('.part').count()) { await cont(p); continue; }
+        if (/days a week/i.test(q)) await app.tap(p, '[data-act="ob-pick-stay"][data-k="days"][data-v="5"]');
+        const nx = p.locator('.ob-cta [data-act="ob-next"]');
+        if (await nx.count()) {
+          t.check(await nx.isEnabled(), 'Next is off on "' + q.slice(0, 40) + '" although the answer is saved');
+          await next(p);
+        } else {                                              // goal, who demonstrates: tap the saved answer again
+          const on = p.locator('[data-act="ob-pick"][aria-pressed="true"]');
+          t.check(await on.count(), 'no saved answer marked on "' + q.slice(0, 40) + '"');
+          await (await on.count() ? on.first() : p.locator('[data-act="ob-pick"]').first()).click();
+          await p.waitForTimeout(150);
+        }
+      }
+      t.log(steps.join(' › '));
+      await app.waitTitle(p, 'Plan');
+      t.has(await app.toast(p), 'Your plan was updated', 'toast after Edit');
+      const pr = (await app.stored(p)).profile;
+      t.equal(pr.days, 5, 'days after Edit');
+      t.equal([pr.goal, pr.sex, pr.birthYear, pr.cm, pr.kg, pr.focus, pr.kit, pr.name], [before.goal, before.sex, before.birthYear, before.cm, before.kg, before.focus, before.kit, before.name],
+        'answers kept by Edit [goal, sex, born, cm, kg, focus, kit, name]');
+      t.equal(Object.keys(pr).filter((k) => ['only', 'edit', 'soreDone'].includes(k)), [], 'onboarding bookkeeping saved in the profile');
+      t.equal(await p.locator('.wk-days button.dd').count(), 20, 'training days on the 28-day grid after Edit');
     });
   }
 };
