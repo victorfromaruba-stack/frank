@@ -18,9 +18,9 @@ supervised activity, or the matching switch on the Today screen's food card.
 
 | Where | New text | Old text |
 |---|---|---|
-| A box under the coach, when the app is opened inside Instagram's, Facebook's or TikTok's own browser (a link tapped in that app). Its first words are in bold | You're in Instagram's browser. Open the app in Safari or Chrome to keep your plan. (Facebook's / TikTok's) | New |
-| The same box on an iPhone: what to tap. A screen reader says "Tap the menu then Open in external browser." | Tap ••• then Open in external browser. (in TikTok: Open in browser) | New |
-| The same box on Android: a button that opens the app in Chrome | Open in Chrome | New |
+| A box under the coach, when the app is opened inside Instagram's, Facebook's or TikTok's own browser (a link tapped in that app), on an iPhone. Its first words are in bold; the coach above is smaller while it shows, so Your personal plan stays above the buttons. A screen reader says "tap the menu" for ••• | You're in Instagram's browser. To keep your plan, tap ••• then Open in external browser. (Facebook's / TikTok's; in TikTok: Open in browser) | New |
+| The same box on Android, with a button that opens the app in Chrome | You're in Instagram's browser. To keep your plan, open the app in Chrome. / Button: Open in Chrome | New |
+| The same box on a computer or another device | You're in Instagram's browser. Open the app in Safari or Chrome to keep your plan. | New |
 | A small button next to Look around first | I already have a plan | New |
 | A box under the coach once the app has moved to Frank's own address (not shown yet: it waits for the address). The button says Go to the new app when the phone has nothing to bring | Frank's app has moved. It's at [new address] now. Bring your progress there in one tap. This copy keeps working. / Button: Bring my progress | New |
 
@@ -80,7 +80,9 @@ supervised activity, or the matching switch on the Today screen's food card.
 |---|---|---|
 | The plan card, the first box | 18 min / Next session (the next session's real length) | 45 min / Daily time (the minutes picked) |
 | The first card, for 10 seconds after a plan came from a backup or a move link | Not what you wanted? You can undo it for a few seconds. / Button: Undo | New |
-| The first card, for someone who made their plan inside Instagram's (Facebook's, TikTok's) own browser. The label is shown in capitals | Keep your plan / You're in Instagram's browser, and your plan stays in it. Move it to Safari or Chrome. / Button: Move my plan | New |
+| The first card inside Instagram's (Facebook's, TikTok's) own browser, once there's something to keep in it. The label is shown in capitals | With a plan: Keep your plan / You're in Instagram's browser, and your plan stays in it. Move it to Safari or Chrome. / Button: Move my plan | New |
+| The same card for one of Frank's clients who came by his session link, with no plan of their own | Keep your progress / You're in Instagram's browser, and your sessions from Frank stay in it. Move them to Safari or Chrome. / Button: Move my plan | New |
+| The same card with no plan and no session from Frank (workouts or notes from Look around first) | Keep your progress / You're in Instagram's browser, and your progress stays in it. Move it to Safari or Chrome. / Button: Move my plan | New |
 
 ## Workout player
 
@@ -90,8 +92,9 @@ supervised activity, or the matching switch on the Today screen's food card.
 | The same button while the countdown is paused: tapped, or because the phone was locked | Resume | New. Before, only the spoken label of the round button on a paused timed move |
 | The End this workout? box, while the phone can't save | This phone isn't saving your progress. Storage is full or blocked. / Button: End | What you have done so far is saved. / Button: End and save (both still shown when saving works) |
 | The finish screen, the label after a workout ended early, when the phone couldn't save it | 3 of 22 moves | Saved: 3 of 22 moves (still shown when the save works) |
-| The finish screen, once, after the first workout on a phone (iPhone or Android) where the app isn't on the Home Screen yet: a sheet that comes up by itself | Keep your progress / Put Frank on your Home Screen. Browsers can clear a website's data; the app on your Home Screen keeps it. | New |
-| The same sheet on an iPhone: four steps, with the Share and Add to Home Screen buttons drawn as the iPhone shows them | 1. Copy your plan. The app on your Home Screen starts empty. Button: Copy my plan / 2. Tap [Share] Share in Safari. / 3. Tap [+] Add to Home Screen. / 4. Open Frank from your Home Screen. Tap I already have a plan, then Paste. | New |
+| The finish screen, once, after the first workout on a phone (iPhone or Android) where the app isn't on the Home Screen yet, and not inside Instagram's browser (it can't put the app there): a sheet that comes up by itself | Keep your progress / Put Frank on your Home Screen. Browsers can clear a website's data; the app on your Home Screen keeps it. | New |
+| The same sheet on an iPhone: four steps, with the Share and Add to Home Screen buttons drawn as the iPhone shows them. Step 2 names the browser in use: Chrome, Firefox or Edge on an iPhone have a Share button too | 1. Copy your plan. The app on your Home Screen starts empty. Button: Copy my plan / 2. Tap [Share] Share in Safari. (in Chrome / Firefox / Edge) / 3. Tap [+] Add to Home Screen. / 4. Open Frank from your Home Screen. Tap I already have a plan, then Paste. | New |
+| The same sheet on an iPhone, a line under Copy my plan: the plan it copies is a link | Anyone with this link can see your answers. Keep it to yourself. | New here (the same line as on Move my plan) |
 | A toast after Copy my plan | Your plan is copied. In the new app, tap I already have a plan. | New |
 | The same sheet on Android: Chrome's own install button when Chrome offers it, else two steps | Install the app (as on Me) / or: 1. Open the browser's menu [⋮]. 2. Tap Install app or Add to Home screen. | New |
 | The close button of this sheet and of the other new sheets, for a screen reader | Close | New here; the app's other sheets say it too |
@@ -122,6 +125,8 @@ supervised activity, or the matching switch on the Today screen's food card.
 | Edit, then Build my plan, after a new goal or new training days, when days are ticked off: a question box | Restart your 28 days? | New. Before, the plan restarted without asking |
 | The same box, its two buttons. Keep my progress is also what the phone's Back does, and the plan then carries on from the same day and week | Keep my progress / Restart | New |
 | Your data, a warning box above the card's text, while the phone can't save | This phone isn't saving your progress. Storage is full or blocked. | New |
+| Put it on your home screen, on an iPhone: in place of the steps, a button that opens the Keep your progress sheet (its first step copies the plan, since the app on the Home Screen starts empty) | Show me how | iPhone: tap the Share button in Safari, then Add to Home Screen. Android: open the browser menu and tap Install app. (still shown on Android and computers) |
+| Put it on your home screen, inside Instagram's browser (which can't put the app there): in place of the steps | You're in Instagram's browser, and your plan stays in it. Move it to Safari or Chrome. (or the sessions from Frank and progress lines of the Plan's card) / Button: Move my plan. With nothing to keep yet: You're in Instagram's browser. Open the app in Safari or Chrome to keep your plan. | iPhone: tap the Share button in Safari, then Add to Home Screen. Android: open the browser menu and tap Install app. |
 | Your data, the card's text | Everything you enter stays in this browser on this phone. Nothing is sent to Frank or anyone else. Clearing your browser data clears it too. | Everything you enter stays on this phone. Nothing is sent to Frank or anyone else. Clearing your browser data clears it too. |
 | Your data, a line under it: what the browser says about keeping the data. No line where the browser can't tell | Protected from automatic clearing. / Not protected yet: save a backup. | New |
 | Your data, two buttons and a link. The buttons show once there's something to keep | Save a backup / Move my plan / Restore from a backup | New |
@@ -166,6 +171,7 @@ supervised activity, or the matching switch on the Today screen's food card.
 | A question box after a move link is opened, a backup file is picked or a link is pasted, before anything changes | Bring your plan here? / Buttons: Cancel, Bring it here | New |
 | The same box, the line under the question: what came. The plan's name and the numbers come from it | 28-day fat burner · 14 workouts · last on 2 Oct (more when it has them: · 2 sessions from Frank · 1 saved session, on Frank's own phone; with none: No workouts yet) | New |
 | The same box, added when this phone has data of its own | It's added to what's on this phone, and this phone keeps its own plan. / It's added to what's on this phone. (when this phone has no plan) | New |
+| The same box, when this phone keeps its own plan and the plan that came brings a health answer it doesn't have: a yes to a health question, pregnancy, a sore spot, or a year of birth that needs more care (60 and over, or maybe under 18). They count on this phone too, as if switched on in Me | It's added to what's on this phone, and this phone keeps its own plan, with the health answers and sore spots from both. | New |
 | A toast after Bring it here | Your plan is on this phone now. | New |
 | A toast after Undo | Undone. This phone is as it was. | New |
 | A toast when a picked file isn't a backup (another app's, broken, or with code written into it). Nothing changes | That isn't a backup from this app. | New |
@@ -225,7 +231,12 @@ supervised activity, or the matching switch on the Today screen's food card.
    history, the free trial's start (the earlier of the two phones) and client access,
    but never "member": that comes from the checkout, once payments are connected.
 5. **Victor: the Home Screen sheet shows on phones only** (iPhone and Android), once,
-   after a workout. A computer gets nothing new.
+   after a workout, and not inside Instagram's browser. A computer gets nothing new.
+6. **Victor: health answers that come with a plan count.** A backup or a move link
+   brought to a phone with its own plan leaves that plan as it is, but takes in every
+   yes to a health question, pregnancy and the sore spots from the other side; Cleared
+   by a doctor stays only if it covered every yes; and the year of birth that needs more
+   care wins. The box says so before anything changes.
 
 ## Older lines to check
 

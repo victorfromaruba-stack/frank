@@ -131,6 +131,12 @@ module.exports = {
           return { start: new URL(m.start_url, href).href, scope: new URL(m.scope, href).href, icons: m.icons.map((i) => new URL(i.src, href).href) };
         });
         t.equal([man.start, man.scope], [home, home], 'manifest start_url and scope');
+        // the app's identity as Chromium works it out: the folder, as before ids (a "./" id would be the site's root, and
+        // every phone that installed the app would be offered it again as another app)
+        const cdp = await p.context().newCDPSession(p);
+        const parsed = await cdp.send('Page.getAppManifest').catch((e) => ({ error: String(e) }));
+        await cdp.detach().catch(() => null);
+        t.equal(parsed.manifest ? parsed.manifest.id : JSON.stringify(parsed.errors || parsed.error || parsed), home, "the app's identity (the manifest id Chromium reads)");
         for (const icon of man.icons) t.equal(await p.evaluate((u) => fetch(u).then((r) => r.status), icon), 200, 'icon ' + icon.slice(home.length));
         t.step('second visit');
         await p.reload(); await L.settle(p);

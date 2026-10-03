@@ -137,8 +137,12 @@ api, the template and the test it needs.
   (`.claude/skills/frank-module/`).
 - A move link or a backup never brings `paid`, nor Coach tools (`coachMode`): Frank types
   his coach code again on a new address. It brings client access, the earlier free
-  trial, Frank's sessions and his saved ones. `FRANK.home` in `js/programs.js` stays
-  empty until Frank's own address exists (`.claude/skills/frank-release/`).
+  trial (one that says it starts after today starts today), Frank's sessions and his
+  saved ones. On a phone with its own plan, the plan stays and the health answers of
+  both count (`.claude/skills/frank-safety/`). `WBF.app.replace()` gives the data a new
+  `stamp`, so another open window takes it as it is (an Undo holds there too).
+  `FRANK.home` in `js/programs.js` stays empty until Frank's own address exists
+  (`.claude/skills/frank-release/`).
 - Client codes: `FRANK.codes` in `js/programs.js` holds SHA-256 hashes of
   `'wbf:' + code` (lower case, no spaces), so the codes can't be read in the
   public repo. `node tools/client-code.mjs <code>` prints the line to add. A

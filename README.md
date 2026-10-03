@@ -70,12 +70,15 @@ Two kinds of users:
   sessions and client access to another browser or phone ("I already have a plan" on
   Welcome takes a pasted link or a file). What comes in is checked field by field,
   shown first ("Bring your plan here?"), merged with what the phone has (nothing is
-  lost, nothing doubles, a membership never comes along) and can be undone for 10
-  seconds. Instagram's, Facebook's and TikTok's browsers get a warning on Welcome; a
-  phone gets a "Keep your progress" sheet once after a workout (Add to Home Screen, or
-  Chrome's install button); the browser is asked to keep the data; and once `FRANK.home`
-  is set, the old address shows "Frank's app has moved" on every tab, with a button
-  that brings each person's progress along.
+  lost, nothing doubles, a membership never comes along; a phone with its own plan keeps
+  it, with the health answers and sore spots from both) and can be undone for 10
+  seconds, also in another open window. Instagram's, Facebook's and TikTok's browsers
+  get a warning on Welcome and a Move my plan card on the Plan (Frank's clients who came
+  by his link too); a phone gets a "Keep your progress" sheet once after a workout (Add
+  to Home Screen, or Chrome's install button; an iPhone copies the plan first, as from
+  Me's "Put it on your home screen"); the browser is asked to keep the data; and once
+  `FRANK.home` is set, the old address shows "Frank's app has moved" on every tab, with
+  a button that brings each person's progress along.
 - **Membership**: a 7-day free trial that starts with the first workout, then €15
   a month. The price screen shows only prices Frank said yes to. Until payments
   are connected, "Tell me when it opens" copies a message for Frank and opens his

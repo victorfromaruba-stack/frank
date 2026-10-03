@@ -114,7 +114,7 @@ Voice guidance, Sound effects and Vibration are on unless someone switched them 
    app: open it from the home screen and stay on Plan, Today or Me. "New version ready"
    comes up; Update reloads. Check the top line of `sw.js` again: the new number.
 
-## 6. Keep my progress (5 minutes)
+## 6. Keep my progress (5 to 10 minutes)
 
 The backup file, the move link and the Home Screen sheet (`js/keep.js`). Do it with a
 plan that has a workout or two, made in Safari (Android: Chrome).
@@ -145,6 +145,23 @@ plan that has a workout or two, made in Safari (Android: Chrome).
    Messages on your own other phone, and open it there. Does the app open with "Bring
    your plan here?" Does the chat app show a preview of the link (it must not show the
    plan: the plan is after the #)?
+8. **An app installed before.** On a phone that installed the app from the live site
+   before this release (Android first): open the site in Chrome. The menu must offer
+   "Open in app" (or nothing), not Install again, and Me has no Install the app. The
+   installed app keeps opening and updating. A phone knows the installed app by its
+   folder, `/frank/`, because `manifest.webmanifest` has no `id`.
+9. **Chrome on an iPhone, if it's installed there.** The Home Screen sheet (or Me > Put
+   it on your home screen > Show me how) says "Tap Share in Chrome". Does Chrome's Share
+   button offer Add to Home Screen, and does the new app take the pasted plan?
+10. **A small iPhone (an SE) in Instagram's browser.** On Welcome, is "Your personal
+    plan" above Get my plan, under the warning?
+11. **Frank's client in Instagram's browser.** Open a session link from Frank in an
+    Instagram DM: the session opens. Back: the Plan's first card says "your sessions
+    from Frank stay in it". Move my plan, paste the link in Safari or Chrome: are the
+    session and the client access there?
+12. **Two windows (Android).** The installed app open, and the site in a Chrome tab. In
+    the tab, restore a backup, then Undo. Switch to the installed app and tap +10 min on
+    Today: back in the tab, the backup's workouts must still be gone.
 
 ## Reading the results
 
@@ -192,6 +209,11 @@ Answers: yes / no / n/a (not in this build) / ? (couldn't tell). A note for ever
 6.5 Restore from a backup brings the same plan                  ___      ___
 6.6 Me: Protected (Home Screen app) / Safari or Chrome says     ___      ___
 6.7 A move link by message opens Bring your plan here?          ___      ___
+6.8 Installed before: Open in app, not Install again            ___      ___
+6.9 Chrome on iPhone: Share in Chrome, Add to Home Screen       ___      n/a
+6.10 iPhone SE in Instagram: heading above the buttons          ___      n/a
+6.11 Frank's client in Instagram: the card, the move works      ___      ___
+6.12 Two windows: Undo holds after a tap in the other           n/a      ___
 
 Notes:
 -

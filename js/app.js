@@ -87,9 +87,10 @@
   // ---- data ---------------------------------------------------------------------
   var KEY = 'wbf.v1';
   function defaults() {
+    // stamp: when replace() last put a whole data in place on this phone (see catchUp)
     return { v: 2, profile: null, settings: { sound: true, voice: true, vibrate: true, rest: 0, ready: 15, units: 'kg', hunits: 'cm' },
              adjust: 1, swaps: {}, done: {}, sessions: [], weights: [], food: {}, flags: null,
-             access: null, inbox: [], inboxDone: {}, coach: { templates: [] }, coachMode: null, walks: {} };
+             access: null, inbox: [], inboxDone: {}, coach: { templates: [] }, coachMode: null, walks: {}, stamp: null };
   }
   // profiles from the first version: age bands and the six health questions
   function migrate(p) {
@@ -139,11 +140,20 @@
   // saves over what one of them saved, it takes it in (on their storage events; a workout at its finish). The newer
   // side is the base: the phone's copy, unless this window couldn't save what it holds. What only the other side has
   // is added: sessions by id, Frank's sessions by i, weights by date, the ticks of the sessions added, and access.
+  // Not after a replace() in the other window (a backup, a move or its Undo): its new stamp says the whole data was put
+  // in place, so it's taken as it is, like after Delete my data, and nothing it took out comes back from this window.
+  // A copy older than this window's own replace() (saved by a window that hadn't seen it yet) gets this one saved over it
+  function stampOf(d) { return typeof d.stamp === 'number' && isFinite(d.stamp) ? d.stamp : 0; }
   function catchUp() {
     var raw = null;
     try { raw = W.localStorage.getItem(KEY); } catch (e) { /* blocked: nothing to take in */ }
     if (!raw) return;
-    var got = load(), base = savedOk ? got : S, more = savedOk ? S : got;
+    var got = load();
+    if (stampOf(got) !== stampOf(S)) {
+      if (stampOf(got) > stampOf(S)) { S = got; if (!PL) setCoachFigure(); } else save();
+      return;
+    }
+    var base = savedOk ? got : S, more = savedOk ? S : got;
     var missing = function (list, key) {
       var have = {};
       base[list].forEach(function (x) { have[x[key]] = 1; });
@@ -163,11 +173,13 @@
   }
   // A whole saved data in place of this phone's (a backup or a move brought in, or its Undo: js/keep.js), read the way
   // the phone's own is (normal) and saved. The coach follows it, and the modules hear 'profile' when it brings another
-  // profile. Not during a workout. Gives what save() gives: false when nothing was saved
+  // profile. Its new stamp makes it hold in other open windows too (catchUp). Not during a workout. Gives what save()
+  // gives: false when nothing was saved
   function replace(data) {
     if (PL || !data || typeof data !== 'object') return false;
-    var old = S.profile;
+    var old = S.profile, was = stampOf(S);
     S = normal(JSON.parse(JSON.stringify(data)));
+    S.stamp = Math.max(Date.now(), was + 1);
     var ok = save();
     setCoachFigure();
     if (S.profile && JSON.stringify(old) !== JSON.stringify(S.profile)) emit('profile', old, S.profile, true);
@@ -2001,8 +2013,9 @@
     var st = S.settings, pr = S.profile, h = (pr && pr.health) || {};
     var parq = WBF.PARQ.some(function (q) { return h[q[0]]; });
     var standalone = (W.matchMedia && W.matchMedia('(display-mode: standalone)').matches) || W.navigator.standalone;
+    // a module's piece (me.install) takes the place of the steps: on an iPhone the app on the Home Screen starts empty
     var install = (!standalone && !framed) ? '<section class="card"><p class="label">Put it on your home screen</p>' +
-      (deferredInstall ? '<button class="btn block" data-act="install">Install the app</button>' :
+      (deferredInstall ? '<button class="btn block" data-act="install">Install the app</button>' : slot('me.install', p) ||
         '<p class="small">iPhone: tap the Share button in Safari, then <b>Add to Home Screen</b>. Android: open the browser menu and tap <b>Install app</b>.</p>') + '</section>' : '';
     return '<section class="card"><p class="label">Workout settings</p><div class="list">' +
       ['voice', 'sound', 'vibrate'].map(function (k) {
@@ -2721,7 +2734,7 @@
   // had added taken back; one that throws later loses only that card, screen, action or event. Either way the console
   // names the module and the place, and the app carries on.
   var ONE = ['welcome.top', 'plan.top', 'workouts.top', 'today.top', 'me.top', 'frank.top', 'pay.top', 'done.next'];   // the card with the highest priority
-  var PLAIN = ['welcome.cta', 'plan.after-hero', 'done.after-stats', 'me.data', 'sheet.foot'];                            // every module's piece, in order
+  var PLAIN = ['welcome.cta', 'plan.after-hero', 'done.after-stats', 'me.data', 'me.install', 'sheet.foot'];              // every module's piece, in order
   var EVENTS = ['boot', 'hash', 'screen', 'finish', 'profile', 'saved'];
   var SLOTS = {}, EV = {}, OWNER = {}, APP_KEYS = defaults(), failed = {}, hearing = {}, started = 0;
   // a module's function, run so that its error stays in the module: undefined comes back, the console says it once

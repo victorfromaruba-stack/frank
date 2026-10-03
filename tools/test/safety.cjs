@@ -1,8 +1,12 @@
 // safety: the app's hard rules. No diet advice for anyone pregnant, under 18 or with a medical condition; plans
 // leave out what pregnancy, a PAR-Q yes, age 60+ or a sore spot rule out; no made-up social proof.
 'use strict';
+const zlib = require('zlib');
 const L = require('./lib.cjs');
 const { app } = L;
+
+// a move link's code as js/keep.js makes one ('z', the JSON packed with deflate-raw, base64url), for a backup's contents
+const moveCode = (data) => 'z' + zlib.deflateRawSync(Buffer.from(JSON.stringify({ app: 'wellness-by-frank', v: 1, data }))).toString('base64url');
 
 // every move of every plan day and every catalogue workout for the saved profile, checked against WBF.plan.safe
 async function planAudit(p) {
@@ -404,6 +408,63 @@ module.exports = {
         if (spot === 'other') t.equal(a.jumps, [], 'jumps with an "Other" sore spot');
         await p.context().close();
       }
+    });
+
+    await t.flow('keep my progress: a plan that comes brings its health answers to a phone with a plan of its own', async () => {
+      // a move link or a backup (js/keep.js) onto a phone with its own plan: the phone keeps that plan, but a yes to a
+      // health question, pregnancy and the sore spots that came count here too, as Me's switches would set them
+      const phone = L.member({ name: 'Own', sex: 'f', goal: 'fat', days: 5, level: 'a', kit: ['chair', 'table', 'db', 'rings', 'pad'], start: L.isoDay(-3) });
+      const bring = async (fileProfile) => {
+        const p = await t.page({ state: phone });
+        await p.evaluate((h) => { location.hash = h; }, 'move.' + moveCode(L.member(Object.assign({ name: 'Inc', sex: 'f', start: L.isoDay(-20) }, fileProfile))));
+        await p.waitForFunction(() => !!document.querySelector('#overlay:not([hidden]) .modal'), null, { timeout: 10000 });
+        const asked = await app.overlay(p);
+        await app.tap(p, '[data-act="modal-yes"]');
+        await app.waitTitle(p, 'Plan');
+        return [p, asked];
+      };
+      const [p, asked] = await bring({ health: { pregnant: true, heart: true }, injuries: ['knee'] });
+      t.has(asked, 'this phone keeps its own plan, with the health answers and sore spots from both', 'the box before the plan comes');
+      const s = (await app.stored(p)).profile;
+      t.equal([s.name, s.goal, !!s.health.pregnant, !!s.health.heart, !!s.health.cleared, s.injuries], ['Own', 'fat', true, true, false, ['knee']],
+        'saved [name and goal: this phone\'s plan, pregnant, heart, cleared, sore spots]');
+      const av = await p.evaluate(() => WBF.plan.avoidFor(WBF.app.state().profile));
+      t.equal([!!av.supine, !!av.prone, !!av.jump, !!av.gentle, av.stress], [true, true, true, true, ['knee']], 'what the plan leaves out [lying on the back, on the front, jumps, gentle, sore spots]');
+      const a = await planAudit(p);
+      t.equal([a.unsafe, a.supine, a.jumps, a.kit, a.stress, a.vigorous, a.level], [[], [], [], [], [], [], 'b'], 'the plan after [unsafe, lying, jumps, pad or rings, the knee, vigorous, level]');
+      t.equal(await p.evaluate(() => WBF.app.atRisk()), true, 'atRisk() after');
+      await app.tap(p, '.tab[data-tab="me"]');
+      t.equal(await p.locator('[data-act="health"][data-k="pregnant"]').getAttribute('aria-checked'), 'true', "Me's Pregnancy mode after");
+      await t.look(p, 'me after a plan with health answers came');
+      // control: a plan with no yes and no sore spot changes none of it, so the empty lists above mean something
+      const [c, said] = await bring({});
+      t.lacks(said, 'health answers', 'control: the box when no health answer comes');
+      const ca = await planAudit(c);
+      t.check(ca.supine.length > 0 && ca.jumps.length > 0 && ca.level === 'a', () => 'control: this phone\'s own plan should have lying moves and jumps at its level (' + ca.supine.length + ' lying, ' + ca.jumps.length + ' jumps, level ' + ca.level + ')');
+      // the rules, one by one: what a file holds once checked (WBF.keep.check), merged into this phone's (WBF.keep.merge)
+      const rules = await c.evaluate(([base, Y]) => {
+        const run = (mine, theirs) => {
+          const now = JSON.parse(JSON.stringify(base)), there = JSON.parse(JSON.stringify(base));
+          Object.assign(now.profile, mine); Object.assign(there.profile, theirs);
+          const p = WBF.keep.merge(now, WBF.keep.check({ app: 'wellness-by-frank', v: 1, data: there }, 'file').data).profile;
+          return [p.health.cleared === true, p.birthYear, p.injuries];
+        };
+        return [
+          run({ health: { heart: true, cleared: true } }, { health: {} })[0],
+          run({ health: { heart: true, cleared: true } }, { health: { heart: true } })[0],
+          run({ health: {} }, { health: { joint: true, cleared: true } })[0],
+          run({ health: { joint: true } }, { health: { heart: true, cleared: true } })[0],
+          run({ birthYear: 1990 }, { birthYear: 1960 })[1],
+          run({ birthYear: 1990 }, { birthYear: Y - 16 })[1],
+          run({ birthYear: 1990 }, { birthYear: 1985 })[1],
+          run({ birthYear: 1960 }, { birthYear: 1990 })[1],
+          run({ birthYear: 1990 }, { birthYear: undefined, age: 'u30', health: { under18: true } })[1],
+          run({ health: { heart: true, cleared: true } }, { health: { injury: true } })[0],
+          run({ injuries: ['wrist'] }, { injuries: ['knee', 'wrist'] })[2]
+        ];
+      }, [L.member(), Y]);
+      t.equal(rules, [true, false, true, false, 1960, Y - 16, 1990, 1960, Y - 16, false, ['wrist', 'knee']],
+        'merged [cleared stays with no new yes, off for a yes not cleared, comes with a cleared yes, off when this phone\'s yes wasn\'t; year: 60 and over, maybe under 18, no rule crossed, 60 and over kept, the first version\'s under 18; its injury question a yes not cleared; sore spots join]');
     });
 
     await t.flow('no made-up social proof', async () => {

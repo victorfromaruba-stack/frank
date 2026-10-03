@@ -132,8 +132,12 @@ On the day:
 4. **The address in the files.** `og:url` and any `og:image` hold the new absolute
    address (`index.html` has no `og:` tags today; add them with the move if the link
    previews are wanted). `manifest.webmanifest` needs no new address: `start_url` and
-   `scope` are `./`. But an installed app belongs to its origin, so people install again
-   from the new address; the banner says how.
+   `scope` are `./`. It has no `id` on purpose: a phone knows an installed app by its id,
+   and without one that is `start_url`, the app's folder. An `id` read as another address
+   makes every installed phone see another app (Install again, a second icon); `"./"` is
+   one, since an id is read against the site's root (`static` and `hosted` check this).
+   But an installed app belongs to its origin, so people install again from the new
+   address; the banner says how.
 5. **The old address elsewhere:**
    `grep -rn "victorfromaruba-stack.github.io" --exclude-dir=dist .` finds the README,
    `SITE` in `tools/test/lib.cjs` (or set `FRANK_QA_SITE`), the frank-qa skill and this one.

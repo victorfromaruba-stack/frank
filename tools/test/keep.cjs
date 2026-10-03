@@ -57,7 +57,7 @@ module.exports = {
   async run(t) {
     await t.flow('backup: Save a backup downloads the plan, the history and the weights', async () => {
       const st = L.member({ name: 'Sanne', goal: 'fat' }, { sessions: [rec('h1', 3), rec('h2', 1)], weights: [{ date: L.isoDay(-3), kg: 70.5 }, { date: L.isoDay(-1), kg: 70.1 }],
-        coachMode: 'f'.repeat(64) });
+        coachMode: 'f'.repeat(64), stamp: Date.parse(L.isoDay(-9) + 'T10:00:00Z') });
       const p = await t.page({ state: st });
       await app.tap(p, '.tab[data-tab="me"]');
       t.has(await app.text(p), 'Everything you enter stays in this browser on this phone.', "Me's data card");
@@ -67,7 +67,7 @@ module.exports = {
       t.equal([file.app, file.v, file.data.v, typeof file.made, file.origin], ['wellness-by-frank', 1, 2, 'string', p.srv.url], 'the file [app, v, data.v, made, origin]');
       t.equal([file.data.sessions.map((r) => r.id), file.data.weights.map((w) => w.kg), file.data.profile.name, file.data.profile.goal, file.data.access],
         [['h1', 'h2'], [70.5, 70.1], 'Sanne', 'fat', { paid: true }], 'the file holds [workouts, weights, name, goal, access]');
-      t.equal([file.data.coachMode, file.data.keep], [undefined, undefined], "the file leaves out [Coach tools, this phone's own notes]");
+      t.equal([file.data.coachMode, file.data.keep, file.data.stamp], [undefined, undefined, undefined], "the file leaves out [Coach tools, this phone's own notes, the stamp of its last restore]");
       t.has(await app.toast(p), 'Your backup file is ready. Keep it somewhere safe.', 'toast');
       t.equal((await app.stored(p)).keep.backupAt, L.TODAY, 'saved: the day of the backup');
       const me = await app.text(p);
@@ -138,6 +138,43 @@ module.exports = {
       t.equal([back.sessions.map((r) => r.id), back.access, back.weights.length, back.inbox.length, back.profile.name], [['p1', 'both'], { trialStart: L.isoDay(-2) }, 2, 1, 'Sam'],
         'after Undo, the phone as it was [workouts, access, weights, sessions from Frank, name]');
       t.equal(await p.locator('[data-card="keep-undo"]').count(), 0, 'the Undo card after Undo');
+    });
+
+    await t.flow('two windows of one browser: a backup and its Undo hold in the other window, also after it saves', async () => {
+      // the installed app next to the browser tab a link opened in: one storage, two windows that take in each other's
+      // saves. A plan brought in shows in the other window; its Undo is taken there as it is, not merged back in
+      const phone = L.member({ name: 'Two', start: L.isoDay(-3) }, { access: { trialStart: L.isoDay(-3) }, sessions: [rec('p1', 2)] });
+      const file = L.state({ access: { client: true }, sessions: [rec('x1', 6), rec('x2', 5)], inbox: [L.spec({ i: 'fx', t: 'From the file' })] });
+      const a = await t.page({ state: phone });
+      const b = t.watch(await a.context().newPage());
+      await b.goto(a.url());
+      await L.settle(b);
+      t.lastPage = a;
+      await app.tap(b, '.tab[data-tab="today"]');
+      await app.tap(a, '.tab[data-tab="me"]');
+      await pickFile(a, '[data-act="keep-restore"]', 'backup.json', JSON.stringify(backup(file)));
+      await box(a);
+      await app.tap(a, '[data-act="modal-yes"]');
+      await app.waitTitle(a, 'Plan');
+      const other = () => b.evaluate(() => [WBF.app.state().sessions.map((r) => r.id), WBF.app.state().inbox.map((x) => x.i), WBF.app.status()]);
+      await b.waitForFunction(() => WBF.app.state().sessions.length === 3, null, { timeout: 5000 }).catch(() => null);   // the storage event
+      t.equal(await other(), [['x1', 'x2', 'p1'], ['fx'], 'client'], 'the other window after the plan came [workouts, sessions from Frank, status]');
+      await app.tap(a, '[data-act="keep-undo"]');
+      await b.waitForFunction(() => WBF.app.state().sessions.length === 1, null, { timeout: 5000 }).catch(() => null);
+      t.equal(await other(), [['p1'], [], 'trial'], 'the other window after Undo [workouts, sessions from Frank, status]');
+      await app.tap(b, '[data-act="water"][data-n="2"]');                // the other window saves
+      await a.waitForFunction((d) => ((WBF.app.state().food || {})[d] || {}).water === 2, L.TODAY, { timeout: 5000 }).catch(() => null);
+      const s = await app.stored(a);
+      t.equal([s.sessions.map((r) => r.id), s.inbox.map((x) => x.i), s.access, (s.food[L.TODAY] || {}).water], [['p1'], [], { trialStart: L.isoDay(-3) }, 2],
+        'saved after a water tap in the other window [workouts, sessions from Frank, access, water]');
+      t.equal(await a.evaluate(() => [WBF.app.state().sessions.length, WBF.app.status()]), [1, 'trial'], 'the first window after that [workouts, status]');
+      // a window that hadn't taken the Undo in yet saves its older copy over it: the first window saves its own again
+      const stamp = (await app.stored(a)).stamp;
+      await b.evaluate(([k, r]) => { const d = JSON.parse(localStorage.getItem(k)); d.stamp = 1; d.sessions.push(r); localStorage.setItem(k, JSON.stringify(d)); }, [L.KEY, rec('old1', 7)]);
+      await a.waitForFunction(([k, n]) => JSON.parse(localStorage.getItem(k)).stamp === n, [L.KEY, stamp], { timeout: 5000 }).catch(() => null);
+      const again = await app.stored(a);
+      t.equal([again.stamp === stamp, again.sessions.map((r) => r.id)], [true, ['p1']], 'saved after an older copy came over it [the Undo\'s stamp, workouts]');
+      await t.look(a, 'plan after Undo, with another window open');
     });
 
     await t.flow('move: a link made on one address brings the plan to another, opened and pasted', async () => {
@@ -239,18 +276,33 @@ module.exports = {
       t.has(await app.overlay(p), '1 workout · last on 6 Oct', 'the box after the workout');
     });
 
-    await t.flow("Instagram's browser: a warning on Welcome, the move first on the Plan; none in Safari", async () => {
-      const ig = await t.page({ ua: L.UA.instagramIphone });
+    await t.flow("Instagram's browser: a warning on Welcome under a smaller coach, the move first on the Plan; none in Safari", async () => {
       const card = (pg) => pg.locator('[data-card="keep-inapp"]').innerText().catch(() => '');
-      t.has(await card(ig), "You're in Instagram's browser. Open the app in Safari or Chrome to keep your plan.", 'Welcome in Instagram on an iPhone');
+      const done = (pg) => pg.context().close().catch(() => null);
+      // Welcome keeps its heading, and on a phone this size its whole text, above the buttons: the coach makes room
+      const fits = (pg) => pg.evaluate(() => {
+        const cta = document.querySelector('.ob-cta').getBoundingClientRect().top, r = (s) => document.querySelector(s).getBoundingClientRect().bottom;
+        return [r('.welcome-text h1') <= cta, r('.welcome-text p') <= cta];
+      });
+      const ig = await t.page({ ua: L.UA.instagramIphone });
+      t.has(await card(ig), "You're in Instagram's browser. To keep your plan, tap", 'Welcome in Instagram on an iPhone');
       t.has(await card(ig), 'Open in external browser', 'the steps on an iPhone');
+      t.equal(await fits(ig), [true, true], 'Welcome in Instagram at 390x844, above the buttons [the heading, its text]');
       await t.look(ig, 'welcome in Instagram on an iPhone');
+      await done(ig);
+      const se = await t.page({ ua: L.UA.instagramIphone, width: 375, height: 667 });
+      t.equal((await fits(se))[0], true, 'Welcome in Instagram at 375x667: the heading above the buttons');
+      await done(se);
       const and = await t.page({ ua: L.UA.instagramAndroid });
+      t.has(await card(and), "You're in Instagram's browser. To keep your plan, open the app in Chrome.", 'Welcome in Instagram on Android');
       const href = await and.locator('[data-card="keep-inapp"] a').getAttribute('href').catch(() => '') || '';
       t.check(href.startsWith('intent://127.0.0.1:') && /#Intent;scheme=http;package=com\.android\.chrome;.*;end$/.test(href), () => 'the Chrome link on Android: ' + href);
+      t.equal(await fits(and), [true, true], 'Welcome in Instagram on Android at 390x844, above the buttons [the heading, its text]');
       await t.look(and, 'welcome in Instagram on Android');
+      await done(and);
       const safari = await t.page({ ua: L.UA.iphone });
       t.equal(await safari.locator('[data-card="keep-inapp"]').count(), 0, 'Welcome in Safari: warnings');
+      await done(safari);
       // a plan made in Instagram's browser anyway: the Plan's first card moves it
       const made = await t.page({ ua: L.UA.instagramIphone, state: L.member() });
       t.has(await card(made), 'Move my plan', "the Plan in Instagram's browser");
@@ -258,7 +310,31 @@ module.exports = {
         "the move card is not above the plan card on the Plan in Instagram's browser");
       await app.tap(made, '[data-card="keep-inapp"] [data-act="keep-move"]');
       await made.waitForSelector('#keep-link', { timeout: 10000 });
-      t.equal(await (await t.page({ ua: L.UA.iphone, state: L.member() })).locator('[data-card="keep-inapp"]').count(), 0, 'the Plan in Safari: move cards');
+      await done(made);
+      const plain = await t.page({ ua: L.UA.iphone, state: L.member() });
+      t.equal(await plain.locator('[data-card="keep-inapp"]').count(), 0, 'the Plan in Safari: move cards');
+    });
+
+    await t.flow("Instagram's browser: Frank's client who came by his session link gets the move card on the Plan", async () => {
+      // the session opens first, never Welcome, and a client has no plan of their own: the Plan under the session says
+      // that the session and the access stay in that browser, and its move link carries them
+      const card = (pg) => pg.locator('[data-card="keep-inapp"]').innerText().catch(() => '');
+      const client = await t.page({ ua: L.UA.instagramIphone, hash: 'frank.' + L.pack(L.spec({ i: 'ig1', t: 'Glutes and core' })) });
+      await app.waitHeading(client, 'Glutes and core');
+      await app.tap(client, '[data-act="back"]');
+      await app.waitTitle(client, 'Plan');
+      t.has(await card(client), "You're in Instagram's browser, and your sessions from Frank stay in it. Move them to Safari or Chrome.", "the Plan of Frank's client in Instagram's browser");
+      await t.look(client, "plan of Frank's client in Instagram's browser");
+      await app.tap(client, '[data-card="keep-inapp"] [data-act="keep-move"]');
+      await client.waitForSelector('#keep-link', { timeout: 10000 });
+      const sent = await client.evaluate(async (v) => WBF.keep.check(await WBF.keep.decode(v.split('#move.')[1]), 'link').data, await client.inputValue('#keep-link'));
+      t.equal([sent.access, sent.inbox.map((x) => x.i)], [{ client: true }, ['ig1']], "the client's move link carries [access, sessions from Frank]");
+      await client.context().close().catch(() => null);
+      const none = await t.page({ ua: L.UA.instagramIphone });
+      await app.tap(none, '[data-act="browse"]');                     // Look around first: nothing saved yet
+      await app.tap(none, '.tab[data-tab="plan"]');
+      await app.waitTitle(none, 'Plan');
+      t.equal(await none.locator('[data-card="keep-inapp"]').count(), 0, "the Plan in Instagram's browser with nothing to keep yet: move cards");
     });
 
     await t.flow('the Home Screen sheet: once after the first workout on a phone, never in the installed app', async () => {
@@ -268,6 +344,8 @@ module.exports = {
       const sheet = await sheetText(p, 'Keep your progress');
       t.has(sheet, 'Keep your progress', 'the sheet after the first workout');
       t.has(sheet, 'Add to Home Screen', 'the iPhone steps');
+      t.has(sheet, 'Share in Safari', 'the iPhone steps: the browser');
+      t.has(sheet, 'Anyone with this link can see your answers. Keep it to yourself.', 'the iPhone steps: who can see the plan it copies');
       await t.look(p, 'the Home Screen sheet on an iPhone');
       await p.waitForTimeout(200);                           // the move link is made as the sheet opens
       await app.tap(p, '[data-act="keep-copy-home"]');
@@ -291,6 +369,12 @@ module.exports = {
       await t.look(and, 'the Home Screen sheet on Android');
       await app.tap(and, '[data-act="keep-install-now"]');
       t.equal([await and.evaluate(() => window.__prompted), await app.overlay(and)], [1, ''], "Install the app [the browser's prompt shown, the sheet]");
+      t.step("Instagram's browser, which can't put the app on the Home Screen");
+      const ig = await t.page({ ua: L.UA.instagramIphone, state: L.member(), speed: 50 });
+      await shortWorkout(ig);
+      t.equal(await sheetText(ig), '', "Instagram's browser after the first workout: the sheet");
+      t.equal(((await app.stored(ig)).keep || {}).installAsked || null, null, "Instagram's browser: saved as asked");
+      await ig.context().close().catch(() => null);
       t.step('the installed app');
       const inst = await t.page({ ua: L.UA.iphone, state: L.member(), speed: 50, go: false });
       await inst.addInitScript(() => {
@@ -303,6 +387,65 @@ module.exports = {
       t.equal(await sheetText(inst), '', 'the installed app (display-mode standalone): the sheet');
       t.equal(await inst.locator('[data-card="keep-home"]').count(), 0, 'the installed app: the card');
       t.equal(((await app.stored(inst)).keep || {}).installAsked || null, null, 'the installed app: saved as asked');
+    });
+
+    await t.flow("Me's Put it on your home screen: on an iPhone the steps that copy the plan first, in Instagram's browser the move", async () => {
+      const homeCard = (pg) => pg.evaluate(() => { const c = [...document.querySelectorAll('.card')].find((x) => /Put it on your home screen/i.test(x.innerText)); return c ? c.innerText : ''; });
+      const crios = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/129.0.6668.69 Mobile/15E148 Safari/604.1';
+      for (const [ua, name, browser] of [[L.UA.iphone, 'Safari on an iPhone', 'Safari'], [crios, 'Chrome on an iPhone', 'Chrome']]) {
+        const p = await t.page({ ua, state: L.member() });
+        await app.tap(p, '.tab[data-tab="me"]');
+        t.lacks(await homeCard(p), 'Add to Home Screen', name + ": Me's card, steps without the copy");
+        await app.tap(p, '[data-act="keep-install"]');
+        const sheet = await sheetText(p, 'Copy my plan');
+        t.has(sheet, 'Copy my plan', name + ': the sheet from Me');
+        t.has(sheet, 'Share in ' + browser + '.', name + ': the sheet names the browser');
+        t.has(sheet, 'Anyone with this link can see your answers. Keep it to yourself.', name + ': who can see the plan it copies');
+        if (browser === 'Safari') await t.look(p, 'the Home Screen sheet from Me on an iPhone');
+        await p.context().close().catch(() => null);
+      }
+      const ig = await t.page({ ua: L.UA.instagramIphone, state: L.member() });
+      await app.tap(ig, '.tab[data-tab="me"]');
+      t.has(await homeCard(ig), "You're in Instagram's browser, and your plan stays in it. Move it to Safari or Chrome.", "Instagram's browser: Me's card");
+      t.equal(await ig.locator('.card [data-act="keep-move"]').count(), 2, "Instagram's browser: Move my plan [in the Home Screen card, in Your data]");
+      await t.look(ig, "me in Instagram's browser");
+      await ig.context().close().catch(() => null);
+      const and = await t.page({ ua: L.UA.android, state: L.member() });
+      await app.tap(and, '.tab[data-tab="me"]');
+      t.has(await homeCard(and), 'open the browser menu and tap Install app', "Android without Chrome's own prompt: Me's card, the app's own steps (an installed app keeps the browser's data there)");
+    });
+
+    await t.flow("what comes along: all of Frank's sessions, data the first version saved, never a trial that starts later", async () => {
+      // a long-time client: every session from Frank, newest first as the app keeps them
+      const inbox = Array.from({ length: 150 }, (_, k) => L.spec({ i: 'f' + (150 - k), t: 'Session ' + (150 - k), d: L.isoDay(-(k + 1)) }));
+      const p = await t.page({ state: L.state({ access: { client: true }, inbox }) });
+      t.equal(await p.evaluate(async () => {
+        const got = WBF.keep.check(await WBF.keep.decode(await WBF.keep.encode(WBF.keep.payload(false))), 'link').data;
+        return [got.inbox.length, got.inbox[0].i, got.inbox[got.inbox.length - 1].i];
+      }), [150, 'f150', 'f1'], "a move link of a client with 150 sessions from Frank [sessions, the newest, the oldest]");
+      await p.context().close().catch(() => null);
+      // a phone whose data the app's first version saved (v 1, an age band in place of the year of birth): its backup
+      const first = L.member({ name: 'Ada', age: '45', birthYear: undefined }, { v: 1, sessions: [rec('v1a', 4)] });
+      const q = await t.page();
+      await app.tap(q, '[data-act="keep-have"]');
+      await pickFile(q, '[data-act="keep-restore"]', 'wellness-by-frank-2026-10-13.json', JSON.stringify(backup(first)));
+      await box(q);
+      t.has(await app.overlay(q), '1 workout · last on 10 Oct', 'the box for data the first version saved');
+      await app.tap(q, '[data-act="modal-yes"]');
+      await app.waitTitle(q, 'Plan');
+      const s = await app.stored(q);
+      t.equal([s.profile.name, s.profile.birthYear, s.sessions.map((x) => x.id), s.v], ['Ada', +L.TODAY.slice(0, 4) - 52, ['v1a'], 2],
+        'saved from it [name, year of birth from its age band, workouts, v]');
+      await q.context().close().catch(() => null);
+      // a free trial can't have started after today: a file that says so gives a trial from today at the latest
+      const z = await t.page();
+      await app.tap(z, '[data-act="keep-have"]');
+      await pickFile(z, '[data-act="keep-restore"]', 'backup.json', JSON.stringify(backup(L.member({ name: 'Fut' }, { access: { trialStart: '2099-01-01' }, sessions: [rec('z1', 1)] }))));
+      await box(z);
+      await app.tap(z, '[data-act="modal-yes"]');
+      await app.waitTitle(z, 'Plan');
+      t.equal([(await app.stored(z)).access, await z.evaluate(() => [WBF.app.status(), WBF.app.daysLeft()])], [{ trialStart: L.TODAY }, ['trial', 7]],
+        'a trial start in 2099 [saved, status, days left]');
     });
 
     await t.flow('storage the browser keeps: asked after the first workout', async () => {

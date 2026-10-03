@@ -293,15 +293,17 @@
       var m = isObj(f.manual) ? f.manual : f;
       return { manual: { pregnant: m.pregnant === true, child: m.child === true, medical: m.medical === true } };
     }
-    // a membership ('paid') never comes from outside: only the checkout sets it
+    // a membership ('paid') never comes from outside: only the checkout sets it. A free trial can't have started after
+    // today (another phone's clock or time zone, or a file made to give an endless trial): at the latest, today
     function accessOf(a) {
       if (!isObj(a)) return null;
       var o = extras(a, ['trialStart', 'client', 'paid']);
-      if (isDay(a.trialStart)) o.trialStart = a.trialStart;
+      if (isDay(a.trialStart)) o.trialStart = a.trialStart > u.iso() ? u.iso() : a.trialStart;
       if (a.client === true) o.client = true;
       return o;
     }
-    // Frank's sessions, through the app's own check of a session from a link (cleanSpec)
+    // Frank's sessions, through the app's own check of a session from a link (cleanSpec). The app keeps the newest first;
+    // max is far more than years of sessions, and the file's own size limit comes first
     function specsOf(v, max) {
       var out = [], seen = {};
       (Array.isArray(v) ? v.slice(0, max * 2) : []).forEach(function (x) {
@@ -310,7 +312,7 @@
       });
       return out;
     }
-    var APP_KEYS = ['v', 'profile', 'settings', 'adjust', 'swaps', 'done', 'sessions', 'weights', 'food', 'flags', 'access', 'inbox', 'inboxDone', 'coach', 'coachMode', 'walks'];
+    var APP_KEYS = ['v', 'profile', 'settings', 'adjust', 'swaps', 'done', 'sessions', 'weights', 'food', 'flags', 'access', 'inbox', 'inboxDone', 'coach', 'coachMode', 'walks', 'stamp'];
     // The data in a backup or a link, made safe: every field of the app's checked, numbers kept in range, Frank's sessions
     // through cleanSpec. null: it isn't the app's data
     function clean(x) {
@@ -320,7 +322,7 @@
       if (profile === undefined) return null;
       var d = { v: DATA_V, profile: profile, settings: settingsOf(x.settings), adjust: num(x.adjust, 0.75, 1.3, 1), swaps: swapsOf(x.swaps), done: doneOf(x.done),
         sessions: listOf(x.sessions, sessionOf, 5000), weights: listOf(x.weights, weightOf, 5000), food: daysOf(x.food, foodDayOf), flags: flagsOf(x.flags),
-        access: accessOf(x.access), inbox: specsOf(x.inbox, 100), inboxDone: idMap(x.inboxDone), coach: { templates: specsOf((x.coach || {}).templates, 200) },
+        access: accessOf(x.access), inbox: specsOf(x.inbox, 5000), inboxDone: idMap(x.inboxDone), coach: { templates: specsOf((x.coach || {}).templates, 5000) },
         walks: daysOf(x.walks, walkOf) };
       // a module's data, and what a later version keeps: plain values, taken only where this phone has none (merge)
       Object.keys(x).forEach(function (k) {
@@ -330,12 +332,13 @@
       });
       return d;
     }
-    // A backup or a code's contents: { data } made safe, or { no: the words to show }. from: 'file' or 'link'
+    // A backup or a code's contents: { data } made safe, or { no: the words to show }. from: 'file' or 'link'. The data
+    // may still say v 1 (the app's first version, which the app reads the same way: its profile is brought up to date)
     function check(o, from) {
       var no = from === 'link' ? SAY.badLink : SAY.notOurs;
       if (!isObj(o) || o.app !== APP || typeof o.v !== 'number' || !isObj(o.data) || typeof o.data.v !== 'number') return { no: no };
       if (o.v > FILE_V || o.data.v > DATA_V) return { no: SAY.newer };
-      if (o.v !== FILE_V || o.data.v !== DATA_V || marked(o.data)) return { no: no };
+      if (o.v !== FILE_V || (o.data.v !== 1 && o.data.v !== DATA_V) || marked(o.data)) return { no: no };
       var d = clean(o.data);
       return d ? { data: d } : { no: no };
     }
@@ -349,18 +352,40 @@
       return !!(d.profile || (d.sessions || []).length || (d.weights || []).length || (d.inbox || []).length || ((d.coach || {}).templates || []).length ||
         Object.keys(d.walks || {}).length || Object.keys(d.food || {}).some(function (k) { return dayFill(d.food[k]) > 0; }) || a.trialStart || a.client || a.paid);
     }
+    // The plan this phone keeps never loses what the person told the app on the other side (.claude/skills/frank-safety):
+    // a yes to a health question or pregnancy comes along, as Me's switches set them (no restart, the sessions follow);
+    // "Cleared by a doctor" stays only when it covered every yes, from either side; sore spots join; and the year of birth
+    // that asks for more care is kept (60 and over, or maybe under 18). p: this phone's profile, changed in place
+    function careful(p, q) {
+      var h = p.health = isObj(p.health) ? p.health : {}, g = Object.assign({}, q.health);
+      if (g.injury && g.joint == null) g.joint = true;      // the first version's injury question, as the app reads it (migrate)
+      var parq = function (x) { return WBF.PARQ.some(function (k) { return x[k[0]] === true; }); };
+      var clear = (!parq(h) || h.cleared === true) && (!parq(g) || g.cleared === true);
+      HEALTH.forEach(function (k) { if (k !== 'cleared' && g[k] === true) h[k] = true; });
+      if (parq(h) && !!h.cleared !== clear) h.cleared = clear;
+      p.injuries = (p.injuries || []).concat((q.injuries || []).filter(function (x) { return (p.injuries || []).indexOf(x) === -1; }));
+      // the other side's year of birth, or the one the app works out for a first version's profile (its under 18 answer,
+      // its age band: migrate in js/app.js)
+      var now = new Date().getFullYear(), age = WBF.plan.age;
+      var year = typeof q.birthYear === 'number' ? q.birthYear : g.under18 ? now - 16 : age(q) == null ? null : now - age(q);
+      if (year == null || year === p.birthYear) return;
+      if ((now - year >= 60 && !(age(p) >= 60)) || (now - year <= 18 && !WBF.plan.possiblyMinor(p))) p.birthYear = year;
+    }
+    // the answers careful() reads, to see whether it changed any
+    function answers(p) { return JSON.stringify([p.health || {}, p.injuries || [], p.birthYear]); }
     // A phone with nothing takes what came as it is. Otherwise workouts join by id, weights by date (the one that came wins
     // on the same date), food and walks by date (the fuller day), Frank's sessions and his saved ones by id. The plan, its
-    // settings and its ticks stay this phone's unless it has no plan (ticks of the same plan join); a tick for one of
-    // Frank's sessions comes along when both have the same session. The food card's switches stay on if either had them
-    // on. The free trial is the earliest of the two, client access comes from either, a membership never from outside,
-    // and Coach tools stay as they are here
+    // settings and its ticks stay this phone's unless it has no plan (ticks of the same plan join), with the health answers
+    // of both (careful); a tick for one of Frank's sessions comes along when both have the same session. The food card's
+    // switches stay on if either had them on. The free trial is the earliest of the two, client access comes from either,
+    // a membership never from outside, and Coach tools stay as they are here
     function merge(mineNow, got) {
       var out = JSON.parse(JSON.stringify(mineNow));
       if (!out.profile && got.profile) {
         out.profile = got.profile; out.settings = got.settings; out.adjust = got.adjust; out.done = got.done;
-      } else if (out.profile && got.profile && out.profile.start && out.profile.start === got.profile.start) {
-        Object.keys(got.done).forEach(function (d) { if (!out.done[d]) out.done[d] = got.done[d]; });
+      } else if (out.profile && got.profile) {
+        if (out.profile.start && out.profile.start === got.profile.start) Object.keys(got.done).forEach(function (d) { if (!out.done[d]) out.done[d] = got.done[d]; });
+        careful(out.profile, got.profile);
       }
       out.swaps = out.swaps || {};
       Object.keys(got.swaps).forEach(function (k) { if (!out.swaps[k]) out.swaps[k] = got.swaps[k]; });
@@ -421,8 +446,13 @@
       if (res.no) { app.toast(res.no); return; }
       if (!canKeep()) { app.toast(SAY.noStore); return; }
       if (app.cur().name === 'player') { pending = function () { offer(res); }; return; }
-      var d = res.data, now = app.state(), body = preview(d);
-      if (filled(now)) body += '. ' + (now.profile ? 'It\'s added to what\'s on this phone, and this phone keeps its own plan.' : 'It\'s added to what\'s on this phone.');
+      var d = res.data, now = app.state(), body = preview(d), p = now.profile;
+      // a phone with its own plan: say when the health answers that came change it
+      if (filled(now)) {
+        body += '. ' + (!p ? 'It\'s added to what\'s on this phone.' : answers(p) !== answers(merge(now, d).profile) ?
+          'It\'s added to what\'s on this phone, and this phone keeps its own plan, with the health answers and sore spots from both.' :
+          'It\'s added to what\'s on this phone, and this phone keeps its own plan.');
+      }
       app.confirmBox('Bring your plan here?', 'Bring it here', function () { bring(d); }, { body: body });
     }
     function bring(d) {
@@ -458,10 +488,11 @@
 
     // ---- a backup and a move link ---------------------------------------------------------------------------------------
     // what both carry: the whole saved data, less this phone's own (Coach tools stay locked until Frank types his code
-    // there, and this module's notes). The file also says when and where it was made
+    // there, this module's notes, and the stamp of the last time a whole data came here). The file also says when and
+    // where it was made
     function payload(file) {
       var d = JSON.parse(JSON.stringify(app.state()));
-      delete d.coachMode; delete d[KEY];
+      delete d.coachMode; delete d[KEY]; delete d.stamp;
       var o = { app: APP, v: FILE_V };
       if (file) { o.made = new Date().toISOString(); o.origin = W.location.origin; }
       o.data = d;
@@ -546,13 +577,17 @@
       homeLink = '';
       encode(payload(false)).then(safely('home', function (code) { homeLink = code.length > MAX_LINK ? null : (base || here()) + '#move.' + code; }));
     }
-    // An iPhone: the plan copied first (an app put on the Home Screen starts empty), Share, Add to Home Screen, then "I already
-    // have a plan" in the new app. host: an address to open in Safari first (the app moved)
+    // the browser an iPhone has the app open in: Chrome, Firefox and Edge on an iPhone put a website on the Home Screen
+    // from their own Share button too
+    function browserName() { var a = agent(); return /CriOS/.test(a) ? 'Chrome' : /FxiOS/.test(a) ? 'Firefox' : /EdgiOS/.test(a) ? 'Edge' : 'Safari'; }
+    // An iPhone: the plan copied first (an app put on the Home Screen starts empty: the copied link holds the person's
+    // answers, and says so), Share, Add to Home Screen, then "I already have a plan" in the new app. host: an address to
+    // open in Safari first (the app moved)
     function iphoneSteps(host) {
       return '<ol class="steps"><li><span class="stack tight"><span>Copy your plan. The app on your Home Screen starts empty.</span>' +
-        '<button class="btn two small" data-act="keep-copy-home" style="align-self:flex-start">Copy my plan</button></span></li>' +
+        '<button class="btn two small" data-act="keep-copy-home" style="align-self:flex-start">Copy my plan</button><span class="small">' + esc(SAY.privacy) + '</span></span></li>' +
         (host ? '<li><span>Open Safari and go to <b>' + esc(host) + '</b>.</span></li>' : '') +
-        '<li><span>Tap ' + glyph('share') + ' <b>Share</b> in Safari.</span></li>' +
+        '<li><span>Tap ' + glyph('share') + ' <b>Share</b> in ' + (host ? 'Safari' : browserName()) + '.</span></li>' +
         '<li><span>Tap ' + glyph('add') + ' <b>Add to Home Screen</b>.</span></li>' +
         '<li><span>Open Frank from your Home Screen. Tap <b>I already have a plan</b>, then <b>Paste</b>.</span></li></ol>';
     }
@@ -676,24 +711,43 @@
           '<button class="btn dark block" data-act="keep-moved">' + (filled(app.state()) ? 'Bring my progress' : 'Go to the new app') + '</button></div>' };
       }
       if (!name) return null;
-      // Welcome has little room: the warning and one line of what to do, or one small button
-      return { id: 'keep-inapp', priority: 50, html: '<div class="infobox"><p><b>You\'re in ' + name + '\'s browser.</b> Open the app in Safari or Chrome to keep your plan.</p>' +
-        (ios() ? '<p>Tap <span aria-hidden="true">•••</span><span class="sr">the menu</span> then <b>' + (name === 'TikTok' ? 'Open in browser' : 'Open in external browser') + '</b>.</p>'
-          : android() ? '<a class="btn dark small" style="align-self:flex-start" href="' + esc(chromeLink()) + '">Open in Chrome</a>' : '') + '</div>' };
+      // Welcome has little room: the warning and what to do in one short paragraph (Android: and one small button). The
+      // coach makes room for it (app.css), so the heading stays above the buttons
+      var how = ios() ? 'To keep your plan, tap <span aria-hidden="true">•••</span><span class="sr">the menu</span> then <b>' + (name === 'TikTok' ? 'Open in browser' : 'Open in external browser') + '</b>.'
+        : android() ? 'To keep your plan, open the app in Chrome.' : 'Open the app in Safari or Chrome to keep your plan.';
+      return { id: 'keep-inapp', priority: 50, html: '<div class="infobox"><p><b>You\'re in ' + name + '\'s browser.</b> ' + how + '</p>' +
+        (android() && !ios() ? '<a class="btn dark small" style="align-self:flex-start" href="' + esc(chromeLink()) + '">Open in Chrome</a>' : '') + '</div>' };
     });
     app.html('welcome.cta', function () { return '<button class="ob-skip" data-act="keep-have">I already have a plan</button>'; });
-    // the Plan: Undo for a few seconds after a plan came; the move card for a plan made inside Instagram's browser
+    // what stays inside Instagram's browser, for its move cards: a plan, or Frank's sessions and access, or other progress
+    function stays(name, S) {
+      return 'You\'re in ' + name + '\'s browser, and ' + (S.profile ? 'your plan stays in it. Move it' : (S.inbox || []).length ? 'your sessions from Frank stay in it. Move them' :
+        'your progress stays in it. Move it') + ' to Safari or Chrome.';
+    }
+    // the Plan: Undo for a few seconds after a plan came; the move card inside Instagram's browser once there's something
+    // to keep there: a plan, or Frank's sessions and client access (his clients come by his link, never through Welcome)
     app.card('plan.top', function () {
       if (undo) {
         return { id: 'keep-undo', priority: 100, html: '<section class="card"><div class="between"><p class="small">Not what you wanted? You can undo it for a few seconds.</p>' +
           '<button class="btn two small" data-act="keep-undo">Undo</button></div></section>' };
       }
-      var moved = movedCard(), name = inApp();
-      if (moved || !name || !app.state().profile) return moved;
-      return { id: 'keep-inapp', priority: 60, html: '<section class="card"><p class="label">Keep your plan</p><p class="small">You\'re in ' + name + '\'s browser, and your plan stays in it. Move it to Safari or Chrome.</p>' +
-        '<button class="btn block" data-act="keep-move">Move my plan</button></section>' };
+      var moved = movedCard(), name = inApp(), S = app.state();
+      if (moved || !name || !filled(S)) return moved;
+      return { id: 'keep-inapp', priority: 60, html: '<section class="card"><p class="label">' + (S.profile ? 'Keep your plan' : 'Keep your progress') + '</p>' +
+        '<p class="small">' + esc(stays(name, S)) + '</p><button class="btn block" data-act="keep-move">Move my plan</button></section>' };
     });
     ['workouts.top', 'today.top', 'me.top', 'frank.top'].forEach(function (s) { app.card(s, movedCard); });
+    // Me's "Put it on your home screen" card, in place of its own steps. An iPhone: the sheet, whose first step copies the
+    // plan, since the app on the Home Screen starts empty. Inside Instagram's browser, which can't put it there: move first.
+    // Elsewhere (Android, a computer) the app's own steps: an installed app there keeps the browser's data
+    app.html('me.install', function () {
+      var name = inApp(), S = app.state();
+      if (name) {
+        return filled(S) ? '<p class="small">' + esc(stays(name, S)) + '</p><button class="btn two block" data-act="keep-move">Move my plan</button>' :
+          '<p class="small">' + esc('You\'re in ' + name + '\'s browser. Open the app in Safari or Chrome to keep your plan.') + '</p>';
+      }
+      return ios() ? '<button class="btn two block" data-act="keep-install">Show me how</button>' : '';
+    });
     // Me > Your data: the backup, the move link, what the browser said about keeping the data
     app.html('me.data', function () {
       var S = app.state(), k = kept(), out = '', any = filled(S);
@@ -739,11 +793,12 @@
     })();
 
     // ---- events ---------------------------------------------------------------------------------------------------------
-    // the Home Screen sheet: once, on a phone's finish screen, when the app isn't on the Home Screen yet
+    // the Home Screen sheet: once, on a phone's finish screen, when the app isn't on the Home Screen yet. Not inside
+    // Instagram's (Facebook's, TikTok's) browser, which can't put it there: the Plan's move card is the way out of it
     var askAfter = null;
     app.on('finish', function (rec) {
       askKeep();
-      if (!kept().installAsked && (ios() || android()) && !installed() && !framed) askAfter = rec.id;
+      if (!kept().installAsked && (ios() || android()) && !installed() && !framed && !inApp()) askAfter = rec.id;
     });
     function autoInstall(id) {
       var o = document.getElementById('overlay');

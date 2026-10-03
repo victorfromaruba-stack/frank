@@ -479,6 +479,8 @@ body:not(.light) .warnbox { background: rgba(242, 201, 107, 0.12); color: var(--
 .coach-card .cc b { font: 900 24px/1.1 var(--f-display); text-transform: uppercase; }
 .coach-card .cc p { margin: 0; color: var(--ink-d2); font-size: 15px; }
 .welcome-hero { position: relative; flex: 1; min-height: 46vh; margin: calc(-1 * (var(--safe-t) + 10px)) -20px 0; background: linear-gradient(170deg, #12603A 0%, #053A1B 55%, #012D12 100%); overflow: hidden; }
+/* a card under the coach (the welcome.top slot, a module's) takes its room from the coach: the heading stays above the buttons */
+.ob:has(> [data-slot="welcome.top"]) .welcome-hero { min-height: 28vh; }
 .welcome-hero .fig-box { position: absolute; inset: calc(var(--safe-t) + 40px) 0 0 0; aspect-ratio: auto; border-radius: 0; }
 .welcome-hero:has(.is3d) { background: var(--studio); }
 .welcome-hero .fig-box.is3d { background: transparent !important; }

@@ -358,6 +358,25 @@ module.exports = {
       p = await t.page({ state: L.member() });
       await p.evaluate(() => { WBF.FRANK.home = 'https://app.example.org/'; WBF.app.tab('plan'); });
       await snap(p, 'plan after the app moved to a new address', { full: false });
+      // one of Frank's clients who came by his session link in Instagram's browser: the Plan under the session
+      p = await t.page({ ua: L.UA.instagramIphone, hash: 'frank.' + L.pack(L.spec({ i: 'ig1', t: 'Glutes and core' })) });
+      await app.waitHeading(p, 'Glutes and core');
+      await app.tap(p, '[data-act="back"]');
+      await app.waitTitle(p, 'Plan');
+      await snap(p, "plan of Frank's client in Instagram's browser", { full: false });
+      // Me in Instagram's browser: Put it on your home screen says to move the plan first
+      p = await t.page({ ua: L.UA.instagramIphone, state: L.member() });
+      await tab(p, 'me');
+      await p.evaluate(() => { const c = [...document.querySelectorAll('.card')].find((x) => /Put it on your home screen/i.test(x.innerText)); if (c) c.scrollIntoView({ block: 'center' }); });
+      await snap(p, "me in Instagram's browser: put it on your home screen", { full: false });
+      // a plan that brings a pregnancy and a sore spot to a phone with its own plan: the box says so first
+      p = await t.page({ state: L.member({ name: 'Own', sex: 'f' }) });
+      await tab(p, 'me');
+      const [pick] = await Promise.all([p.waitForEvent('filechooser', { timeout: 10000 }), app.tap(p, '[data-act="keep-restore"]')]);
+      await pick.setFiles({ name: 'backup.json', mimeType: 'application/json',
+        buffer: Buffer.from(JSON.stringify({ app: 'wellness-by-frank', v: 1, data: L.member({ sex: 'f', health: { pregnant: true }, injuries: ['knee'] }) })) });
+      await p.waitForFunction(() => !!document.querySelector('#overlay:not([hidden]) .modal'), null, { timeout: 10000 });
+      await snap(p, 'bring your plan here? (health answers onto a phone with its own plan)', { full: false });
     });
 
     await t.flow('personal prototype', async () => {

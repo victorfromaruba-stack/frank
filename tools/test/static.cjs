@@ -117,8 +117,14 @@ module.exports = {
         t.check(d && d.w === want[0] && d.h === want[1], 'manifest icon ' + i.src + ' is ' + (d ? d.w + 'x' + d.h : 'not a PNG') + ', the manifest says ' + i.sizes);
       }
       t.check((m.icons || []).some((i) => /maskable/.test(i.purpose || '')), 'manifest has no maskable icon');
-      // one install per address: the id is the start (Chrome would otherwise take start_url, which may change)
-      t.equal(m.id, './', 'manifest id');
+      // The app's identity: a phone that installed it knows it by this, and a manifest with another one is another app
+      // (Install again, a second icon, no more updates to the installed one). It is the id read against the ORIGIN of
+      // start_url, or start_url itself without an id: "./" would be the root of the whole site, not the app's folder.
+      // On the live site it must stay the folder the app is served from, what every installed phone has
+      const site = new URL(L.SITE), start = new URL(m.start_url, new URL('manifest.webmanifest', site));
+      let id = start;
+      if (typeof m.id === 'string' && m.id) { const u = new URL(m.id, start.origin); if (u.origin === start.origin) id = u; }
+      t.equal(id.href.split('#')[0], site.href, "the app's identity on the live site (manifest id, else start_url), as installed phones know it");
       // Android's richer install dialog shows phone-shaped screenshots. They are for that dialog only: installed phones
       // never need them, so they stay out of SHELL and LAZY in sw.js
       const sw = swInfo(read('sw.js'));

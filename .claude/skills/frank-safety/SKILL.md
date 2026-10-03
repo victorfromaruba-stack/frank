@@ -54,6 +54,14 @@ What a person can change, and what it changes:
   and, for pregnancy, food and weight too.
 - The food card's three switches change food and weight only. What the profile says
   shows "From your plan answers" and can't be switched off there.
+- A backup or a move link brought to a phone with a plan of its own (`careful()` in
+  `js/keep.js`): the phone keeps its plan, but nothing the person told the app on the other
+  side is lost. A yes to a health question or pregnancy comes along as Me's switches set it
+  (no restart: the sessions follow), Cleared by a doctor stays only when it covered every
+  yes from both sides, the sore spots join, the year of birth that asks for more care wins
+  (60 and over, or maybe under 18), and the food card's switches stay on if either side had
+  them on. The box before it says "with the health answers and sore spots from both".
+  Tested by the `keep my progress: a plan that comes brings its health answers` flow.
 
 ## Building something that touches these rules
 

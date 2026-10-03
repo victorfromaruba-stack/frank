@@ -80,7 +80,7 @@ The app's own functions (also `WBF.app`, which the tests and the showcase captur
 |---|---|
 | `state()` | the saved data (`wbf.v1`). Ask for it each time: another window's save or Delete my data puts a new object there |
 | `save()` | writes it; `true` when the phone saved. No "Saved" toast on `false` |
-| `replace(data)` | puts a whole saved data in place of the phone's (a backup or a move link brought in, or its Undo: `js/keep.js`), read the way the app reads its own (what's missing from the defaults, an older profile brought up to date), and saves it. The coach follows the new profile and the modules hear `profile`. `false`: nothing saved (the phone refused, or a workout is running: never replace during one). Check what you pass first: it's taken as it is |
+| `replace(data)` | puts a whole saved data in place of the phone's (a backup or a move link brought in, or its Undo: `js/keep.js`), read the way the app reads its own (what's missing from the defaults, an older profile brought up to date), and saves it with a new `stamp`: another open window of the browser (the installed app next to a tab) then takes it as it is instead of merging its own memory back in, so an Undo holds there too. The coach follows the new profile and the modules hear `profile`. `false`: nothing saved (the phone refused, or a workout is running: never replace during one). Check what you pass first: it's taken as it is |
 | `refresh()` | draws the screen again where it is: the scroll, typed text and the focus stay. Use it after a tap in your card |
 | `render()` | draws the screen again, at the scroll it was left at (the top, on a tab). The app's own taps use it |
 | `go(name, params)`, `back()`, `tab(name, params)`, `cur()` | screens: open one, Back, a tab afresh, the one showing (`{ name, params }`). A name that isn't a screen throws |
@@ -129,7 +129,7 @@ modules.
 
 | Slot | Kind | Where | `fn` gets |
 |---|---|---|---|
-| `welcome.top` | card | Welcome, under the coach, above "Your personal plan". A light screen | the screen's params |
+| `welcome.top` | card | Welcome, under the coach (which shrinks to make room), above "Your personal plan". A light screen | the screen's params |
 | `welcome.cta` | html | Welcome, among its buttons, in the row with "Look around first": a small text button (`.ob-skip`). A light screen | the screen's params |
 | `plan.top` | card | Plan, under the date, above Frank's session and the plan card; with or without a plan | the screen's params |
 | `plan.after-hero` | html | Plan, under the plan card | the screen's params |
@@ -137,6 +137,7 @@ modules.
 | `today.top` | card | Today, under the heading, above the week strip | the screen's params |
 | `me.top` | card | Me, under the name, above the numbers | the screen's params |
 | `me.data` | html | Me, inside Your data, above "Delete my data and start over" | the screen's params |
+| `me.install` | html | Me, in the "Put it on your home screen" card (not in the installed app): in place of the card's own iPhone and Android steps. Not shown while Chrome offers its own Install the app | the screen's params |
 | `frank.top` | card | Frank, under his bio, above "Train with Frank in person" | the screen's params |
 | `pay.top` | card | the price screen, above its heading. A light screen | the screen's params |
 | `done.after-stats` | html | the finish screen, under Time, Moves and kcal | the session's record |
@@ -147,9 +148,11 @@ Welcome and the price screen are light (`body.light`): use what those screens us
 (`.infobox`, `.ob-note`, `.btn.dark`, `.btn.white`). Everywhere else, the app's dark
 classes: `.card`, `.label`, `.small`, `.lead`, `.btn.two.small`, `.rowx`. The screen
 checks in every test (contrast, tap sizes, names) then hold for your card too. Welcome
-has little room: the coach fills the top and the buttons stay at the bottom, so a card
-there pushes the text under the buttons until the person scrolls. Keep it to two lines,
-and look at the screen.
+has little room: the coach fills the top and the buttons stay at the bottom. With a card
+in `welcome.top` the coach shrinks to make room (`app.css`), but a longer card still
+pushes the text under the buttons until the person scrolls. Keep it to two lines (or one
+line and a small button), and look at the screen at 390x844 and 375x667 (the keep suite
+checks that "Your personal plan" stays above the buttons with its card).
 
 ## The events
 
