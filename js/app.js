@@ -305,9 +305,10 @@
   // address after '#'. A plain #anchor is none
   function isLink(h) { return /^[a-z][a-z0-9-]*\./.test(h); }
   // the code in a link, a whole message or the code alone. The one after "#frank." first: wellnessbyfrank.com and
-  // app.wellnessbyfrank.nl have a "frank." of their own
+  // app.wellnessbyfrank.nl have a "frank." of their own. A link that a mail or chat app wrapped (Outlook's Safe Links,
+  // Google's or Instagram's redirect) carries its '#' as %23, or as %2523 when it was wrapped twice
   function codeIn(text) {
-    text = String(text || '').trim();
+    text = String(text || '').trim().replace(/%(?:25)*23/g, '#');
     var m = text.match(/#frank\.([A-Za-z0-9_-]{8,})/) || text.match(/(?:^|\s)frank\.([A-Za-z0-9_-]{8,})/);
     return m ? m[1] : (/^[A-Za-z0-9_-]{24,}$/.test(text) ? text : null);
   }
@@ -499,7 +500,15 @@
   }
 
   var drawn = '';                     // the screen on display (its name and onboarding step): drawn again, it keeps the focus
+  // A screen that isn't there (a typo, or the screen of a module that was left out) goes, with any other on the stack,
+  // and the one under it shows (the Plan, or the welcome, when none is left). The console says so: a test fails on it
+  function noScreen() {
+    var keep = stack.filter(function (x) { return SCREENS[x.name]; });
+    try { console.error('Wellness by Frank: there is no screen "' + cur().name + '"'); } catch (e) { /* no console */ }
+    setStack(keep.length ? keep : [{ name: S.profile ? 'plan' : 'welcome', params: {} }]);
+  }
   function render(top) {
+    if (!SCREENS[cur().name]) { noScreen(); return; }
     var c = cur(), scr = SCREENS[c.name], key = focusKey(app), here = c.name + '/' + ((c.params || {}).step || '');
     var same = drawn === here, first = !drawn;
     drawn = here;
@@ -2030,7 +2039,7 @@
         '<section class="card"><p class="label">The science</p><p class="small">The rules behind the generated plans, with every source.</p><button class="btn two block" data-act="science">Why the plans work</button></section>' +
         (coachOn() ? '<section class="card quiet"><p class="label">For Frank</p><p class="small">Write sessions for your clients and send them as a link.</p>' +
           '<button class="btn two block" data-act="coach">Coach tools</button></section>'
-          : '<button class="link quiet" data-act="coach">Frank? Unlock coach tools</button>') + '</div>';
+          : '<button class="link quiet" data-act="coach">Frank? Open coach tools</button>') + '</div>';
     }
   };
 
@@ -2091,11 +2100,11 @@
   // Coach tools on a phone without Frank's coach code: the code field, nothing else
   function coachLock() {
     return '<div class="screen bare">' + backBar('Coach tools') +
-      '<div class="stack tight"><h1 class="h1">Unlock coach tools</h1>' +
+      '<div class="stack tight"><h1 class="h1">Open coach tools</h1>' +
       '<p class="lead">Type your coach code. Coach tools then stay open on this phone.</p></div>' +
       '<form class="stack" data-form="coach-code"><label for="coach-in" class="sr">Coach code</label>' +
       '<input class="input" id="coach-in" maxlength="60" placeholder="Coach code" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">' +
-      '<button class="btn block" type="submit">Unlock</button></form></div>';
+      '<button class="btn block" type="submit">Open</button></form></div>';
   }
   SCREENS.coach = {
     title: function () { return 'Coach tools'; },
@@ -2377,7 +2386,10 @@
     join: function () { closeOverlay(); go('join', {}); },
     coach: function () { go('coach', {}); },
     science: function () { closeOverlay(); go('science', {}); },
-    cite: function (el) {
+    // a source's number scrolls to the source. Not the link's own jump to #src-N: the phone's history would count it, and
+    // the app would take it for Back
+    cite: function (el, e) {
+      if (e) e.preventDefault();
       var t = document.getElementById('src-' + el.getAttribute('data-n'));
       if (t) { t.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' }); t.classList.add('hit'); setTimeout(function () { t.classList.remove('hit'); }, 1600); }
     },
@@ -2420,7 +2432,9 @@
     'c-save': function () { if (saveDraft() && savedOk) toast('Saved'); },
     'c-send': function () { var sp = saveDraft(); if (sp) sendSheet(sp); },
     'next-round': function () {
+      var old = JSON.parse(JSON.stringify(S.profile));
       S.profile.round = (S.profile.round || 1) + 1; S.profile.start = iso(); S.done = {}; save();
+      emit('profile', old, S.profile, true);       // a new start and harder sessions
       render(true); toast('Round ' + S.profile.round + ' starts today');
     },
     moves: function () { go('moves', {}); },
@@ -2491,8 +2505,10 @@
       S.flags.manual[k] = !S.flags.manual[k]; save(); render(false);
     },
     health: function (el) {
-      var k = el.getAttribute('data-k'), h = S.profile.health = S.profile.health || {};
-      h[k] = !h[k]; save(); render(false);
+      var k = el.getAttribute('data-k'), old = JSON.parse(JSON.stringify(S.profile)), h = S.profile.health = S.profile.health || {};
+      h[k] = !h[k]; save();
+      emit('profile', old, S.profile, healthSig(old.health) !== healthSig(h));     // Pregnancy mode or Cleared by a doctor
+      render(false);
       toast(k === 'cleared' ? (h[k] ? 'Your plan can include vigorous work now' : 'Your plan stays gentle') : (h[k] ? 'Pregnancy mode is on' : 'Pregnancy mode is off'));
     },
     water: function (el) {
@@ -2741,12 +2757,13 @@
     };
   }
   // The app's own functions: for the modules (each gets them with its own ways in, below), the tests and the showcase
-  // captures (.claude/skills/frank-showcase)
+  // captures (.claude/skills/frank-showcase). atRisk, noBmi and flags are the safety rules (.claude/skills/frank-safety):
+  // a module asks them, it never makes its own copy
   var base = W.WBF.app = {
     state: function () { return S; }, save: save, render: render, refresh: refresh, go: go, back: back, tab: tab, cur: cur,
     toast: toast, openSheet: openSheet, closeOverlay: closeOverlay, confirmBox: confirmBox,
     status: status, daysLeft: daysLeft, planDays: planDays, nextDay: nextDay, session: session, kcalOf: kcalOf, kcal: kcalOf,
-    mountFigures: mountFigures,
+    atRisk: atRisk, noBmi: noBmi, flags: flags, mountFigures: mountFigures,
     sheet: function (id, tabName) { exerciseSheet(id); if (tabName && XS) { XS.tab = tabName; paintExMedia(); } },
     util: { esc: esc, iso: iso, fromIso: fromIso, addDays: addDays, monday: monday, mins: mins, mmss: mmss, plural: plural, ic: ic,
             figHtml: figHtml, thumbHtml: thumbHtml, backBar: backBar, fmtShort: fmtShort, fmtLong: fmtLong }
@@ -2761,6 +2778,10 @@
       mod.undo.push(function () { reg[k].splice(reg[k].indexOf(r), 1); });
     };
     var known = function (list, k) { if (list.indexOf(k) === -1) throw new Error('"' + k + '" is none of: ' + list.join(', ')); };
+    // a screen that isn't there (a typo) stops the module's handler before anything moves: the app stays where it was
+    var there = function (name) { if (!SCREENS[name]) throw new Error('there is no screen "' + name + '"'); };
+    me.go = function (name, params) { there(name); go(name, params); };
+    me.tab = function (name, params) { there(name); tab(name, params); };
     // fn(params) gives null or { id, priority, html }: of all the modules' cards in the slot, one shows
     me.card = function (name, fn) { known(ONE, name); add(SLOTS, name, fn); };
     // fn(params) gives html, or '' for nothing
@@ -2777,7 +2798,9 @@
       SCREENS[name] = safeScreen(mod, name, def, null);
       mod.undo.push(function () { delete SCREENS[name]; });
     };
-    // replaces a screen of the app (or of a module that started earlier); gives back the one it replaced, to draw it still
+    // replaces a screen of the app (or of a module that started earlier) and gives back the one it replaced. Its title, html
+    // and mount run in place of the old one's: one that draws old.html(p) inside it calls old.title(p) and old.mount(p) too
+    // (a search, the rulers and inputs come alive in mount)
     me.override = function (name, def) {
       var old = SCREENS[name];
       if (!old) throw new Error('there is no screen "' + name + '" to override');
@@ -2819,13 +2842,18 @@
     pushState();
     return true;
   }
-  // a link opened in a tab that has the app: a sheet or a box that is open closes (not during a workout), then the
-  // modules and Frank's sessions get the link
+  // the modules first, then Frank's sessions
+  function openLink(h) { if (!emit('hash', h) && fromLink(h)) render(true); }
+  // A link opened in a tab that has the app: a sheet or a box that is open closes (not during a workout), a box like its
+  // Cancel, as with Back and Escape. The box's answer goes first, with the Back it may take ("Restart your 28 days?"
+  // saves the Edit as Keep my progress, then leaves it): the link opens over the screen it leaves
   W.addEventListener('hashchange', function () {
-    var h = takeLink();
+    var h = takeLink(), no = null, n = 0;
     if (!h) return;
-    if (cur().name !== 'player') closeOverlay();
-    if (!emit('hash', h) && fromLink(h)) render(true);
+    if (cur().name !== 'player') { no = $('.modal', overlay) ? overlay._no : null; closeOverlay(); }
+    if (!no) { openLink(h); return; }
+    no();
+    setTimeout(function wait() { if ((selfBack || unwound) && ++n < 40) setTimeout(wait, 25); else openLink(h); }, 0);
   });
   // the modules first (one that comes after app.js starts as it comes, too late for 'boot'), then a link, then the screen
   var queue = [].concat(W.WBF.ext || []);

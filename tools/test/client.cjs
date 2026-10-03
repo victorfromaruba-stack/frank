@@ -25,7 +25,7 @@ async function otherWindow(t, a, sp) {
 
 module.exports = {
   name: 'client',
-  about: 'client codes (also typed while a coach loads), session links (opened and pasted, from github.io and Frank\'s own domains, broken and hostile ones, opened in a second window, also during a workout, edited and sent again), Back after the join screen, Coach tools: closed without Frank\'s coach code, opened with it (also after a reload), locked again, a link made on the same phone gives no access, build, send, open the link on a fresh phone, Back',
+  about: 'client codes (also typed while a coach loads), session links (opened and pasted, from github.io and Frank\'s own domains, also wrapped by Outlook, Google or Instagram, broken and hostile ones, opened in a second window, also during a workout, edited and sent again), Back after the join screen, Coach tools: closed without Frank\'s coach code, opened with it (also after a reload), locked again, a link made on the same phone gives no access, build, send, open the link on a fresh phone, Back',
   async run(t) {
     await t.flow('client codes', async () => {
       const p = await t.page();
@@ -164,21 +164,29 @@ module.exports = {
       await app.waitTitle(p, 'Workout');
     });
 
-    await t.flow('session link pasted from each address', async () => {
+    await t.flow('session link pasted from each address, also wrapped by a mail or chat app', async () => {
       // Frank's message as WhatsApp hands it over, from GitHub Pages and from his own domains: the code is what follows
-      // "#frank.", not the "frank." in wellnessbyfrank.com
+      // "#frank.", not the "frank." in wellnessbyfrank.com. A link that Outlook, Google or Instagram wrapped in a link of
+      // their own carries its "#" as %23 (as %2523 when it was wrapped twice)
       const p = await t.page();
       const hosts = ['https://victorfromaruba-stack.github.io/frank/', 'https://wellnessbyfrank.com/', 'https://app.wellnessbyfrank.nl/'];
-      for (const [n, host] of hosts.entries()) {
-        const sp = L.spec({ i: 'qa-host' + n, t: 'Session ' + (n + 1) + ' of 3' });
+      const wrapped = [
+        ['Outlook Safe Links, github.io', (c) => 'https://eur01.safelinks.protection.outlook.com/?url=https%3A%2F%2Fvictorfromaruba-stack.github.io%2Ffrank%2F%23frank.' + c + '&data=05%7C02&reserved=0'],
+        ['a Google redirect, wellnessbyfrank.com', (c) => 'https://www.google.com/url?q=https://wellnessbyfrank.com/%23frank.' + c + '&sa=D&source=gmail'],
+        ["Instagram's redirect, app.wellnessbyfrank.nl", (c) => 'https://l.instagram.com/?u=https%3A%2F%2Fapp.wellnessbyfrank.nl%2F%23frank.' + c + '&e=AT0'],
+        ['Outlook around a Google redirect', (c) => 'https://eur01.safelinks.protection.outlook.com/?url=https%3A%2F%2Fwww.google.com%2Furl%3Fq%3Dhttps%253A%252F%252Fwellnessbyfrank.com%252F%2523frank.' + c + '%26sa%3DD&data=05']
+      ];
+      const messages = hosts.map((host) => [host, (c) => 'Open it here: ' + host + '#frank.' + c]).concat(wrapped);
+      for (const [n, [what, link]] of messages.entries()) {
+        const sp = L.spec({ i: 'qa-host' + n, t: 'Session ' + (n + 1) + ' of ' + messages.length });
         await p.evaluate(() => WBF.app.go('join'));
-        await p.fill('#join-in', 'Hi Sam, your next session: ' + sp.t + '. Open it here: ' + host + '#frank.' + L.pack(sp));
+        await p.fill('#join-in', 'Hi Sam, your next session: ' + sp.t + '. ' + link(L.pack(sp)));
         await submit(p);
         const opened = await app.waitHeading(p, sp.t, 5000).then(() => true, () => false);
         const said = await app.toast(p);
-        t.check(opened, () => 'a message with a link on ' + host + ' did not open the session (toast: "' + said + '")');
+        t.check(opened, () => 'a message with a link (' + what + ') did not open the session (toast: "' + said + '")');
       }
-      t.equal((await app.stored(p)).inbox.map((x) => x.i), ['qa-host2', 'qa-host1', 'qa-host0'], 'sessions from Frank after the three messages');
+      t.equal((await app.stored(p)).inbox.map((x) => x.i), messages.map((m, n) => 'qa-host' + n).reverse(), 'sessions from Frank after the ' + messages.length + ' messages');
     });
 
     await t.flow('an edited session sent again shows as new', async () => {
@@ -302,12 +310,17 @@ module.exports = {
       const p = await t.page({ state: L.state({ profile: L.profile({ start: L.isoDay(-10) }), access: { trialStart: L.isoDay(-10) } }) });
       await app.tap(p, '.tab[data-tab="frank"]');
       const frank = await app.text(p);
-      t.has(frank, 'Frank? Unlock coach tools', 'the Frank tab for a member');
+      t.has(frank, 'Frank? Open coach tools', 'the Frank tab for a member');
       t.lacks(frank, 'Write sessions for your clients', 'the Frank tab for a member');
       await t.look(p, 'frank for a member');
       await app.tap(p, '[data-act="coach"]');
       await app.waitTitle(p, 'Coach tools');
       await t.look(p, 'coach tools locked');
+      // plain verbs (.claude/skills/frank-words): "Open coach tools", not "Unlock"
+      const locked = await app.text(p);
+      t.has(locked, 'Open coach tools', 'Coach tools for a member');
+      t.equal((await p.locator('form[data-form="coach-code"] button[type="submit"]').textContent()).trim(), 'Open', 'the button under the code field');
+      t.lacks(frank + ' ' + locked, /unlock/i, 'the Frank tab and Coach tools for a member');
       const shut = async (what) => t.equal([await p.locator('[data-act="coach-new"]').count(), await p.locator('#c-t').count(), await p.locator('#coach-in').count()],
         [0, 0, 1], what + ' [New session, the session editor, the code field]');
       await shut('Coach tools for a member');
@@ -345,7 +358,7 @@ module.exports = {
       await L.settle(p);
       // FRANK.coachCodes without this code, as after a new coach code (the test-only one lives in the page): shut
       await app.tap(p, '.tab[data-tab="frank"]');
-      t.has(await app.text(p), 'Frank? Unlock coach tools', 'the Frank tab once FRANK.coachCodes has another code');
+      t.has(await app.text(p), 'Frank? Open coach tools', 'the Frank tab once FRANK.coachCodes has another code');
       // the code still in the list: open after the reload, without typing it again
       await app.addCoachCode(p);
       await app.tap(p, '.tab[data-tab="frank"]');
@@ -362,13 +375,13 @@ module.exports = {
       t.equal((await app.stored(p)).coachMode, null, 'saved coach mode after Lock');
       await app.tap(p, '[data-act="back"]');
       await app.waitTitle(p, 'Frank');
-      t.has(await app.text(p), 'Frank? Unlock coach tools', 'the Frank tab after Lock');
+      t.has(await app.text(p), 'Frank? Open coach tools', 'the Frank tab after Lock');
     });
 
     await t.flow("own link: Frank's phone doesn't become a client's", async () => {
       // how a member used to get the whole app for free: a session made here, sent, then opened on the same phone
       const p = await t.page({ state: L.state({ profile: L.profile({ start: L.isoDay(-10) }), access: { trialStart: L.isoDay(-10) } }) });
-      await app.unlockCoach(p);
+      await app.openCoach(p);
       await app.tap(p, '[data-act="coach-new"]');
       await p.fill('#c-t', 'My own session');
       await app.tap(p, '[data-act="c-add"]');
@@ -401,7 +414,7 @@ module.exports = {
 
     await t.flow('coach tools round trip', async () => {
       const p = await t.page({ state: L.member() });
-      await app.unlockCoach(p);                              // Frank's phone: his coach code opens Coach tools
+      await app.openCoach(p);                                // Frank's phone: his coach code opens Coach tools
       await app.waitTitle(p, 'Coach tools');
       await app.tap(p, '[data-act="coach-new"]');
       await app.waitTitle(p, 'Session');

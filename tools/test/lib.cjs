@@ -670,9 +670,9 @@ const app = {
     const list = WBF.FRANK.coachCodes = WBF.FRANK.coachCodes || [];
     if (list.indexOf(h) === -1) list.push(h);
   }, coachHash(code)),
-  // Frank's phone: Coach tools opened the way Frank does it, Frank tab > "Frank? Unlock coach tools", with the
+  // Frank's phone: Coach tools opened the way Frank does it, Frank tab > "Frank? Open coach tools", with the
   // test-only coach code. Start on a screen with the tab bar; it ends on Coach tools
-  async unlockCoach(page, code = QA_COACH) {
+  async openCoach(page, code = QA_COACH) {
     await app.addCoachCode(page, code);
     await app.tap(page, '.tab[data-tab="frank"]');
     await app.tap(page, '[data-act="coach"]');

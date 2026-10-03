@@ -3,7 +3,7 @@ name: frank-module
 description: How to add a feature to the Wellness by Frank app in its own file, js/<feature>.js, through the module seam (WBF.ext) instead of editing js/app.js. Use it whenever a feature is added to Frank's app, and whenever a card, banner, button, sheet, screen, link (#name.…) or saved setting is added to Plan, Today, Me, Frank, Welcome, the price screen, the finish screen or the exercise sheet. Use it for every roadmap feature (keep my progress and backups, the fast start, your week and reminders, the honest trial, the finish screen and story cards, train with Frank, Frank in the app, the day-28 proof, a faster coach), and whenever you touch WBF.ext, WBF.app, a js/*.js module, the script list in index.html or a module's test. Use it even when the change looks small enough to drop into app.js: that's how nine features end up colliding in one file.
 metadata:
   owner: victor
-  version: "1.0"
+  version: "1.1"
 ---
 # Wellness by Frank: a feature in its own file
 
@@ -64,6 +64,10 @@ When a module throws:
 - later, in a card, a screen (or a screen's `html()` that gives no html), an action or an
   event: only that piece is skipped (a replaced screen falls back to the one it replaced, a
   new one shows just its Back button);
+- `app.go()` or `app.tab()` to a screen that isn't there (a typo) throws before anything
+  moves, so the handler stops there and the app stays on its own screen. A screen that isn't
+  there by another way (one of a module that was left out) is dropped, and the one under it
+  shows: the console says `there is no screen "<name>"`;
 - either way the console says `Wellness by Frank: module <name> failed (<where>)`, once
   per place, and the suites fail on console errors. A broken module never passes a run.
 
@@ -77,10 +81,11 @@ The app's own functions (also `WBF.app`, which the tests and the showcase captur
 | `save()` | writes it; `true` when the phone saved. No "Saved" toast on `false` |
 | `refresh()` | draws the screen again where it is: the scroll, typed text and the focus stay. Use it after a tap in your card |
 | `render()` | draws the screen again, at the scroll it was left at (the top, on a tab). The app's own taps use it |
-| `go(name, params)`, `back()`, `tab(name, params)`, `cur()` | screens: open one, Back, a tab afresh, the one showing (`{ name, params }`) |
+| `go(name, params)`, `back()`, `tab(name, params)`, `cur()` | screens: open one, Back, a tab afresh, the one showing (`{ name, params }`). A name that isn't a screen throws |
 | `toast(text)`, `openSheet(html, onClose, full)`, `closeOverlay()`, `confirmBox(text, yes, onYes, opts)` | a toast, a sheet, a question box (`opts`: `body`, `no`, `onNo`, `extra`, `onExtra`) |
 | `status()`, `daysLeft()` | `'new'`, `'trial'`, `'ended'`, `'member'` or `'client'`; days left of the free trial |
 | `planDays()`, `nextDay()`, `session(workoutId, day)`, `kcalOf(session, seconds)` | the 28 days, the next one to train, a session as the plan builds it, its calories (always shown with "est.") |
+| `atRisk(p)`, `noBmi(p)`, `flags(p)` | the safety rules (`.claude/skills/frank-safety/`), for the saved profile or `p`: no food, drink or weight advice and no weight target when `atRisk()`; no BMI when `noBmi()`; `flags()` says why (`pregnant`, `child`, `medical`). They follow the answers, Me's switches and the food card's: ask each time you draw, never copy the rule |
 | `sheet(moveId, tab)`, `mountFigures(root)` | a move's sheet; draws the coach, thumbnails and muscle maps in html you put on screen yourself |
 
 `app.util`: `esc` (escape every text you put in html), `iso`, `fromIso`, `addDays`,
@@ -96,8 +101,20 @@ The module's ways in:
 | `on(event, fn)` | the events below |
 | `action(name, fn)` | `data-act="<name>"` runs `fn(el, event)`. The names are shared with the app's, so a name that exists stops the module. Start yours with the module's name. Names starting `pl-` run only during a workout |
 | `screen(name, def)` | a screen of its own: `{ title(p), html(p), mount(p) }`, opened with `app.go(name, params)`. The title is the screen's name in `document.title` and in tests |
-| `override(name, def)` | replaces a screen and gives back the one it replaced, to draw it still (`old.html(p)`). If yours throws, the old one shows |
+| `override(name, def)` | replaces a screen and gives back the one it replaced. Your `title`, `html` and `mount` run in place of its own: to draw the old one inside yours, call all three (below). If yours throws, the old one shows |
 | `data(key, fresh)` | the module's own data, `state()[key]`, made by `fresh()` the first time it's asked for with one. One key per module, never one of the app's: call `app.data(key)` once as it starts to claim it |
+
+A screen of the app inside yours: its search, rulers and inputs come alive in its `mount`
+(Workouts, the exercise library, the finish screen, the onboarding, the session editor),
+so call that too, or they do nothing.
+
+```js
+var old = app.override('workouts', {
+  title: function (p) { return old.title(p); },
+  html: function (p) { return '<section class="card">…</section>' + old.html(p); },
+  mount: function (p) { if (old.mount) old.mount(p); }
+});
+```
 
 Each card or piece sits in `<div data-slot="…" data-module="…" data-card="…">` that takes
 no room on screen (`display: contents`): the screen keeps its own spacing, and tests find
@@ -133,10 +150,10 @@ and look at the screen.
 | Event | Gets | When |
 |---|---|---|
 | `boot` | `link` | once, after every module has started, before the first screen. `link` is the address after `#` when it looks like a link (`name.rest`), else `''`. Return `true` when your module opened it: the modules after yours and the app's own `#frank.` links don't get it |
-| `hash` | `link` | a link opened in a tab that has the app already. Same rule. A sheet or a box that was open has closed (not during a workout) |
+| `hash` | `link` | a link opened in a tab that has the app already. Same rule. A sheet or a box that was open has closed (not during a workout), a box like its Cancel; when the box's answer leaves its screen ("Restart your 28 days?" after Edit), the link comes after that |
 | `screen` | `name, root` | after a screen is drawn (`root` is `#app`). The player's own redraws don't count |
 | `finish` | `rec, s` | a workout was saved (one move or more), before the finish screen draws. `rec` is its record in the history, `s` the session |
-| `profile` | `old, new, changed` | the onboarding or Edit saved the profile. `changed`: the sessions change |
+| `profile` | `old, new, changed` | the profile changed: the onboarding or Edit saved it, a health switch on Me (Pregnancy mode, Cleared by a doctor) or "Start the next 28 days". `old` is the profile before, `new` the saved one. `changed`: the sessions change. The food card's switches change `atRisk()` but not the profile: they don't send it |
 | `saved` | `ok` | after every save; `ok` is `false` when the phone refused (storage full or blocked) |
 
 An event set off inside a handler of the same event (a save in a `saved` handler, a screen
@@ -163,7 +180,8 @@ drawn in a `screen` handler) isn't passed on to any module, so nothing loops.
   back to its top.
 - **Html:** escape every value with `app.util.esc`. No inline event handlers: actions only.
   Nothing from other sites, no GPL code, calories with "est.", no diet advice or weight
-  targets for anyone at risk (`.claude/skills/frank-app/`).
+  targets for anyone at risk: ask `app.atRisk()` and `app.noBmi()` as you draw
+  (`.claude/skills/frank-safety/`).
 - **Only `app`:** a module reads nothing private from `app.js`. What it needs and can't
   get is a change to the seam (step 3).
 

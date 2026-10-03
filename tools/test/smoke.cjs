@@ -6,7 +6,7 @@ const { app } = L;
 
 module.exports = {
   name: 'smoke',
-  about: 'every tab, the exercise sheet, a workout, the player starts, logging walks, water, meals and weight, delete my data, a phone that can\'t save, other options in the sheet, muscle maps when the coach comes in late, Back after a tab switch, the scroll after Back and after a workout, the activity slider, the keyboard\'s focus (new screens, Back, choices, an open sheet, Space in the player), toasts clear of the main button, the BMI bar\'s colours, the iPhone status bar on light screens, feature modules (the template, slots, events, broken modules), links to a move or a workout, the Personal prototype',
+  about: 'every tab, the exercise sheet, a workout, the player starts, logging walks, water, meals and weight, delete my data, a phone that can\'t save, other options in the sheet, muscle maps when the coach comes in late, Back after a tab switch, the scroll after Back and after a workout, the activity slider, the keyboard\'s focus (new screens, Back, choices, an open sheet, Space in the player), toasts clear of the main button, the BMI bar\'s colours, the iPhone status bar on light screens, feature modules (the template, slots, events, broken modules, a screen wrapped by one, a screen that is not there, the safety rules and every change to the profile), links to a move or a workout, a link while a box asks, a source number on the science screen, the focus ring on a light and a dark screen, the Personal prototype',
   async run(t) {
     await t.flow('first visit', async () => {
       const p = await t.page();
@@ -87,8 +87,13 @@ module.exports = {
       await app.tap(p, '[data-act="science"]', { nth: 0 });
       await app.waitTitle(p, 'The science');
       await t.look(p, 'science', { kcal: false });
+      // a source's number scrolls to the source, and the screen stays (its #src-N jump was taken for the phone's Back)
+      const src = await p.locator('#app a.cite').first().getAttribute('data-n');
+      await app.tap(p, '#app a.cite');
+      t.equal(await p.evaluate((n) => [document.title.split(' · ')[0], location.hash, (document.getElementById('src-' + n) || {}).className], src), ['The science', '', 'hit'],
+        'after a tap on a source number [screen, address bar, the source marked]');
       await app.tap(p, '[data-act="back"]');
-      await app.tap(p, '[data-act="coach"]');                     // "Frank? Unlock coach tools"
+      await app.tap(p, '[data-act="coach"]');                     // "Frank? Open coach tools"
       await app.waitTitle(p, 'Coach tools');
       await t.look(p, 'coach tools locked');
       await app.addCoachCode(p);                                  // the test-only coach code (L.QA_COACH)
@@ -401,6 +406,32 @@ module.exports = {
       await q.keyboard.press(' ');
       await q.waitForSelector('.pl-name h1', { timeout: 5000 }).catch(() => t.fail('Space on the get-ready screen did not start the first move'));
       t.equal(await q.evaluate(() => document.activeElement.tagName), 'H1', 'focus on the first move: element');
+      t.step('the focus ring on a light screen and on a dark one');
+      // the ring around the control that has the keyboard's focus needs 3:1 against the screen around it (WCAG 1.4.11):
+      // sky-lo on the light screens (sky-hi there is 1.35:1), sky-hi on the dark ones
+      const ring = async (page) => {
+        let r = null;
+        for (let i = 0; i < 8 && !(r && r.control); i++) {
+          await page.keyboard.press('Tab');
+          r = await page.evaluate(() => {
+            const a = document.activeElement, s = getComputedStyle(a), rgb = (c) => (c.match(/[\d.]+/g) || []).map(Number);
+            let back = null;                                   // the first solid background around the control
+            for (let e = a.parentElement; e && !back; e = e.parentElement) { const c = rgb(getComputedStyle(e).backgroundColor); if (c.length === 3 || c[3] === 1) back = c; }
+            const lin = (v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+            const lum = (c) => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+            const c = rgb(s.outlineColor), k = back ? (Math.max(lum(c), lum(back)) + 0.05) / (Math.min(lum(c), lum(back)) + 0.05) : 0;
+            return { control: document.getElementById('app').contains(a) && /^(BUTTON|A|INPUT)$/.test(a.tagName), what: (a.getAttribute('aria-label') || a.textContent || '').trim().slice(0, 24),
+              light: document.body.classList.contains('light'), visible: a.matches(':focus-visible'), drawn: s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) >= 2, k: Math.round(k * 100) / 100 };
+          });
+        }
+        return r;
+      };
+      for (const [what, state, light] of [['the welcome', undefined, true], ['the Plan', L.member(), false]]) {
+        const page = await t.page({ state });
+        const r = await ring(page);
+        t.equal([r.control, r.light, r.visible, r.drawn], [true, light, true, true], what + ', Tab to "' + r.what + '" [a control on the screen, a light screen, focus-visible, a ring 2 px or more]');
+        t.check(r.k >= 3, () => what + ': the focus ring on "' + r.what + '" is ' + r.k + ':1 against the screen, 3:1 needed');
+      }
     });
 
     await t.flow('toasts stay clear of the main button', async () => {
@@ -540,6 +571,14 @@ module.exports = {
         });
         ext.push(function qaOverride(app) { app.override('frank', { title: () => 'QA', html: () => { throw new Error('qa: screen broken on purpose'); } }); });
         ext.push(function qaNoHtml(app) { app.screen('qa-blank', { title: () => 'QA blank', html: () => {} }); });
+        // a module that draws a screen of the app inside its own, as the skill shows: title, html and mount
+        ext.push(function qaWrap(app) {
+          const old = app.override('workouts', {
+            title: (q) => old.title(q),
+            html: (q) => '<p class="small" id="qa-wrapped">QA wrapped</p>' + old.html(q),
+            mount: (q) => { if (old.mount) old.mount(q); }
+          });
+        });
       });
       // the broken modules say so in the console, once for each place: collected here instead of failing the flow, and
       // checked at the end (any other console error fails it there)
@@ -601,6 +640,15 @@ module.exports = {
         "links [the screen the template's link opened, the links a module that started later got]");
       await app.tap(p, '[data-act="back"]');
       await app.waitTitle(p, 'Me');
+      t.step('a screen of the app inside a module\'s');
+      // the old screen's search comes alive in its mount: the module calls it as well
+      await app.tap(p, '.tab[data-tab="workouts"]');
+      await p.fill('#wq', 'squat');
+      await p.waitForTimeout(200);
+      t.equal([await app.title(p), await p.locator('#qa-wrapped').count(), await p.locator('#wq-results').isVisible()], ['Workouts', 1, true],
+        "Workouts inside a module's screen [title, the module's piece, the search's results]");
+      t.has(await p.locator('#wq-results').innerText().catch(() => ''), 'Squat', 'the search on Workouts inside a module\'s screen');
+      await p.fill('#wq', '');
       t.step('screens that fail, the events and the console');
       await app.tap(p, '.tab[data-tab="frank"]');
       t.equal(await app.title(p), 'Frank', 'the Frank tab, replaced by a screen that throws: the app\'s own');
@@ -612,7 +660,7 @@ module.exports = {
       await app.tap(p, '#app [data-act="back"]');
       await app.waitTitle(p, 'Frank');
       const seen = await p.evaluate(() => [[...new Set(window.__mods.screens)].sort(), window.__mods.saved > 0]);
-      t.equal(seen, [['done', 'example', 'frank', 'me', 'plan', 'player', 'qa-blank', 'today'], true], 'events [screens drawn, saves heard]');
+      t.equal(seen, [['done', 'example', 'frank', 'me', 'plan', 'player', 'qa-blank', 'today', 'workouts'], true], 'events [screens drawn, saves heard]');
       const said = errors.map((e) => { const m = /Wellness by Frank: module (\w+) failed (\([^)]*\))/.exec(e); return m ? m[1] + ' ' + m[2] : e.slice(0, 160); });
       t.equal(said.sort(), ['qaBroken (start)', 'qaCardThrows (frank.top)', 'qaCardThrows (on:screen)', 'qaClash (start)', 'qaLow (action:qa-throw)',
         'qaNoHtml (screen:qa-blank)', 'qaOverride (screen:frank)'],
@@ -668,6 +716,112 @@ module.exports = {
       await app.tap(p, '[data-act="modal-yes"]');
       await app.waitTitle(p, 'Plan');
       t.has(await app.text(p), 'After this workout', "Frank's session on the Plan after the workout");
+    });
+
+    await t.flow('modules: a screen that is not there, the safety rules, every change to the profile', async () => {
+      // A module that opens a screen that isn't there (a typo) as it starts or from a link is stopped before anything
+      // moves: the app opens, or stays, on its own screen. A screen on the stack that isn't there goes, and the one under
+      // it shows. Modules ask the app's safety rules (atRisk, noBmi, flags) and hear 'profile' for every change to the
+      // profile: the onboarding and Edit, Me's health switches and the next 28 days
+      const errorsOf = (page) => {
+        const errors = [];
+        for (const f of page.listeners('console')) page.off('console', f);
+        page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+        return errors;
+      };
+      const said = (errors) => errors.map((e) => { const m = /Wellness by Frank: module (\w+) failed (\([^)]*\))/.exec(e); return m ? m[1] + ' ' + m[2] : e.slice(0, 80); }).sort();
+      const where = (page) => page.evaluate(() => [document.title.split(' · ')[0], WBF.app.cur().name, document.getElementById('app').innerHTML.length > 0]);
+      const p = await t.page({ state: L.member(), go: false });
+      await p.addInitScript(() => {
+        const ext = (window.WBF = window.WBF || {}).ext = window.WBF.ext || [];
+        const heard = window.__mods = { profile: [] };
+        ext.push(function qaTypo(app) {
+          const open = (h) => {
+            if (h === 'qa.go') app.go('qa-tpyo', {});
+            else if (h === 'qa.tab') app.tab('qa-tpyo');
+            else return false;
+            return true;
+          };
+          app.on('boot', open);
+          app.on('hash', open);
+          app.on('profile', (old, now, changed) => heard.profile.push([old.round || 1, now.round || 1, !!(old.health || {}).pregnant, !!(now.health || {}).pregnant,
+            changed, app.atRisk(), app.noBmi(), app.flags().pregnant]));
+        });
+        ext.push(function qaStartTypo(app) {
+          app.card('plan.top', () => ({ id: 'qa-start', html: '<p class="small">QA start card</p>' }));
+          app.tab('qa-nope');
+        });
+      });
+      const errors = errorsOf(p);
+      await p.goto(p.srv.home + 'index.html#qa.go');
+      await L.settle(p);
+      t.equal(await where(p), ['Plan', 'plan', true], 'a link at the start to a screen that is not there [screen, the app\'s screen, drawn]');
+      t.equal(await p.locator('[data-card="qa-start"]').count(), 0, 'cards of a module that opened a screen that is not there as it started');
+      await t.look(p, 'plan after modules that opened screens that are not there');
+      await p.evaluate(() => { location.hash = '#qa.tab'; });
+      await p.waitForTimeout(300);
+      t.equal(await where(p), ['Plan', 'plan', true], 'a link in a tab that has the app, to a screen that is not there [screen, the app\'s screen, drawn]');
+      t.equal(said(errors), ['qaStartTypo (start)', 'qaTypo (on:boot)', 'qaTypo (on:hash)'], 'console errors [each module, once for each place]');
+      t.check(errors.every((e) => /there is no screen "qa-(tpyo|nope)"/.test(e)), () => 'console errors that do not say which screen is not there: ' + JSON.stringify(errors).slice(0, 300));
+
+      t.step("Me's health switches");
+      await app.tap(p, '.tab[data-tab="me"]');
+      await app.tap(p, '[data-act="health"][data-k="pregnant"]');
+      await app.tap(p, '[data-act="health"][data-k="pregnant"]');
+      t.equal(await p.evaluate(() => window.__mods.profile), [[1, 1, false, true, true, true, true, true], [1, 1, true, false, true, false, false, false]],
+        "'profile' after Pregnancy mode on, then off [round before, after, pregnant before, after, the sessions change, atRisk(), noBmi(), flags().pregnant]");
+      t.step('the next 28 days');
+      await p.evaluate(() => { const S = WBF.app.state(); WBF.app.planDays().forEach((d) => { if (d.train) S.done[d.day] = 'qa'; }); WBF.app.tab('plan'); });
+      await app.tap(p, '[data-act="next-round"]');
+      t.equal((await p.evaluate(() => window.__mods.profile))[2], [1, 2, false, false, true, false, false, false], "'profile' after Start the next 28 days [the same]");
+
+      t.step('a screen that is not there, asked for by the app');
+      // not through a module: the stack drops it, the Plan shows, and the phone's Back then leaves the app (no dead press)
+      const q = await t.page({ state: L.member() });
+      const qErrors = errorsOf(q);
+      await q.evaluate(() => WBF.app.go('qa-nope', {}));
+      t.equal(await where(q), ['Plan', 'plan', true], 'WBF.app.go() to a screen that is not there [screen, the app\'s screen, drawn]');
+      t.equal(qErrors.map((e) => e.slice(0, 80)), ['Wellness by Frank: there is no screen "qa-nope"'], 'console errors');
+      await q.waitForFunction(() => history.state && history.state.wbf === 1, null, { timeout: 5000 }).catch(() => null);
+      await q.goBack({ timeout: 5000 }).catch(() => null);
+      await q.waitForURL((u) => !u.href.startsWith(q.srv.url), { timeout: 5000 }).catch(() => null);
+      t.check(!q.url().startsWith(q.srv.url), () => "the phone's Back after a screen that is not there did not leave the app (still on " + q.url() + ')');
+    });
+
+    await t.flow('a link while a box asks: the box answers like its Cancel, then the link opens', async () => {
+      // Edit with a new goal asks "Restart your 28 days?" once days are ticked off. A link that comes then (Frank's message
+      // tapped in another app opens it in this tab) closes the box as the phone's Back and Escape do, like its Cancel:
+      // Keep my progress saves the Edit, and the link opens after it
+      const rec = { id: 'h1', at: L.isoDay(-2) + 'T07:30:00.000Z', date: L.isoDay(-2), wid: 'full-i', title: 'Full body', level: 'i', day: 1, sec: 900,
+        moves: 12, total: 12, feel: 'right', adj: 0, loads: {}, kcal: 90 };
+      const st = L.member({ start: L.isoDay(-2) }, { sessions: [rec], done: { 1: 'h1' } });
+      const ask = async (page) => {
+        await app.tap(page, '.tab[data-tab="me"]');
+        await app.tap(page, '[data-act="ob-edit"]');
+        await app.tap(page, '[data-act="ob-pick"][data-k="goal"][data-v="strength"]');
+        await page.evaluate(() => WBF.app.go('onboard', { step: 'name' }));
+        await app.tap(page, '[data-act="ob-build"]');
+        t.has(await app.overlay(page), 'Restart your 28 days?', 'the box after Edit with a new goal');
+      };
+      // what was saved: the goal, the plan's start and day 1's tick (Restart would start today, with no ticks)
+      const kept = async (page) => { const s = await app.stored(page); return [s.profile.goal, s.profile.start, s.done[1] || null]; };
+      const p = await t.page({ state: st });
+      await ask(p);
+      await p.evaluate((h) => { location.hash = h; }, 'frank.' + L.pack(L.spec({ i: 'qa-box', t: 'Session while asked' })));
+      await app.waitHeading(p, 'Session while asked');
+      t.equal([await app.overlay(p), ...await kept(p), (await app.stored(p)).inbox.map((x) => x.i)], ['', 'strength', L.isoDay(-2), 'h1', ['qa-box']],
+        "Frank's link while the box asks [box, saved goal, plan start, day 1, sessions from Frank]");
+      t.has((await app.toasts(p)).join(' | '), 'Your plan was updated', 'toasts');
+      await t.look(p, 'a session from a link that came while a box asked');
+      await app.tap(p, '[data-act="back"]');
+      await app.waitTitle(p, 'Plan');
+      t.step("a move's link");
+      const q = await t.page({ state: st });
+      await ask(q);
+      await q.evaluate(() => { location.hash = '#ex.squat'; });
+      await q.waitForFunction(() => !document.getElementById('overlay').hidden && document.querySelector('#overlay .xs'), null, { timeout: 5000 }).catch(() => null);
+      t.equal([await app.title(q), (await q.locator('#overlay h2').first().textContent().catch(() => '')).trim(), ...await kept(q)],
+        ['Plan', await q.evaluate(() => WBF.EX.squat.name), 'strength', L.isoDay(-2), 'h1'], "a move's link while the box asks [screen, sheet, saved goal, plan start, day 1]");
     });
 
     await t.flow('personal prototype', async () => {

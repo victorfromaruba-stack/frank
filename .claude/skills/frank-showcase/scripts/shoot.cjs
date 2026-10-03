@@ -232,7 +232,12 @@ const SCREENS = {
   me: { state: 'member', what: 'Me tab: progress and weight', run: async (p) => { await app(p, () => WBF.app.tab('me')); } },
   frank: { state: 'member', what: 'Frank tab', run: async (p) => { await app(p, () => WBF.app.tab('frank')); } },
   science: { state: 'member', what: 'the science screen', run: async (p) => { await app(p, () => WBF.app.go('science', {})); } },
-  tools: { state: 'coach', what: "Frank's coach tools with saved sessions", run: async (p) => { await app(p, () => WBF.app.go('coach', {})); } },
+  // Coach tools open on Frank's phone only, once his coach code was typed: the phone keeps the code's hash, which is
+  // public in js/programs.js (the code itself isn't needed here). Then the tools show, not the code field
+  tools: { state: 'coach', what: "Frank's coach tools with saved sessions", run: async (p) => {
+    await app(p, () => { WBF.app.state().coachMode = WBF.FRANK.coachCodes[0]; WBF.app.go('coach', {}); });
+    await p.waitForSelector('[data-act="coach-new"]', { timeout: 20000 }).catch(() => { throw new Error('Coach tools showed the code field, not the tools'); });
+  } },
   client: { state: 'client', what: "a client's plan with Frank's session on top", run: async () => {} }
 };
 

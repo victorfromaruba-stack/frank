@@ -24,7 +24,7 @@
     codes: [
       '3423e93ea2938ccbb786555bc73794e7b5216f5f85a319ebe19c57d723e3b57b'   // 2026-10-02
     ],
-    // Frank's coach code: typed on Frank > "Frank? Unlock coach tools", it opens Coach tools on that phone (session
+    // Frank's coach code: typed on Frank > "Frank? Open coach tools", it opens Coach tools on that phone (session
     // links open the app on other phones, so only Frank may make them). Hashes of 'wbf-coach:' + code, made with
     // node tools/client-code.mjs --coach <code>. A new hash here locks every phone that had the old code.
     coachCodes: [
