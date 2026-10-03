@@ -131,6 +131,21 @@ supervised activity, or the matching switch on the Today screen's food card.
 | How much to move, the line about the app | The moving-minutes card counts your workouts and walks toward 150 minutes a week, or 250 if you want to lose fat. If you're pregnant, may be under 18 or have a medical condition, it stays at 150. Plans train every muscle at least twice a week. | The moving-minutes card counts your workouts and walks toward 150 minutes a week (250 if you want to lose fat). Plans train every muscle at least twice a week. |
 | Intervals and fat loss, the line about the app | Fat-loss plans keep at least two strength days and at most two interval days, and count walks toward 250 minutes. Target-weight dates use 0.5 to 1% a week. If you're pregnant, may be under 18 or have a medical condition, there is no target weight and no 250-minute goal. | Fat-loss plans keep at least two strength days and at most two interval days, and count walks toward 250 minutes. Target-weight dates use 0.5 to 1% a week. |
 
+## Height, the Other sore spot and client codes (live since 2 October)
+
+| Where | New text | Old text |
+|---|---|---|
+| How tall are you?, with ft picked | 5 ft 10 in (feet and inches), and the ruler marks 4 ft, 5 ft, 6 ft, 7 ft | 70 in |
+| Any sore spots?, a new choice | Other | new |
+| Any sore spots?, the line when Other is picked | Got it. Jumps are left out. For this spot, the app can't tell which moves load it: skip any move that hurts it, and check with a doctor or physio first. | new |
+| Any sore spots?, the line when Other and another spot are picked | Got it. Moves that load your shoulder are left out or swapped, and jumps are left out. For the other spot, the app can't tell which moves load it: skip any move that hurts it, and check with a doctor or physio first. | new |
+| Building your plan, a step | Leaving out jumps for your sore spot (or "your other sore spot") | new |
+| The summary, the sore spots row | Jumps are left out, or: Moves that load them, and jumps, are left out | Moves that load them are left out |
+| Frank's clients, the text | Frank writes your sessions and sends each one as a link. Open the link on this phone and the session lands on your plan. Or paste the link here, or type the code Frank gave you. | … Or paste the link or code here. |
+| Frank's clients, the hint in the box | Paste the link, or type your code | Paste the link or code from Frank |
+| Frank's clients, the button | Continue | Add the session |
+| After a client code works, a message | Welcome. The whole app is open to you. | new |
+
 ## Older lines to check
 
 Not changed in this batch, but worth Frank's look.
