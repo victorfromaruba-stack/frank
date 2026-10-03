@@ -184,6 +184,9 @@ module.exports = {
       await app.tap(p, '#overlay .xs-foot [data-act="close"]');
       await app.tap(p, '[data-act="pl-done"]');
       await snap(p, 'player rest', { full: false });
+      await app.tap(p, '.pl-rest [data-act="pl-pause"]');
+      await snap(p, 'player rest paused', { full: false });
+      await app.tap(p, '.pl-rest [data-act="pl-pause"]');
       await app.tap(p, '[data-act="pl-skip"]');
       await app.tap(p, '[data-act="pl-pause"]');
       await snap(p, 'player timed move paused', { full: false });

@@ -6,24 +6,6 @@
 module.exports = [
   {
     suite: 'onboarding',
-    match: /^Me: change sore spots: stopped: expected the "Me" screen, got "Your plan"/,
-    why: 'Me > Sore spots > Change, then Next: endless history loop, the person is stuck on the step (the change is saved). back() relies on popstate to pop the screen, but popstate sees the onboarding on top and calls ob-back, which calls back() again (js/app.js, the popstate handler and ob-back).',
-    since: '2026-10-02'
-  },
-  {
-    suite: 'onboarding',
-    match: /^Me: Edit, then back: stopped: expected the "Me" screen, got "Your plan"/,
-    why: 'Me > Edit, then the back arrow (or the phone\'s Back) on the first step: the same endless history loop (about 1,100 popstate events a second); the person is stuck on "What\'s your main goal?".',
-    since: '2026-10-02'
-  },
-  {
-    suite: 'onboarding',
-    match: /^Me: change sore spots: onboarding bookkeeping saved in the profile: got \["only"\]/,
-    why: 'finishProfile() deletes draft.edit and draft.soreDone but not draft.only, so a sore-spot Change saves only:"sore" in the profile. newDraft() copies it, and from then on Me > Edit acts as a one-step edit: the first answer saves and the screen loops.',
-    since: '2026-10-02'
-  },
-  {
-    suite: 'onboarding',
     match: /build steps is missing \/Setting doses for beginner\//,
     why: 'Building your plan says "Setting doses for advanceds" when a PAR-Q yes keeps the plan at Beginner (buildSteps uses d.level, not WBF.plan.levelFor).',
     since: '2026-10-02'

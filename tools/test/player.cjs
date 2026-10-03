@@ -26,10 +26,33 @@ const clock = (p) => p.evaluate(() => { const c = document.getElementById('pl-cl
 const restLabel = (p) => p.evaluate(() => { const c = document.querySelector('.pl-rest .label'); return c ? c.textContent.trim() : ''; });
 const moveName = (p) => p.evaluate(() => { const c = document.querySelector('.pl-name h1'); return c ? c.textContent.trim() : ''; });
 const secs = (s) => { const m = /^(\d+):(\d\d)$/.exec(s); return m ? +m[1] * 60 + +m[2] : +s; };
+// the Pause / Resume button that is showing: its word on the get-ready and rest screens, its label on a timed move
+const pauseSays = (p) => p.evaluate(() => { const b = document.querySelector('[data-act="pl-pause"]'); return b ? b.textContent.trim() || b.getAttribute('aria-label') : ''; });
+const movesDone = (p) => p.evaluate(() => document.querySelectorAll('.pl-segs i.on').length);
+// the phone locked (true) or unlocked (false): what the page sees when the screen goes off or another app opens
+const locked = (p, on) => p.evaluate((h) => {
+  Object.defineProperty(document, 'hidden', { configurable: true, get: () => h });
+  Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => (h ? 'hidden' : 'visible') });
+  document.dispatchEvent(new Event('visibilitychange'));
+}, on);
+// what the voice coach says from now on (a stand-in for the phone's speech, which the test browser doesn't have)
+const listen = (p) => p.evaluate(() => {
+  window.__said = [];
+  const fake = { speaking: false, pending: false, paused: false, speak: (u) => { window.__said.push(u.text); }, cancel() {}, pause() {}, resume() {},
+    getVoices: () => [], addEventListener() {} };
+  Object.defineProperty(window, 'speechSynthesis', { value: fake, configurable: true });
+});
+const heard = (p) => p.evaluate(() => window.__said || []);
+// the phone's Back button, and the app's answer to it
+const phoneBack = (p) => p.evaluate(() => new Promise((r) => {
+  addEventListener('popstate', () => setTimeout(r, 50), { once: true });
+  setTimeout(r, 2000);
+  history.back();
+}));
 
 module.exports = {
   name: 'player',
-  about: 'every player control on a session from Frank, a full plan day to the finish screen, quitting with and without saving',
+  about: 'every player control on a session from Frank, a full plan day to the finish screen, quitting with and without saving, the phone\'s Back twice and a locked phone during a rest',
   async run(t) {
     await t.flow('every control', async () => {
       // squat (reps) · side plank (timed, each side: switch sides) · plank (timed)
@@ -194,6 +217,93 @@ module.exports = {
       t.has(await app.text(p), 'stays open', 'day not ticked after one move');
       const s = await app.stored(p);
       t.equal([s.sessions.length, (s.sessions[0] || {}).moves, !!(s.done || {})['1']], [1, 1, false], 'saved [sessions, moves, day 1 done]');
+    });
+
+    await t.flow('phone Back twice during a rest', async () => {
+      // Back asks "End this workout?"; Back again closes the box like Keep going, and the rest counts on
+      const sp = L.spec({ i: 'qa-back', t: 'Back test', x: [['squat', 3], ['plank', 10]], rs: 30, r: 1 });
+      const p = await t.page({ state: L.state({ profile: L.profile(), access: { client: true }, inbox: [sp] }), speed: 1 });
+      await app.tap(p, '[data-act="start-coach"][data-id="qa-back"]');
+      await app.waitTitle(p, 'Workout');
+      await app.tap(p, '[data-act="pl-skip"]');
+      await app.tap(p, '[data-act="pl-done"]');
+      t.equal(await restLabel(p), 'Rest', 'after Done');
+      await phoneBack(p);
+      t.has(await app.overlay(p), 'End this workout?', 'the first Back');
+      await phoneBack(p);
+      t.equal(await app.overlay(p), '', 'the quit box after the second Back');
+      t.equal([await app.title(p), await restLabel(p), await pauseSays(p)], ['Workout', 'Rest', 'Pause'], 'after Back, Back [screen, step, pause button]');
+      const c0 = +(await count(p));
+      await speed(p, 20); await p.waitForTimeout(400); await speed(p, 1);
+      const c1 = +(await count(p));
+      t.check(c1 < c0, 'the rest stopped after Back, Back: ' + c0 + ' s, then ' + c1 + ' s');
+      await t.look(p, 'player rest after Back, Back');
+      await phoneBack(p);
+      t.has(await app.overlay(p), 'End this workout?', 'a third Back');
+      await app.tap(p, '[data-act="modal-no"]');
+      t.equal([await restLabel(p), await pauseSays(p)], ['Rest', 'Pause'], 'after Keep going [step, pause button]');
+    });
+
+    await t.flow('phone locked during a rest', async () => {
+      // nothing moves on while nobody looks: the rest waits, no move is ticked off, the voice stays quiet
+      const sp = L.spec({ i: 'qa-lock', t: 'Lock test', x: [['plank', 10], ['wall-sit', 10], ['squat', 5], ['plank', 10]], rs: 20, r: 1 });
+      const st = L.state({ profile: L.profile(), access: { client: true }, inbox: [sp] });
+      st.settings = Object.assign({}, st.settings, { voice: true });
+      const p = await t.page({ state: st, speed: 1 });
+      await listen(p);
+      await app.tap(p, '[data-act="start-coach"][data-id="qa-lock"]');
+      await app.waitTitle(p, 'Workout');
+      const N = await p.evaluate(() => ({ ws: WBF.EX['wall-sit'].name, sq: WBF.EX.squat.name }));
+
+      t.step('get ready: Pause, Resume, Start');
+      await app.tap(p, '.pl-rest [data-act="pl-pause"]');
+      t.equal(await pauseSays(p), 'Resume', 'the get-ready button after Pause');
+      const g0 = await count(p);
+      await speed(p, 20); await p.waitForTimeout(400); await speed(p, 1);
+      t.equal(await count(p), g0, 'the get-ready count while paused');
+      await app.tap(p, '.pl-rest [data-act="pl-pause"]');
+      t.equal(await pauseSays(p), 'Pause', 'the get-ready button after Resume');
+      await app.tap(p, '.pl-rest [data-act="pl-pause"]');
+      await app.tap(p, '[data-act="pl-skip"]');
+      t.equal(await pauseSays(p), 'Pause', 'the first move after Start on a paused get-ready (Start starts it)');
+
+      t.step('locked during a rest');
+      await speed(p, 20);
+      await p.waitForFunction(() => /Rest/.test((document.querySelector('.pl-rest .label') || {}).textContent || ''), null, { timeout: 20000 });
+      await speed(p, 1);
+      t.equal([await restLabel(p), await movesDone(p)], ['Rest', 1], 'before locking [step, moves done]');
+      await locked(p, true);
+      const before = [await restLabel(p), await count(p), await movesDone(p), await clock(p)];     // from here on, nothing may change
+      const said0 = (await heard(p)).length;
+      await speed(p, 50); await p.waitForTimeout(1000); await speed(p, 1);          // about 50 s of workout time
+      t.equal([await restLabel(p), await count(p), await movesDone(p), await clock(p)], before, 'while locked [step, rest left, moves done, clock]');
+      t.equal((await heard(p)).slice(said0), [], 'what the voice said while the phone was locked');
+      await locked(p, false);
+      t.equal([await restLabel(p), await pauseSays(p)], ['Rest', 'Resume'], 'after unlocking [step, pause button]');
+      await t.look(p, 'player rest paused after the phone was locked');
+      await app.tap(p, '.pl-rest [data-act="pl-pause"]');
+      await speed(p, 20);
+      await p.waitForFunction((n) => (document.querySelector('.pl-name h1') || {}).textContent === n, N.ws, { timeout: 20000 })
+        .catch(() => t.fail('the rest did not go on to ' + N.ws + ' after Resume'));
+      await speed(p, 1);
+
+      t.step('locked during a reps move, then Done');
+      await speed(p, 20);
+      await p.waitForFunction(() => /Rest/.test((document.querySelector('.pl-rest .label') || {}).textContent || ''), null, { timeout: 20000 });
+      await speed(p, 1);
+      await app.tap(p, '[data-act="pl-skip"]');
+      t.equal(await moveName(p), N.sq, 'the reps move');
+      await locked(p, true);
+      const c0 = await clock(p);
+      await speed(p, 50); await p.waitForTimeout(600); await speed(p, 1);
+      t.equal(await clock(p), c0, 'the workout clock while locked on a reps move');
+      await locked(p, false);
+      await app.tap(p, '[data-act="pl-done"]');
+      t.equal([await restLabel(p), await pauseSays(p)], ['Rest', 'Pause'], 'the rest after Done (Done goes on) [step, pause button]');
+      const r0 = +(await count(p));
+      await speed(p, 20); await p.waitForTimeout(400); await speed(p, 1);
+      t.check(+(await count(p)) < r0, 'the rest after Done does not count down');
+      t.equal(await movesDone(p), 3, 'moves done');
     });
   }
 };

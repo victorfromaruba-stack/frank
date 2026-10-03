@@ -364,6 +364,8 @@
   var stack = [{ name: S.profile ? 'plan' : 'welcome', params: {} }];
   var useHistory = !framed;           // inside a frame, history.back() could leave the host page
   var depth = 0;                      // history entries this page pushed: back never goes further
+  var selfBack = false;               // the next popstate is the app's own back(): pop one screen, nothing more
+  var unwound = false;                // the next popstate is tab() dropping old entries: nothing to do
   function cur() { return stack[stack.length - 1]; }
   function pushState() { if (!useHistory) return; try { W.history.pushState({ wbf: stack.length }, ''); depth++; } catch (e) { useHistory = false; } }
   function go(name, params) {
@@ -374,14 +376,23 @@
   }
   function pop() { if (stack.length > 1) { stack.pop(); render(false); } }
   function back() {
-    if (useHistory && depth > 0) { try { W.history.back(); return; } catch (e) { useHistory = false; } }
+    if (useHistory && depth > 0) { try { selfBack = true; depth--; W.history.back(); return; } catch (e) { selfBack = false; useHistory = false; } }
     pop();
   }
-  function tab(name) { stack = [{ name: name, params: {} }]; render(true); }
+  // a tab starts a new stack: drop the history entries the old one pushed, so the phone's Back leaves from here
+  function tab(name, params) {
+    if (useHistory && depth > 0) { try { unwound = true; W.history.go(-depth); depth = 0; } catch (e) { unwound = false; useHistory = false; } }
+    stack = [{ name: name, params: params || {} }];
+    render(true);
+  }
   W.addEventListener('popstate', function () {
     if (!useHistory) return;
+    if (unwound) { unwound = false; return; }
+    if (selfBack) { selfBack = false; pop(); return; }
     depth = Math.max(0, depth - 1);
-    if (closeOverlay()) { pushState(); return; }
+    // the phone's Back: a box closes like its Cancel (as with Escape), a sheet closes, the workout asks first
+    var no = $('.modal', overlay) ? overlay._no : null;
+    if (closeOverlay()) { if (no) no(); pushState(); return; }
     if (cur().name === 'player') { pushState(); askQuit(); return; }
     if (cur().name === 'onboard') { pushState(); A['ob-back'](); return; }
     pop();
@@ -598,13 +609,18 @@
   };
   function newDraft() {
     var p = S.profile;
-    if (p) return JSON.parse(JSON.stringify(p));
+    if (p) {
+      // without the onboarding's bookkeeping: phones that used Change before saved it in the profile
+      var d = JSON.parse(JSON.stringify(p));
+      delete d.only; delete d.edit; delete d.soreDone;
+      return d;
+    }
     return { goal: null, focus: [], want: [], sex: null, birthYear: null, cm: null, kg: null, targetKg: null, health: {}, injuries: [],
              active: 1, push: null, level: null, days: 3, minutes: 20, kit: WBF.DEFAULT_KIT.slice(), name: '' };
   }
   function obNext(from) {
     var i = OB_I[from] + 1;
-    if (OB[i] && OB[i].id === 'p2' && draft.edit) i++;
+    if (OB[i] && OB[i].intro && draft.edit) i++;     // Edit skips the Part intros, both ways (ob-back)
     return OB[i] ? OB[i].id : 'ready';
   }
   function obGo(id) { replaceTop('onboard', { step: id }); }
@@ -683,6 +699,7 @@
   var GOAL_FIG = { fat: 'jumping-jacks', strength: 'goblet-squat', move: 'cat-cow', fit: 'reverse-lunge' };
   var WANTS = [['looks', 'Look and feel fitter', 'smile'], ['energy', 'More energy', 'bolt'], ['aches', 'Fewer aches from sitting', 'chair'], ['sleep', 'Sleep better', 'moon'], ['age', 'Stay strong as I age', 'shield'], ['stress', 'Less stress', 'leaf']];
   var ACTIVE = [['box-squat', 'I sit most of the day', 1], ['march', 'I walk a little most days', null], ['high-knees', 'I\'m on my feet and moving a lot', null], ['jump-squat', 'I train most days', null]];
+  function activeFig(a) { var x = ACTIVE[a]; return figHtml(x[0], x[2] != null ? { still: x[2], note: false, video: false } : { note: false, video: false }); }
 
   SCREENS.onboard = {
     title: function () { return 'Your plan'; },
@@ -781,7 +798,7 @@
       } else if (id === 'active') {
         q = 'How <em>active</em> are you?';
         var a = +d.active || 0, A_ = ACTIVE[a];
-        body = '<div class="illus">' + figHtml(A_[0], A_[2] != null ? { still: A_[2], note: false, video: false } : { note: false, video: false }) + '</div>' +
+        body = '<div class="illus">' + activeFig(a) + '</div>' +
           '<div class="illus-cap"><b>' + A_[1] + '</b></div>' +
           '<div class="slider-pick"><input type="range" min="0" max="3" step="1" value="' + a + '" id="act-in" aria-label="How active are you?"><div class="slider-ends"><span>Sitting</span><span>Very active</span></div></div>';
       } else if (id === 'pushups') {
@@ -854,8 +871,17 @@
         });
       }
       if (id === 'active') {
+        // only the words and the coach change: a new slider under the finger would end the drag
         var inp = $('#act-in');
-        inp.addEventListener('input', function () { d.active = +inp.value; var y = W.scrollY; obGo('active'); W.scrollTo(0, y); var again = $('#act-in'); if (again) again.focus(); });
+        inp.addEventListener('input', function () {
+          var a = +inp.value;
+          if (a === (+d.active || 0)) return;
+          d.active = a;
+          $('.illus-cap b').textContent = ACTIVE[a][1];
+          var box = $('.illus');
+          box.innerHTML = activeFig(a);
+          mountFigures(box);
+        });
       }
       if (id === 'build') runBuild();
     }
@@ -1281,13 +1307,18 @@
     if (PL.left <= 0) advance();
     else live();
   }
+  // A new step (a move, a rest) runs, whether a countdown ended or the person tapped to get there.
+  // With the phone locked it starts paused and quiet: nothing moves on until the person is back and taps Resume.
   function enterMove(i) {
     PL.i = i; PL.phase = 'move'; PL.half = false; PL.cueI = 0; PL.cueAt = PL.elapsed;
     var st = PL.s.steps[i];
     PL.len = timed(st) ? st.dose : 0;
     PL.left = timed(st) ? st.dose : 0;
-    beep('go'); buzz(120);
-    speak(EX[st.ex].name + '. ' + spokenDose(st) + '.');
+    PL.paused = !!document.hidden;
+    if (!PL.paused) {
+      beep('go'); buzz(120);
+      speak(EX[st.ex].name + '. ' + spokenDose(st) + '.');
+    }
     paintPlayer();
   }
   function afterMove() {
@@ -1297,8 +1328,11 @@
     var r = WBF.plan.restAfter(s, i), a = s.steps[i], b = s.steps[i + 1];
     PL.phase = (a.side === 1 && b.side === 2 && a.ex === b.ex) ? 'switch' : 'rest';
     PL.left = PL.len = r;
-    beep('soft'); buzz([60, 60, 60]);
-    speak(PL.phase === 'switch' ? 'Switch sides.' : 'Rest. Next: ' + EX[b.ex].name + '.');
+    PL.paused = !!document.hidden;
+    if (!PL.paused) {
+      beep('soft'); buzz([60, 60, 60]);
+      speak(PL.phase === 'switch' ? 'Switch sides.' : 'Rest. Next: ' + EX[b.ex].name + '.');
+    }
     paintPlayer();
   }
   function advance() {
@@ -1337,6 +1371,11 @@
     if (st.block === 'focus') return 'Your focus';
     return st.rounds > 1 ? (PL && PL.s.coach && PL.s.coach.f === 's' ? 'Set ' : 'Round ') + st.round + ' of ' + st.rounds : 'Workout';
   }
+  // Pause and Resume: the big round button on a timed move, a smaller one with the word on the get-ready and rest screens
+  function pauseFace(big) { return ic(PL.paused ? 'play' : 'pause') + (big ? '' : PL.paused ? 'Resume' : 'Pause'); }
+  function pauseBtn(big) {
+    return '<button class="' + (big ? 'pl-main' : 'btn two small') + '" data-act="pl-pause" aria-label="' + (PL.paused ? 'Resume' : 'Pause') + '">' + pauseFace(big) + '</button>';
+  }
   function paintPlayer() {
     if (!PL || cur().name !== 'player') return;
     app.innerHTML = SCREENS.player.html();
@@ -1359,7 +1398,7 @@
           '<p class="label" style="text-align:center">' + title + '</p>' +
           '<div class="ring-wrap"><svg viewBox="0 0 200 200" aria-hidden="true"><circle class="track" cx="100" cy="100" r="90"/><circle class="fill" id="pl-ring" cx="100" cy="100" r="90" stroke-dasharray="565.5" stroke-dashoffset="0"/></svg>' +
           '<span class="pl-big" id="pl-count" role="timer">' + Math.ceil(PL.left) + '</span></div>' +
-          '<div class="rowx" style="justify-content:center">' + (PL.phase === 'rest' ? '<button class="btn two small" data-act="pl-more">+20 s</button>' : '') +
+          '<div class="rowx" style="justify-content:center">' + (PL.phase === 'rest' ? '<button class="btn two small" data-act="pl-more">+20 s</button>' : '') + pauseBtn(false) +
           '<button class="btn small" data-act="pl-skip">' + (PL.phase === 'ready' ? 'Start' : 'Skip') + '</button></div>' +
           '<div class="pl-next"><div class="between"><p class="label">' + (PL.phase === 'ready' ? 'First' : 'Next') + '</p><span class="meta num">' + (nxi + 1) + ' / ' + s.steps.length + '</span></div>' +
           '<div class="pl-next-fig" data-fig="' + nx.ex + '" data-note="0"' + (nx.side === 2 ? ' data-flip="1"' : '') + '></div>' +
@@ -1379,7 +1418,7 @@
              : '<span class="pl-big"><small>×</small>' + st.dose + '</span>') +
         '<p class="note s pl-cue" id="pl-cue" aria-live="polite">' + esc(ex.cue[0]) + '</p>' +
         '<div class="pl-ctrl"><button class="icon-btn ring" data-act="pl-prev" aria-label="Previous move"' + (PL.i === 0 ? ' disabled' : '') + '>' + ic('prev') + '</button>' +
-        (isT ? '<button class="pl-main" data-act="pl-pause" aria-label="' + (PL.paused ? 'Resume' : 'Pause') + '">' + ic(PL.paused ? 'play' : 'pause') + '</button>'
+        (isT ? pauseBtn(true)
              : '<button class="pl-main" data-act="pl-done" aria-label="Done">' + ic('check') + '</button>') +
         '<button class="icon-btn ring" data-act="pl-next" aria-label="Skip this move">' + ic('next') + '</button></div>' +
         (nxt ? '<div class="pl-upnext">' + thumbHtml(nxt.ex) + '<span class="grow"><span class="meta">Next</span><br><b>' + esc(EX[nxt.ex].name) + '</b></span><span class="dose">' + doseText(nxt) + '</span></div>' : '') +
@@ -1893,7 +1932,7 @@
       S.weights = S.weights.filter(function (w) { return w.date !== iso(); });
       S.weights.push({ date: iso(), kg: Math.round(d.kg * 10) / 10 });
     }
-    delete d.edit; delete d.soreDone;
+    delete d.edit; delete d.soreDone; delete d.only;
     S.profile = d;
     S.flags = null; flags();
     save();
@@ -2017,7 +2056,7 @@
       if (t) { t.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' }); t.classList.add('hit'); setTimeout(function () { t.classList.remove('hit'); }, 1600); }
     },
     body: function (el) { cur().params.body = el.getAttribute('data-v'); render(false); },
-    'body-go': function (el) { stack = [{ name: 'workouts', params: { body: el.getAttribute('data-v') } }]; render(true); },
+    'body-go': function (el) { tab('workouts', { body: el.getAttribute('data-v') }); },
     wf: function (el) { cur().params[el.getAttribute('data-k')] = el.getAttribute('data-v'); render(false); },
     'coach-new': function () { cdraft = newCoachDraft(); go('coach-edit', {}); },
     'coach-edit': function (el) {
@@ -2087,7 +2126,7 @@
       PL.paused = !PL.paused; PL.last = now();
       if (PL.paused) SND.hush();
       var b = $('[data-act="pl-pause"]');
-      if (b) { b.innerHTML = ic(PL.paused ? 'play' : 'pause'); b.setAttribute('aria-label', PL.paused ? 'Resume' : 'Pause'); }
+      if (b) { b.innerHTML = pauseFace(b.classList.contains('pl-main')); b.setAttribute('aria-label', PL.paused ? 'Resume' : 'Pause'); }
       var fig = $('.pl-fig'); if (fig && fig._fig) { if (PL.paused) fig._fig.pause(); else fig._fig.play(); }
     },
     'pl-how': function () {
@@ -2206,10 +2245,9 @@
       if (PL.phase === 'move') { if (timed(PL.s.steps[PL.i])) A['pl-pause'](); else afterMove(); } else A['pl-skip']();
     }
   });
+  // a locked phone or another app: whatever runs waits (get ready, a move, a rest), so nothing moves on unseen
   document.addEventListener('visibilitychange', function () {
-    if (document.hidden && PL && !PL.paused && PL.phase === 'move' && timed(PL.s.steps[PL.i])) {
-      PL.paused = true; SND.hush(); paintPlayer();
-    }
+    if (document.hidden && PL && !PL.paused) { PL.paused = true; SND.hush(); paintPlayer(); }
   });
   $$('.tab', tabsEl).forEach(function (t) { t.addEventListener('click', function () { tab(t.getAttribute('data-tab')); }); });
 

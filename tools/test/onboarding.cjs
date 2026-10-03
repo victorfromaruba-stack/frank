@@ -13,6 +13,13 @@ async function expectStep(t, p, want) {
 }
 const next = (p) => app.tap(p, '.ob-cta [data-act="ob-next"]');
 const cont = (p) => app.tap(p, '.part .btn');
+// popstate events in the next ms: Back may not keep going back by itself (the old Back loop fired about 1,100 a second)
+const popsIn = (p, ms = 600) => p.evaluate((w) => new Promise((r) => {
+  let n = 0; const f = () => n++;
+  addEventListener('popstate', f);
+  setTimeout(() => { removeEventListener('popstate', f); r(n); }, w);
+}), ms);
+const bookkeeping = (pr) => Object.keys(pr || {}).filter((k) => ['only', 'edit', 'soreDone'].includes(k));
 
 // One person from the welcome screen to a plan. o: the answers and the checks that depend on them.
 async function walk(t, o) {
@@ -218,7 +225,7 @@ const IMPERIAL = {
 
 module.exports = {
   name: 'onboarding',
-  about: 'the whole onboarding by tapping, in cm/kg and in ft/lb, to a built plan; Me: change sore spots, Edit and Back, Edit all the way',
+  about: 'the whole onboarding by tapping, in cm/kg and in ft/lb, to a built plan; Me: change sore spots, Edit and Back, Edit after an old Change, Edit all the way',
   async run(t) {
     await t.flow('metric (cm, kg)', async () => {
       const o = METRIC;
@@ -272,17 +279,58 @@ module.exports = {
       t.equal(pr.injuries, ['shoulder'], 'saved sore spots after the change');
       t.equal(Object.keys(pr).filter((k) => ['only', 'edit', 'soreDone'].includes(k)), [], 'onboarding bookkeeping saved in the profile');
       await app.waitTitle(p, 'Me');
+      t.equal(await popsIn(p), 0, 'popstate events once back on Me');
       t.has(await app.toast(p), 'Your plan was updated', 'toast after the change');
       t.has(await app.text(p), 'Sore spots: Shoulder', 'Me after the change');
+      t.step("Change, then the phone's Back");
+      await app.tap(p, '[data-act="ob-edit-step"][data-step="sore"]');
+      await expectStep(t, p, 'sore spots');
+      await app.tap(p, '[data-act="ob-multi"][data-k="injuries"][data-v="knee"]');
+      await p.evaluate(() => history.back());
+      await app.waitTitle(p, 'Me', 5000);
+      t.equal(await popsIn(p), 0, 'popstate events once back on Me');
+      t.equal((await app.stored(p)).profile.injuries, ['shoulder'], 'sore spots after Back (nothing saved)');
     });
 
     await t.flow('Me: Edit, then back', async () => {
+      // the back arrow and the phone's Back step back through Edit to Me, once: no Back loop
       const p = await t.page({ state: L.member() });
       await app.tap(p, '.tab[data-tab="me"]');
       await app.tap(p, '[data-act="ob-edit"]');
       await expectStep(t, p, 'main goal');
       await app.tap(p, '[data-act="ob-back"]');
       await app.waitTitle(p, 'Me', 5000);
+      t.equal(await popsIn(p), 0, 'popstate events once back on Me');
+      t.step("the phone's Back");
+      await app.tap(p, '[data-act="ob-edit"]');
+      await expectStep(t, p, 'main goal');
+      await app.tap(p, '[data-act="ob-pick"][data-k="goal"][aria-pressed="true"]');
+      await expectStep(t, p, 'focus');
+      await p.evaluate(() => history.back());
+      await expectStep(t, p, 'main goal');
+      await p.evaluate(() => history.back());
+      await app.waitTitle(p, 'Me', 5000);
+      t.equal(await popsIn(p), 0, 'popstate events once back on Me');
+      t.equal(bookkeeping((await app.stored(p)).profile), [], 'onboarding bookkeeping saved in the profile');
+    });
+
+    await t.flow('Me: Edit after an old Change', async () => {
+      // phones that used Change before the fix saved only:"sore" in the profile: Edit still walks every step, and saving drops it
+      const p = await t.page({ state: L.member({ only: 'sore', soreDone: true }) });
+      await app.tap(p, '.tab[data-tab="me"]');
+      await app.tap(p, '[data-act="ob-edit"]');
+      await expectStep(t, p, 'main goal');
+      await app.tap(p, '[data-act="ob-pick"][data-k="goal"][aria-pressed="true"]');
+      await expectStep(t, p, 'focus');
+      await app.tap(p, '[data-act="ob-back"]');
+      await expectStep(t, p, 'main goal');
+      await app.tap(p, '[data-act="ob-back"]');
+      await app.waitTitle(p, 'Me', 5000);
+      await app.tap(p, '[data-act="ob-edit-step"][data-step="sore"]');
+      await expectStep(t, p, 'sore spots');
+      await next(p);
+      await app.waitTitle(p, 'Me', 5000);
+      t.equal(bookkeeping((await app.stored(p)).profile), [], 'onboarding bookkeeping left in the profile');
     });
 
     await t.flow('Me: Edit, all the way', async () => {
@@ -311,6 +359,7 @@ module.exports = {
         }
       }
       t.log(steps.join(' › '));
+      t.check(!steps.some((s) => /^part \d/i.test(s)), () => 'Edit shows a Part intro going forward (going back it skips them): ' + steps.join(' › '));
       await app.waitTitle(p, 'Plan');
       t.has(await app.toast(p), 'Your plan was updated', 'toast after Edit');
       const pr = (await app.stored(p)).profile;

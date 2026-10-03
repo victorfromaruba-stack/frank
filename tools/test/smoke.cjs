@@ -5,7 +5,7 @@ const { app } = L;
 
 module.exports = {
   name: 'smoke',
-  about: 'every tab, the exercise sheet, a workout, the player starts, logging walks, water, meals and weight, delete my data, easier options, the Personal prototype',
+  about: 'every tab, the exercise sheet, a workout, the player starts, logging walks, water, meals and weight, delete my data, easier options, Back after a tab switch, the activity slider, the Personal prototype',
   async run(t) {
     await t.flow('first visit', async () => {
       const p = await t.page();
@@ -153,6 +153,54 @@ module.exports = {
         t.equal(await p.locator('#overlay [data-act="xs-tab"][aria-pressed="true"]').getAttribute('data-v'), tab, 'tab in the sheet of an easier option (' + name + ')');
       }
       await t.look(p, 'sheet of an easier option');
+    });
+
+    await t.flow('Back after a tab switch', async () => {
+      // a tab starts afresh: the phone's Back goes back through what was opened since, then leaves the app, with no dead presses
+      const p = await t.page({ state: L.member() });
+      const inApp = () => p.url().startsWith(p.srv.url);
+      await app.tap(p, '[data-act="open-day"][data-day="1"]', { nth: 0 });
+      await app.tap(p, '[data-act="start"]');
+      await app.waitTitle(p, 'Workout');
+      await app.tap(p, '[data-act="quit"]');
+      await app.tap(p, '[data-act="modal-yes"]');                      // nothing done yet: straight back to the Plan tab
+      await app.waitTitle(p, 'Plan');
+      await app.tap(p, '[data-act="body-go"][data-v="legs"]');           // Quick start: the Workouts tab, legs
+      await app.waitTitle(p, 'Workouts');
+      t.has(await app.text(p), 'Legs & glutes', 'Quick start legs');
+      await app.tap(p, '[data-act="open-workout"]', { nth: 0 });
+      await p.waitForSelector('.wd-title');
+      await p.goBack({ timeout: 5000 }).catch(() => null);
+      t.check(inApp(), "the phone's Back on a workout opened from Workouts left the app");
+      if (inApp()) await app.waitTitle(p, 'Workouts', 5000);
+      await p.goBack({ timeout: 5000 }).catch(() => null);
+      await p.waitForURL((u) => !u.href.startsWith(p.srv.url), { timeout: 5000 }).catch(() => null);
+      t.check(!inApp(), () => "the phone's Back on the Workouts tab did not leave the app (still on " + p.url() + ')');
+    });
+
+    await t.flow('how active: one drag', async () => {
+      // "How active are you?" follows one drag from Sitting to Very active and back, the words and the coach with it
+      const p = await t.page();
+      await app.tap(p, '[data-act="ob-start"]');
+      await p.evaluate(() => WBF.app.go('onboard', { step: 'active' }));
+      await p.waitForSelector('#act-in');
+      const drag = async (from, to) => {
+        const r = await p.locator('#act-in').boundingBox(), y = r.y + r.height / 2, x = (f) => r.x + 6 + (r.width - 12) * f;
+        await p.mouse.move(x(from), y);
+        await p.mouse.down();
+        for (let k = 1; k <= 24; k++) { await p.mouse.move(x(from + (to - from) * k / 24), y); await p.waitForTimeout(16); }
+        await p.mouse.up();
+        await p.waitForTimeout(150);
+        return [await p.locator('#act-in').inputValue(), (await p.locator('.illus-cap').textContent()).trim()];
+      };
+      t.equal(await drag(0, 1), ['3', 'I train most days'], 'one drag to Very active [value, words]');
+      t.equal(await p.locator('.illus [data-fig]').getAttribute('data-fig'), 'jump-squat', 'the coach after the drag');
+      await t.look(p, 'how active after a drag');
+      await app.tap(p, '.ob-cta [data-act="ob-next"]');
+      await p.waitForSelector('[data-act="ob-push"]');
+      await app.tap(p, '[data-act="ob-back"]');
+      t.equal(await p.locator('#act-in').inputValue(), '3', 'the answer after Next and Back');
+      t.equal(await drag(1, 0), ['0', 'I sit most of the day'], 'one drag back to Sitting [value, words]');
     });
 
     await t.flow('personal prototype', async () => {
