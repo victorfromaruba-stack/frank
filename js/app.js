@@ -2469,8 +2469,8 @@
       asked = true;
       SW.register('sw.js').catch(function () { /* offline cache is optional */ });
     }
-    // A page that opened before the worker took over loaded files without it (the other coach, Frank's photos). It
-    // lists what it loaded, when the worker takes over and when a coach comes in, so the worker keeps those too.
+    // A page that opened before the worker took over loaded files without it (the other coach). It lists what it
+    // loaded, when the worker takes over and when a coach comes in, so the worker keeps those too.
     function keepLoaded() {
       if (early && SW.controller && W.performance && performance.getEntriesByType) {
         SW.controller.postMessage({ used: performance.getEntriesByType('resource').map(function (r) { return r.name; }) });

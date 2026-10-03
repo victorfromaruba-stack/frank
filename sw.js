@@ -2,20 +2,21 @@
    Frank's videos (media/) are left to the browser's normal cache: phones ask for videos in pieces,
    which a cache can't answer. */
 const VERSION = 'wbf-10';
-// kept when the worker installs: what the app needs to open and train offline
+// kept when the worker installs: what the app needs to open and train offline. Frank's photos too: Workouts and
+// Frank show them, also on a phone that never opened those tabs online
 const SHELL = [
   './', 'index.html', 'app.css', 'manifest.webmanifest',
   'fonts/fonts.css', 'fonts/Nunito-latin.woff2', 'fonts/Nunito-latin-ext.woff2', 'fonts/GildaDisplay-latin.woff2', 'fonts/GildaDisplay-latin-ext.woff2',
   'js/figure.js', 'js/exercises.js', 'js/programs.js', 'js/science.js', 'js/sound.js', 'js/figure3d.js', 'js/media.js', 'js/app.js',
   'vendor/three.module.min.js', 'vendor/jsm/GLTFLoader.js', 'vendor/jsm/BufferGeometryUtils.js', 'vendor/jsm/RoomEnvironment.js',
   'assets/coach-m.glb',
+  'img/wellness-1.jpg', 'img/wellness-2.jpg', 'img/wellness-3.jpg', 'img/wellness-4.jpg',
   'img/icon-192.png'
 ];
-// kept from the first time the app uses them, so a first visit doesn't download them next to the coach.
-// A phone that has them gets them again with a new VERSION.
+// kept from the first time the app uses them, not at install: the other coach (1.1 MB most phones never load) and
+// the install icon. A phone that has them gets them again with a new VERSION.
 const LAZY = [
   'assets/coach-f.glb',
-  'img/wellness-1.jpg', 'img/wellness-2.jpg', 'img/wellness-3.jpg', 'img/wellness-4.jpg',
   'img/icon-512.png'
 ];
 const HOME = new URL('./', location.href).href;
@@ -34,8 +35,8 @@ self.addEventListener('activate', (e) => {
     .then((keys) => Promise.all(keys.filter((k) => k !== VERSION).map((k) => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
-// A first visit: the page loaded files before this worker took over (the other coach, Frank's photos). It lists
-// what it loaded, and the LAZY files among them are kept as if they had come through here.
+// A first visit: the page loaded files before this worker took over (the other coach). It lists what it loaded,
+// and the LAZY files among them are kept as if they had come through here.
 self.addEventListener('message', (e) => {
   const used = e.data && e.data.used;
   if (!Array.isArray(used)) return;

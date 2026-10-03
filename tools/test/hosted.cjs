@@ -1,8 +1,9 @@
 // hosted: the app as GitHub Pages serves it, under /frank/ with 10-minute caching, ETags and the service worker on.
 // Nothing from other sites, no 404s, fonts and the worker stay inside /frank/, the install manifest; a first visit that
 // lets the coach load first and downloads each file once; opening with no network (the server off, so the worker can't
-// fetch what it should have kept), shared links, the other coach, a phone without the 3D coach; a new deploy (a VERSION
-// bump) reaching a phone that has the app, and an open app offering it on Plan, Today and Me only.
+// fetch what it should have kept), also straight after a first visit: the tabs, Frank's photos, shared links, the other
+// coach; a phone without the 3D coach; a new deploy (a VERSION bump) reaching a phone that has the app, and an open app
+// offering it on Plan, Today and Me only.
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -42,25 +43,47 @@ function watchRegister() {
 }
 // No network: the server off (the worker's own requests don't see setOffline) and the browser's HTTP cache emptied, as
 // it is once Pages' 10 minutes are over, so only what the worker kept can answer. The function it returns brings the
-// network back and lists the requests that reached the server in between.
+// network back and lists the page's requests that failed in between: files the worker didn't keep. The worker's own
+// refresh of each file fails too, out of the page's sight, and a request the next screen or page cut short
+// (ERR_ABORTED) isn't a missing file.
 async function offline(p, srv) {
+  const failed = [];
+  const seen = (r) => {
+    const why = (r.failure() || {}).errorText || '';
+    const line = r.url().replace(srv.home, '') + ' (' + why + ')';
+    if (!/ERR_ABORTED/.test(why) && !failed.includes(line)) failed.push(line);
+  };
   await srv.stop();
-  const from = srv.hits.length;
   const cdp = await p.context().newCDPSession(p);
   await cdp.send('Network.clearBrowserCache');
   await cdp.detach();
   await p.context().setOffline(true);
+  p.on('requestfailed', seen);
   return async () => {
-    const got = srv.hits.slice(from).map((h) => h.url);
+    p.off('requestfailed', seen);
     await p.context().setOffline(false);
     await srv.start();
-    return got;
+    return failed;
   };
+}
+// From Plan: Workouts, one of Frank's programs and Frank, the screens with his photos (img/wellness-*.jpg)
+async function photosOffline(t, p) {
+  await app.tap(p, '.tab[data-tab="workouts"]');
+  await app.waitTitle(p, 'Workouts');
+  await t.look(p, 'workouts offline');
+  await app.tap(p, '[data-act="open-workout"][data-id="essentials"]');
+  await app.waitTitle(p, 'Essentials');
+  await t.look(p, 'a program offline');
+  await app.tap(p, '[data-act="back"]');
+  await app.waitTitle(p, 'Workouts');
+  await app.tap(p, '.tab[data-tab="frank"]');
+  await app.waitTitle(p, 'Frank');
+  await t.look(p, 'frank offline');
 }
 
 module.exports = {
   name: 'hosted',
-  about: 'served under /frank/ like GitHub Pages: no outside requests or 404s, fonts and service worker inside /frank/, manifest, a first visit that downloads each file once, opens offline and from shared links, a new deploy reaches installed and open phones',
+  about: 'served under /frank/ like GitHub Pages: no outside requests or 404s, fonts and service worker inside /frank/, manifest, a first visit that downloads each file once, every tab offline (right after a first visit too) and from shared links, a new deploy reaches installed and open phones',
   fresh: true,
   timeout: 420,
   async run(t) {
@@ -97,7 +120,8 @@ module.exports = {
         const got = srv.hits.slice(from).filter((h) => h.status === 200).map((h) => h.url.slice(PREFIX.length));
         t.equal(got.filter((u, i) => got.indexOf(u) !== i), [], 'files the first visit downloaded twice');
         t.equal(got.filter((u) => lazy.includes(u)), [], 'files the first visit downloaded without showing them (LAZY in sw.js)');
-        // on top of what the page loaded, the worker adds the few small SHELL files it hasn't used yet: no coach, no photos
+        // on top of what the page loaded, the worker adds the SHELL files it hasn't used yet: small ones and Frank's
+        // photos (about 110 KB), never a coach
         const used = ['', ...(await p.evaluate(() => performance.getEntriesByType('resource').map((e) => e.name)))].map((u) => (u ? u.slice(home.length) : u));
         const extra = got.filter((u) => !used.includes(u));
         const kb = Math.round(extra.reduce((a, u) => a + fs.statSync(path.join(L.REPO, u || 'index.html')).size, 0) / 1024);
@@ -148,19 +172,49 @@ module.exports = {
             await app.waitTitle(p, 'Plan');
           }
           await t.look(p, 'plan from a shared link offline');
+          // Frank's photos, on screens this phone never opened online
+          t.step('Frank\'s photos offline');
+          await photosOffline(t, p);
         } finally {
-          t.equal(await online(), [], 'requests that reached the server while it was off');
+          t.equal(await online(), [], 'requests that failed offline');
         }
       });
 
+      // the worker takes over during the first visit and the phone goes offline right after: the tabs work, with Frank's
+      // photos on screens the visit never opened. A member, and a client who came by Frank's link (no onboarding, so no
+      // "Meet your coach" with his photo)
+      const link = '#frank.' + L.pack(L.spec({ i: 'qa-first', t: 'First session' }));
+      for (const who of ['a member', 'a client from a link']) {
+        await t.flow('a first visit, then no network: ' + who, async () => {
+          const client = who !== 'a member';
+          const p = await t.page({ server: srv, sw: true, href: home + (client ? link : ''), state: client ? L.state() : L.member() });
+          if (!(await until(p, () => !!navigator.serviceWorker.controller, null, 30000))) throw new Error('the service worker did not take over the first visit');
+          const online = await offline(p, srv);
+          try {
+            if (client) {
+              await p.goto('about:blank');                       // the app closed, then the link opened again
+              await p.goto(home + link);
+              await app.waitHeading(p, 'First session');
+              await L.settle(p);
+              await app.tap(p, '[data-act="back"]');
+            } else {
+              await p.reload(); await L.settle(p);
+            }
+            await app.waitTitle(p, 'Plan');
+            await photosOffline(t, p);
+          } finally {
+            t.equal(await online(), [], 'requests that failed offline');
+          }
+        });
+      }
+
       await t.flow('a new deploy reaches the phone', async () => {
-        const p = await t.page({ server: srv, sw: true, href: home });
+        // she trains with the female coach (LAZY): kept once her phone has used it, and by the next version too
+        const p = await t.page({ server: srv, sw: true, href: home, state: L.member({ sex: 'f' }) });
         await swReady(p);
         await p.reload(); await L.settle(p);                     // installed and in control, as on a phone
-        // a photo the app showed (LAZY): kept from then on, and by the next version too
-        await p.evaluate(() => WBF.app.tab('frank'));
-        await L.settle(p);
-        t.check(await isCached(p, 'img/wellness-4.jpg'), 'a photo the app showed (img/wellness-4.jpg) was not kept for offline');
+        await p.waitForFunction(() => WBF.fig3d.coach() === 'f', null, { timeout: 30000 });
+        t.check(await isCached(p, 'assets/coach-f.glb'), 'before the deploy: the coach she uses (assets/coach-f.glb) was not kept for offline');
         try {
           const next = deploy('-qa');
           await p.reload(); await L.settle(p);                   // the browser finds the new sw.js and installs it
@@ -168,7 +222,7 @@ module.exports = {
             throw new Error('the new service worker never took over (caches: ' + (await cacheKeys(p)).join(', ') + ')');
           }
           const kept = await cached(p, next);
-          t.equal(lazy.filter((f) => kept.includes(f)), ['img/wellness-4.jpg'], 'LAZY files in the new version\'s cache (only the one this phone used)');
+          t.equal(lazy.filter((f) => kept.includes(f)), ['assets/coach-f.glb'], 'LAZY files in the new version\'s cache (only the one this phone used)');
           await p.reload(); await L.settle(p);
           t.check((await p.evaluate(() => window.__qaDeploy || null)) === next, 'a reload after the new service worker took over, the phone still runs the old js/app.js');
         } finally { undeploy(); }
@@ -230,7 +284,7 @@ module.exports = {
             .catch(() => { throw new Error('offline, the female coach did not load'); });
           await t.look(p, 'plan offline with the female coach');
         } finally {
-          t.equal(await online(), [], 'requests that reached the server while it was off');
+          t.equal(await online(), [], 'requests that failed offline');
         }
       });
 

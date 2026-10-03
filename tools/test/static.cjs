@@ -64,6 +64,9 @@ module.exports = {
       for (const f of need) {
         if (!exists(f)) t.fail(f + ' is used by the app but does not exist');
         else if (!sw.shell.includes(f) && !sw.lazy.includes(f) && !/^img\/icon-(180|192)\.png$|^media\//.test(f)) t.fail(f + ' is used by the app but missing from SHELL and LAZY in sw.js: it breaks offline');
+        // a picture the screens show comes at install: kept only once used, it is broken offline on a phone that never
+        // opened its screen online
+        else if (/^img\//.test(f) && sw.lazy.includes(f)) t.fail(f + ' is shown by the app but is LAZY in sw.js: offline, a phone that never opened its screen online shows it broken. Put it in SHELL');
       }
       // a font loads when a letter needs it, maybe for the first time offline: every font is kept at install
       for (const m of read('fonts/fonts.css').matchAll(/url\(([^)]+)\)/g)) {
