@@ -476,6 +476,8 @@ module.exports = {
       t.equal(await app.toast(p), SAVE_FAIL, 'the warning after a water tap');
       await app.tap(p, '.tab[data-tab="me"]');
       t.has(await app.text(p), "Save a backup now. It holds everything on screen, also what this phone couldn't save.", "Me's data card");
+      // whether the browser protects its data from clearing doesn't matter while nothing is saved: no second "save a backup"
+      t.lacks(await app.text(p), /Not protected yet|Protected from automatic clearing/, "Me's data card while the phone can't save: the line about clearing");
       t.equal([await p.locator('[data-act="keep-save"]').count(), await p.locator('[data-act="keep-move"]').count(), await p.locator('[data-act="keep-restore"]').count()], [1, 0, 0],
         'Me offers [Save a backup, Move my plan, Restore from a backup]');
       await t.look(p, 'me when the phone cannot save');
@@ -520,6 +522,15 @@ module.exports = {
         t.equal([s.profile.name, s.sessions.map((r) => r.id)], ['Mo', ['mv1']], 'at the new address [name, workouts]');
         await q.evaluate((h) => { WBF.FRANK.home = h; WBF.app.tab('plan'); }, b.home);
         t.equal(await q.locator('[data-card="keep-moved"]').count(), 0, 'at the new address: banners');
+        // a phone at the old address with nothing to bring: the card says where the app is now, and its button goes there
+        const n = await t.page({ server: a });
+        pages.push(n);
+        await n.evaluate((h) => { WBF.FRANK.home = h; WBF.app.tab('welcome'); }, b.home);
+        const said = await n.locator('[data-card="keep-moved"] p').textContent().catch(() => '');
+        t.has(said, "Frank's app has moved. It's at " + b.url.replace('http://', '') + ' now. This copy keeps working.', 'Welcome with nothing to bring: the card');
+        t.lacks(said, 'Bring your progress', 'Welcome with nothing to bring: the card');
+        t.equal(await n.locator('[data-card="keep-moved"] [data-act="keep-moved"]').textContent().catch(() => ''), 'Go to the new app', 'Welcome with nothing to bring: the button');
+        await t.look(n, 'welcome after the app moved, nothing to bring');
       } finally {
         for (const pg of pages) await pg.context().close().catch(() => null);
         await a.close(); await b.close();

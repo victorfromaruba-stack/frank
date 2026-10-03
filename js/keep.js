@@ -692,12 +692,13 @@
     });
 
     // ---- cards ----------------------------------------------------------------------------------------------------------
-    function movedLine(to) { return 'It\'s at ' + new URL(to).host + ' now. Bring your progress there in one tap. This copy keeps working.'; }
+    // where the app is now; "Bring your progress" only when this phone has some (any), as its button says
+    function movedLine(to, any) { return 'It\'s at ' + new URL(to).host + ' now.' + (any ? ' Bring your progress there in one tap.' : '') + ' This copy keeps working.'; }
     function movedCard() {
-      var to = home();
+      var to = home(), any = filled(app.state());
       if (!to) return null;
-      return { id: 'keep-moved', priority: 95, html: '<section class="card"><p class="label">Frank\'s app has moved</p><p class="small">' + esc(movedLine(to)) + '</p>' +
-        '<button class="btn block" data-act="keep-moved">' + (filled(app.state()) ? 'Bring my progress' : 'Go to the new app') + '</button></section>' };
+      return { id: 'keep-moved', priority: 95, html: '<section class="card"><p class="label">Frank\'s app has moved</p><p class="small">' + esc(movedLine(to, any)) + '</p>' +
+        '<button class="btn block" data-act="keep-moved">' + (any ? 'Bring my progress' : 'Go to the new app') + '</button></section>' };
     }
     // Android: Chrome opens the same address (or the phone's browser, without Chrome)
     function chromeLink() {
@@ -707,8 +708,9 @@
     app.card('welcome.top', function () {
       var to = home(), name = inApp();
       if (to) {
-        return { id: 'keep-moved', priority: 95, html: '<div class="infobox"><p><b>Frank\'s app has moved.</b> ' + esc(movedLine(to)) + '</p>' +
-          '<button class="btn dark block" data-act="keep-moved">' + (filled(app.state()) ? 'Bring my progress' : 'Go to the new app') + '</button></div>' };
+        var any = filled(app.state());
+        return { id: 'keep-moved', priority: 95, html: '<div class="infobox"><p><b>Frank\'s app has moved.</b> ' + esc(movedLine(to, any)) + '</p>' +
+          '<button class="btn dark block" data-act="keep-moved">' + (any ? 'Bring my progress' : 'Go to the new app') + '</button></div>' };
       }
       if (!name) return null;
       // Welcome has little room: the warning and what to do in one short paragraph (Android: and one small button). The
@@ -751,10 +753,11 @@
     // Me > Your data: the backup, the move link, what the browser said about keeping the data
     app.html('me.data', function () {
       var S = app.state(), k = kept(), out = '', any = filled(S);
+      // the phone refuses to save: the backup comes from what's on screen, so it holds what wasn't saved too. Whether the
+      // browser protects its data from clearing doesn't matter then, so no line about it
+      if (failing) return '<p class="small">Save a backup now. It holds everything on screen, also what this phone couldn\'t save.</p><button class="btn block" data-act="keep-save">Save a backup</button>';
       if (prot === true) out += '<p class="small">Protected from automatic clearing.</p>';
       else if (prot === false && any) out += '<p class="small">Not protected yet: save a backup.</p>';
-      // the phone refuses to save: the backup comes from what's on screen, so it holds what wasn't saved too
-      if (failing) return out + '<p class="small">Save a backup now. It holds everything on screen, also what this phone couldn\'t save.</p><button class="btn block" data-act="keep-save">Save a backup</button>';
       if (any) out += '<button class="btn two block" data-act="keep-save">Save a backup</button><button class="btn two block" data-act="keep-move">Move my plan</button>';
       out += '<button class="link" data-act="keep-restore">Restore from a backup</button>';
       if (k.backupAt && isDay(k.backupAt)) out += '<p class="small">Last backup: ' + esc(u.fmtShort.format(u.fromIso(k.backupAt))) + '.</p>';
