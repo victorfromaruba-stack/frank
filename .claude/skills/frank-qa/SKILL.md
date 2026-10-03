@@ -22,8 +22,8 @@ itself on 127.0.0.1 and needs no network, except `live`.
 
 | Situation | Run | Time |
 |---|---|---|
-| Before every push to `app` | `node tools/test/run.cjs` (every local suite) | about 8 min |
-| While working on a small change | `node tools/test/run.cjs quick` (static, smoke), then the full run before the push | about 1 min |
+| Before every push to `app` | `node tools/test/run.cjs` (every local suite) | 15 to 20 min |
+| While working on a small change | `node tools/test/run.cjs quick` (static, smoke), then the full run before the push | about 4 min |
 | One area | `node tools/test/run.cjs player client` | |
 | You changed how something looks | the full run, then open `<out>/screens/index.html` and look at every screen you touched | |
 | After the push | `node tools/test/run.cjs live --wait` | about 1 min |
@@ -41,22 +41,25 @@ Exit code: 0 all passed, 1 a suite failed, 2 a usage error.
 
 | Suite | What it checks |
 |---|---|
-| `static` | No browser. Every file passes `node --check`; `tools/check-plans.cjs` passes; every file the app loads exists and is in `SHELL` or `LAZY` in `sw.js`, and a picture the screens show in `SHELL`; a cached file changed since `origin/app` means `VERSION` must change; the manifest (relative `start_url` and scope, icon sizes, a maskable icon); nothing loaded from other sites; no GPL text; no keys or tokens; `FRANK.codes` holds only hashes; the monthly price is still €15 |
-| `smoke` | Welcome, onboarding start, "Look around first", every tab, Workouts (body part, search, library), the exercise sheet (three tabs, pager), a plan day, the player starts and the coach moves, the science, Coach tools; logging walks, water, meals and weight; a phone that can't save (one toast that fits, Me, the quit box and the finish screen say so); Delete my data; Other options; the Personal prototype |
-| `onboarding` | The whole onboarding tapped through like a person, once in cm and kg, once in ft and lb (rulers dragged, year wheel, PAR-Q answers, sore spots, push-up test), to the built plan; what was saved, the plan level and that no ruled-out move is in it; Me: change sore spots, Edit then Back, Edit all the way, Edit of an older profile (health questions it never answered stay open; answered No, the plan and its ticks stay) |
+| `static` | No browser. Every file passes `node --check`; `tools/check-plans.cjs` passes; every file the app loads exists and is in `SHELL` or `LAZY` in `sw.js`, and a picture the screens show in `SHELL`; every `js/*.js` is loaded by `index.html` and in `SHELL`, a module before `js/app.js`; a cached file changed since `origin/app` means `VERSION` must change; the manifest (relative `start_url` and scope, icon sizes, a maskable icon); nothing loaded from other sites; no GPL text; no keys or tokens; `FRANK.codes` and `FRANK.coachCodes` hold only hashes; the monthly price is still €15, with Frank's `approved: true` |
+| `smoke` | Welcome, onboarding start, "Look around first", every tab, Workouts (body part, search, library), the exercise sheet (three tabs, pager), a plan day, the player starts and the coach moves, the science (a source number keeps the screen), Coach tools; logging walks, water, meals and weight; a phone that can't save (one toast that fits, Me, the quit box and the finish screen say so); Delete my data; Other options; the keyboard (the focus on a new screen, after Back, on a choice, in a sheet; Space in the player; a ring you can see on a light and a dark screen); toasts clear of the main button; the BMI bar's colours; the iPhone status bar on light screens; modules (the template, one card per slot, modules that throw, a screen that isn't there, the safety rules and every change to the profile); links to a move or a workout, also during a workout or while a box asks; the Personal prototype |
+| `onboarding` | The whole onboarding tapped through like a person, once in cm and kg, once in ft and lb (rulers dragged and read as a screen reader says them, year wheel, PAR-Q answers, sore spots, push-up test), to the built plan; what was saved, the plan level and that no ruled-out move is in it; Me: change sore spots, Edit then Back, Edit all the way, Edit of an older profile (health questions it never answered stay open; answered No, the plan and its ticks stay) |
 | `player` | Every control on a session from Frank (ready, reps, How-to, rest +20 s, skip, switch sides, pause, previous) and the screens in order; a plan day run to the finish screen; the feedback buttons tune `adjust`; Today, Me and the grid after; quitting with and without saving; the phone's Back mid-workout |
-| `paywall` | The trial starts with the first workout; days left; the price screen after the trial (€15 a month, the yearly placeholder, "Become a member" off while payments are off); members; Frank's sessions stay open; "I'm one of Frank's clients" |
-| `client` | Client codes (a test-only code, typed with capitals and spaces); session links opened, pasted, broken and hostile (no script runs, doses capped); long titles; Coach tools: build, save, send, the link opened on a fresh phone, Back, the player counts sets |
+| `paywall` | The trial starts with the first workout; the price screen before the trial (the trial offer), during it (days left, no trial offer) and after it: only prices Frank approved (€15 a month, no yearly placeholder, nothing about a preview), no switched-off button, "Tell me when it opens" (Frank's chat, the message copied); with a payment link, the checkout; members; Frank's sessions stay open; "I'm one of Frank's clients" |
+| `client` | Client codes (a test-only code, typed with capitals and spaces); session links opened, pasted (from github.io and Frank's own domains, also wrapped by a mail or chat app), in a second window, during a workout, edited and sent again, broken and hostile (no script runs, doses capped); long titles; Coach tools: closed without Frank's coach code (a test-only one), open with it and after a reload, locked again, a link made on the same phone gives no access; build, save, send, the link opened on a fresh phone, Back, the player counts sets |
 | `safety` | The food card refers to a dietitian or doctor when pregnant, under 18 or with a medical condition, with no water card, no food or drink lesson and no weight target (onboarding and Edit); every plan day and catalogue workout is checked against pregnancy, a PAR-Q yes (gentle until "Cleared by a doctor"), age 60+ and each sore spot; no made-up social proof |
 | `hosted` | Served under `/frank/` with Pages' 10-minute caching and the service worker on: no outside requests, no 404s, fonts and worker scope inside `/frank/`, the manifest and icons, every `SHELL` file cached; with no network (the server off) the welcome, the plan, Workouts, a program, Frank (his photos), an exercise sheet, a workout, a session link and shared links still work, also right after a first visit, and no request fails; a new deploy reaches a phone that has the app, and an open app offers it on Plan, Today and Me; Personal |
-| `screens` | A screenshot of every screen and main state (86 of them, every onboarding step, sheets, player states, empty and full states, Personal) with the standard checks, plus `index.html`, a contact sheet to look through |
+| `screens` | A screenshot of every screen and main state (100 of them: every onboarding step, sheets, player states, empty and full states, the price screen for everyone, Coach tools locked and open, Personal) with the standard checks, plus `index.html`, a contact sheet to look through |
 | `live` | The published site: every app file is served with the right type and is byte for byte what `origin/app` holds, `sw.js` VERSION, the folder address serves the app; then welcome, onboarding, a member's plan, the sheet, the player, a session link and Personal, through the real site. Only runs when named (or with `all`) |
 
 Every screen a test looks at (`t.look`) also gets the standard checks: no page or
 console errors, no sideways scroll at 390 px, Frank's fonts loaded, no broken
 images, no undrawn 3D coach, no muscle map left hidden once the coach is in, every
 "kcal" with "est." next to it, no screenshot mode, no HTTP errors, nothing
-requested from another site.
+requested from another site. And what someone with low vision, a screen reader or
+big fingers needs (WCAG 2.2 AA): text at 4.5:1 against what is behind it (3:1 when
+large), every control at least 24 x 24 px and a choice 44 px tall, no control inside
+another, and a name a screen reader can say on every control, box and picture.
 
 ## Reading the output
 
@@ -111,7 +114,9 @@ new problem. `why` names the bug and where in the code it is.
 
 Every feature that changes what a person sees or what's saved gets a test in the
 same change. Put it in the suite for that area (a flow of its own, so one failure
-doesn't hide the rest), and add its screen to `screens.cjs`:
+doesn't hide the rest), and add its screen to `screens.cjs`. A feature in its own
+file (a module, `.claude/skills/frank-module/`) starts from the flow at the end of
+its `template.js`:
 
 ```js
 await t.flow('water: a glass and back', async () => {
@@ -131,18 +136,20 @@ and an `about`, and add the name to `ORDER` in `run.cjs`.
 |---|---|
 | `t.page({ state, url, hash, speed, now, sw, prefix, site, threeD })` | A fresh phone with one page. `state` is seeded into localStorage once; `speed: 50` makes timers 50 times faster (`window.__qa.speed(n)` changes it later); `url: 'personal/'` opens Personal |
 | `L.state()`, `L.member()`, `L.profile()`, `L.spec()`, `L.pack()` | Saved states to seed: a new person, a paying member, a profile, a session from Frank, a link code (`#frank.` + `L.pack(spec)`) |
+| `L.QA_CODE`, `L.QA_COACH` | A client code and a coach code that exist only in tests: `app.addCode` and `app.addCoachCode` add their hashes in the page |
 | `L.TODAY`, `L.isoDay(n)` | The tests' date, 2026-10-14 09:00 in The Hague, and n days from it. An ended trial is `access: { trialStart: L.isoDay(-10) }` |
 | `app.tap`, `app.tapText`, `p.fill` | What a person does. Use these for the thing you test |
 | `WBF.app.go(name, params)`, `.tab(name)`, `.sheet(id)` | Jump to a screen to set up a test (`p.evaluate(() => WBF.app.go('pay'))`), not to test the way there |
 | `app.waitTitle`, `app.waitHeading`, `app.waitText` | Wait for a screen, a heading, a text |
 | `app.text`, `app.title`, `app.toast`, `app.toasts`, `app.overlay`, `app.stored` | What's on screen, the last toast (even after it faded), the open sheet, what was saved |
 | `app.runWorkout`, `app.slideRuler`, `app.addCode` | Play a workout to the finish screen, drag an onboarding ruler, make the test-only client code valid |
+| `app.openCoach` | Frank's phone: opens Coach tools the way Frank does (Frank tab > Frank? Open coach tools, the test-only coach code) |
 | `app.maps`, `app.holdCoach` | Which muscle maps show; keep the 3D coach out until a test lets it in (a slow phone: open the page with `go: false`) |
 | `t.has`, `t.lacks`, `t.equal`, `t.near`, `t.check`, `t.fail` | Checks. They record a problem and go on |
 | `t.step`, `t.look`, `t.shot`, `t.note`, `t.log` | Name the step, run the standard checks, save a screenshot, print a note, print with `-v` |
 
 Tests find things by `data-act`, `data-k`, `data-v`, `data-tab` and a few ids
-(`#wq`, `#join-in`, `#ob-name`). If you rename one in the app, grep `tools/test/`
+(`#wq`, `#join-in`, `#coach-in`, `#ob-name`). If you rename one in the app, grep `tools/test/`
 and change both together.
 
 Keep tests deterministic. Seed the state you need; don't tap through the onboarding
@@ -162,7 +169,7 @@ can, wait for something on screen, not a fixed number of milliseconds.
   parallel or another browser next to it. When the machine is busy, runs get slow
   and waits can time out: rerun alone, or add `--timeout 40000`.
 - **SwiftShader.** WebGL runs in software (`--use-angle=swiftshader`), so every 3D
-  coach takes seconds to load and draw, and `screens` takes about 2 minutes (longer
+  coach takes seconds to load and draw, and `screens` takes about 3 minutes (longer
   with `--scale 2`). That's normal. The same software renderer makes screenshots
   match from machine to machine.
 - **Playwright** comes from the global install here (`/opt/node22/lib/node_modules`);
@@ -173,6 +180,8 @@ can, wait for something on screen, not a fixed number of milliseconds.
 ## Don't
 
 - Don't commit the output folder or screenshots.
-- Don't put a real client code, a token or Frank's business terms (fees, client
-  numbers) in a test. Use `L.QA_CODE`; its hash is added in the page by `app.addCode`.
+- Don't put a real client code, Frank's coach code, a token or Frank's business terms
+  (fees, client numbers) in a test. Use `L.QA_CODE` (its hash is added in the page by
+  `app.addCode`) and `L.QA_COACH` (`app.addCoachCode`, or `app.openCoach` to open
+  Coach tools like Frank).
 - Don't treat `live` as the check before a push: it tests what's already published.

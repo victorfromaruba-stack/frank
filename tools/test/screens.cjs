@@ -180,6 +180,13 @@ module.exports = {
       await app.tap(p, '#overlay [data-act="close"]');
       await app.tap(p, '[data-act="c-send"]');
       await snap(p, 'coach send sheet', { full: false });
+      // Frank's phone: the For Frank card on his tab, and the box that locks Coach tools again
+      await app.tap(p, '#overlay [data-act="close"]');
+      await tab(p, 'frank');
+      await snap(p, 'frank with coach tools open');
+      await go(p, 'coach', {});
+      await app.tap(p, '[data-act="coach-lock"]');
+      await snap(p, 'coach tools lock question', { full: false });
     });
 
     await t.flow('player', async () => {
@@ -226,6 +233,13 @@ module.exports = {
       await snap(p, 'paywall after the trial');
       await tab(p, 'me');
       await snap(p, 'me trial ended', { full: false });
+      // a member, and one of Frank's clients: Frank sees these from Coach tools with his own phone's access
+      p = await t.page({ state: L.member({}, { access: { paid: true, trialStart: L.isoDay(-40) } }) });
+      await go(p, 'pay', {});
+      await snap(p, 'paywall for a member');
+      p = await t.page({ state: L.member({}, { access: { client: true } }) });
+      await go(p, 'pay', {});
+      await snap(p, 'paywall for a client');
       p = await t.page({ state: L.member({ sex: 'f', health: { pregnant: true, heart: true } }, { access: { client: true } }) });
       await tab(p, 'today');
       await snap(p, 'today pregnant (no diet advice)');

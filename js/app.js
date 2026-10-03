@@ -1234,12 +1234,15 @@
   }
 
   // ---- paywall --------------------------------------------------------------------------------
+  // what a member and one of Frank's clients read where others get a way to join: the price screen and Me
+  var HAVE = { member: 'You\'re a member. Thank you.', client: 'You train with Frank. His sessions show up on your plan, and the whole app is open to you.' };
   // Only plans with Frank's yes show. The trial is offered only to someone who hasn't had it; with no payment link yet,
-  // the way on is a message to Frank, not a button that does nothing
+  // the way on is a message to Frank, not a button that does nothing. A member or a client has it all already: their
+  // line instead of a way to join (Frank opens this screen from Coach tools, with his own phone's access)
   SCREENS.pay = {
     title: function () { return 'Membership'; },
     html: function (p) {
-      var st = status(), fresh = st === 'new', link = BILL.paymentLink;
+      var st = status(), fresh = st === 'new', link = BILL.paymentLink, have = HAVE[st] || '';
       var plans = BILL.plans.filter(function (pl) { return pl.approved; });
       var sel = p.plan || (plans.filter(function (pl) { return pl.best; })[0] || plans[0] || {}).id;
       var planBtn = function (pl) {
@@ -1252,11 +1255,12 @@
         '<ul class="perks">' + ['A 28-day plan for your goal, level and time, adjusted after every session', Object.keys(EX).length + ' moves shown by a 3D coach, with Frank\'s cues and the why',
           'Workouts for every body part, plus Frank\'s programs', 'Progress, weight, walks, water and food in one place', 'Plans that leave out what your body shouldn\'t do'].map(function (t) { return '<li>' + ic('check') + t + '</li>'; }).join('') + '</ul>' +
         plans.map(planBtn).join('') +
-        (link ? '<a class="btn dark block" href="' + esc(link) + '" target="_blank" rel="noopener">' + (fresh ? 'Start my free trial' : 'Become a member') + '</a>'
+        (have ? '<p class="ob-sub">' + have + '</p>'
+          : link ? '<a class="btn dark block" href="' + esc(link) + '" target="_blank" rel="noopener">' + (fresh ? 'Start my free trial' : 'Become a member') + '</a>'
               : (fresh ? '<button class="btn dark block" data-act="pay-trial">Start my ' + BILL.trialDays + '-day free trial</button><p class="fine">No payment needed for the trial.</p>'
                        : '<a class="btn dark block" href="' + esc(FR.dm) + '" target="_blank" rel="noopener" data-act="pay-ask">Tell me when it opens</a><p class="fine">Membership isn\'t open yet.</p>')) +
-        '<button class="btn white block" data-act="join">I\'m one of Frank\'s clients</button>' +
-        (link ? '<p class="fine">Cancel any time.</p>' : '') + '</div></div>';
+        (st !== 'client' ? '<button class="btn white block" data-act="join">I\'m one of Frank\'s clients</button>' : '') +
+        (link && !have ? '<p class="fine">Cancel any time.</p>' : '') + '</div></div>';
     }
   };
 
@@ -2005,8 +2009,7 @@
   }
   function membershipCard() {
     var st = status(), body;
-    if (st === 'client') body = '<p class="lead">You train with Frank. His sessions show up on your plan, and the whole app is open to you.</p>';
-    else if (st === 'member') body = '<p class="lead">You\'re a member. Thank you.</p>';
+    if (HAVE[st]) body = '<p class="lead">' + HAVE[st] + '</p>';
     else if (st === 'trial') body = '<p class="lead">Free trial: ' + plural(daysLeft(), 'day') + ' left.</p><button class="btn two block" data-act="paywall">See membership</button>';
     else if (st === 'ended') body = '<p class="lead">Your free trial has ended.</p><button class="btn block" data-act="paywall">' + (BILL.paymentLink ? 'Become a member' : 'See membership') + '</button>';
     else body = '<p class="lead">Your ' + BILL.trialDays + '-day free trial starts with your first workout.</p>';

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Runs the app's test suites and prints PASS or FAIL for each. Exits 1 when a suite fails, 2 on a usage error.
 //
-//   node tools/test/run.cjs                  every local suite (all but live), about 8 minutes
-//   node tools/test/run.cjs quick            static and smoke, about a minute
+//   node tools/test/run.cjs                  every local suite (all but live), 15 to 20 minutes
+//   node tools/test/run.cjs quick            static and smoke, about 4 minutes
 //   node tools/test/run.cjs smoke player     only these
 //   node tools/test/run.cjs live --wait      the published site, after a push (waits up to 5 min for the deploy)
 //   node tools/test/run.cjs all              every suite, the published site too

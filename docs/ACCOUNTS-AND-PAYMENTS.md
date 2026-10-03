@@ -2,16 +2,20 @@
 
 ## Built now (no server)
 
-- **Members**: a free trial (`BILLING.trialDays`, 7) that starts on the paywall
-  after onboarding (or with the first workout), then a paywall with a yearly and
-  a monthly plan that links to a checkout page (`BILLING.paymentLink`).
-- **Frank's clients**: Frank writes a session in Coach tools and sends it as a
-  link. Opening it puts the session on the client's plan and opens the app to
-  them without the membership. Frank bills his clients himself.
+- **Members**: a free trial (`BILLING.trialDays`, 7) that starts on the price
+  screen after onboarding (or with the first workout), then the membership. The
+  price screen shows only the plans Frank said yes to (`approved` in
+  `BILLING.plans`: €15 a month) and links to a checkout page once
+  `BILLING.paymentLink` is set. Until then it offers "Tell me when it opens": a
+  message for Frank, pasted in his Instagram chat.
+- **Frank's clients**: Frank writes a session in Coach tools (open only on a
+  phone where he typed his coach code) and sends it as a link. Opening it puts
+  the session on the client's plan and opens the app to them without the
+  membership. Frank bills his clients himself.
 
 All of this runs in the person's browser. That makes it easy to try, and easy
-to get around: someone who knows how can clear the trial or open the app
-without paying. It's fine for a pilot with Frank's clients, not for selling
+to get around: someone who knows how can clear the trial, open the app
+without paying or open Coach tools without the code. It's fine for a pilot with Frank's clients, not for selling
 memberships to strangers.
 
 ## What a real membership needs
@@ -65,7 +69,8 @@ doesn't change when you pick one. Prices are in euro.
 ## Decisions for Victor and Frank
 
 1. The yearly price and the trial length (now €119.99 a year and 7 days free:
-   placeholders in `BILLING.plans`). The monthly price is decided: €15.
+   placeholders in `BILLING.plans`; the price screen shows the yearly plan only
+   once it has `approved: true`). The monthly price is decided: €15.
 2. Payment provider (Mollie or Stripe through Frank's Dutch business, or Paddle).
 3. Web app first, or straight into the stores.
 4. Whether Frank's clients also get the generated plans (now: yes).

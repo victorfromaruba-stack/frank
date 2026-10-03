@@ -5,7 +5,7 @@ const { app } = L;
 
 module.exports = {
   name: 'paywall',
-  about: 'trial starts with the first workout, days left, the price screen: the trial offered only before it starts, only prices Frank approved (€15 a month), "Tell me when it opens" while payments are off, the checkout once they are on; members, Frank\'s sessions stay open',
+  about: 'trial starts with the first workout, days left, the price screen: the trial offered only before it starts, only prices Frank approved (€15 a month), "Tell me when it opens" while payments are off, the checkout once they are on; members, and the price screen for a member or a client (their line, no way to join); Frank\'s sessions stay open',
   async run(t) {
     await t.flow('new: the first workout starts the trial', async () => {
       const p = await t.page({ state: L.state({ profile: L.profile() }) });
@@ -134,6 +134,31 @@ module.exports = {
       await app.tap(p, '.tab[data-tab="plan"]');
       await app.tap(p, '[data-act="start-day"]');
       await app.waitTitle(p, 'Workout');
+    });
+
+    await t.flow('member and client: the price screen says they have it', async () => {
+      // Frank opens the price screen from Coach tools ("See what members see") with his own phone's access. A member or
+      // one of his clients already has the app: their line, never a way to join or "Membership isn't open yet"
+      const who = [
+        ['member', L.member({ start: L.isoDay(-30) }, { access: { paid: true, trialStart: L.isoDay(-40) } }), "You're a member. Thank you."],
+        ['client', L.member({}, { access: { client: true, trialStart: L.isoDay(-10) } }), 'You train with Frank. His sessions show up on your plan, and the whole app is open to you.']
+      ];
+      for (const [label, st, line] of who) {
+        for (const pay of [false, true]) {
+          t.step(label + (pay ? ', payments on' : ''));
+          const p = await t.page({ state: st, threeD: false });
+          await p.evaluate((on) => { if (on) WBF.BILLING.paymentLink = 'https://pay.example.org/wellness-by-frank'; WBF.app.go('pay'); }, pay);
+          await app.waitTitle(p, 'Membership');
+          const txt = await app.text(p);
+          t.has(txt, line, label + ' on the price screen');
+          for (const bad of ['Tell me when it opens', "isn't open yet", 'Start my', 'Become a member', 'Cancel any time']) t.lacks(txt, bad, label + ' on the price screen' + (pay ? ' with payments on' : ''));
+          t.equal(await p.locator('.pay a.btn, .pay [data-act="pay-trial"], .pay [data-act="pay-ask"]').count(), 0, label + ': ways to join on the price screen');
+          // a client already is one of Frank's clients; a member may still become one
+          t.equal(await p.locator('.pay [data-act="join"]').count(), label === 'client' ? 0 : 1, label + ': "I\'m one of Frank\'s clients" on the price screen');
+          if (!pay) await t.look(p, 'price screen for a ' + label);
+          await p.context().close();
+        }
+      }
     });
   }
 };
