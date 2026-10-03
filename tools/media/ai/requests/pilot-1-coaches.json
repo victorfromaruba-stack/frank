@@ -1,0 +1,7 @@
+{
+  "about": "Pilot, part 1: two looks for each coach (front, side, 45 degrees). Pick one per coach with pick.mjs look.",
+  "steps": ["design"],
+  "coaches": ["f", "m"],
+  "looks": 2,
+  "budget": 5
+}
