@@ -5,7 +5,7 @@ const { app } = L;
 
 module.exports = {
   name: 'smoke',
-  about: 'every tab, the exercise sheet, a workout, the player starts, logging walks, water, meals and weight, delete my data, easier options, Back after a tab switch, the activity slider, the Personal prototype',
+  about: 'every tab, the exercise sheet, a workout, the player starts, logging walks, water, meals and weight, delete my data, other options in the sheet, Back after a tab switch, the activity slider, the Personal prototype',
   async run(t) {
     await t.flow('first visit', async () => {
       const p = await t.page();
@@ -140,19 +140,23 @@ module.exports = {
       t.check(!left || !JSON.parse(left).profile, 'a profile is still stored after "Delete everything"');
     });
 
-    await t.flow('easier options in the sheet', async () => {
-      // "Easier options" in a sheet open the easier move's sheet; its tabs must work like the first sheet's
+    await t.flow('other options in the sheet', async () => {
+      // "Other options" in a sheet open that move's sheet; its tabs must work like the first sheet's
       const p = await t.page({ state: L.member() });
       await p.evaluate(() => WBF.app.sheet('push-up'));
+      t.has(await app.overlay(p), 'Other options', 'push-up sheet');
       const first = await p.evaluate(() => WBF.EX['push-up'].name);
       await app.tap(p, '#overlay [data-act="ex"]', { nth: 0 });
       const name = await p.locator('#overlay h2').first().innerText();
-      t.check(name !== first, 'Easier options did not open another move');
+      t.check(name !== first, 'Other options did not open another move');
       for (const tab of ['muscle', 'howto']) {
         await app.tap(p, '#overlay [data-act="xs-tab"][data-v="' + tab + '"]');
-        t.equal(await p.locator('#overlay [data-act="xs-tab"][aria-pressed="true"]').getAttribute('data-v'), tab, 'tab in the sheet of an easier option (' + name + ')');
+        t.equal(await p.locator('#overlay [data-act="xs-tab"][aria-pressed="true"]').getAttribute('data-v'), tab, 'tab in the sheet of another option (' + name + ')');
       }
-      await t.look(p, 'sheet of an easier option');
+      await t.look(p, 'sheet of another option');
+      // the showcase's hook opens a sheet on a tab, also while another sheet is open
+      await p.evaluate(() => WBF.app.sheet('squat', 'muscle'));
+      t.equal(await p.locator('#overlay [data-act="xs-tab"][aria-pressed="true"]').getAttribute('data-v'), 'muscle', 'WBF.app.sheet(id, "muscle") over an open sheet');
     });
 
     await t.flow('Back after a tab switch', async () => {

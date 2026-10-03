@@ -20,6 +20,14 @@ const popsIn = (p, ms = 600) => p.evaluate((w) => new Promise((r) => {
   setTimeout(() => { removeEventListener('popstate', f); r(n); }, w);
 }), ms);
 const bookkeeping = (pr) => Object.keys(pr || {}).filter((k) => ['only', 'edit', 'soreDone'].includes(k));
+// the eight health questions (PAR-Q+ and pregnancy)
+const healthKeys = (p) => p.evaluate(() => WBF.PARQ.map((q) => q[0]).concat(['pregnant']));
+// the real length of the saved plan's sessions, in seconds: every training day, or one week
+const realSecs = (p, week) => p.evaluate((wk) => {
+  const pr = WBF.app.state().profile;
+  return WBF.plan.days(pr).filter((d) => d.train && (!wk || d.week === wk)).map((d) => WBF.app.session(d.workoutId, d).estSec);
+}, week || 0);
+const minutesOf = (secs) => secs.map((s) => Math.max(1, Math.round(s / 60)));
 
 // One person from the welcome screen to a plan. o: the answers and the checks that depend on them.
 async function walk(t, o) {
@@ -61,7 +69,22 @@ async function walk(t, o) {
   await app.tap(p, '#wheel button[data-year="' + o.born + '"]');
   await p.waitForFunction((y) => { const b = document.querySelector('#wheel button.on'); return b && b.getAttribute('data-year') === String(y); }, o.born, { timeout: 5000 })
     .catch(() => t.fail('year wheel: tapping ' + o.born + ' did not select it'));
-  if (o.born > 2008) t.has(await app.text(p), 'made for adults', 'under-18 note');
+  t.equal(await p.locator('#born-warn').isVisible(), o.born >= 2008, 'under-18 note showing (born ' + o.born + ')');
+  await next(p);
+
+  // the health questions come before height and weight (a yes changes what those steps may say)
+  t.step('health');
+  await expectStep(t, p, 'Before you');
+  t.equal(await p.locator('[data-act="ob-health"][aria-pressed="true"]').count(), 0, 'health questions answered (Yes or No) before any tap');
+  t.check(await p.locator('.ob-cta [data-act="ob-next"]').isDisabled(), 'health: Next works before the questions are answered');
+  if (o.healthNone) await app.tap(p, '[data-act="ob-health-none"]');
+  else for (const k of await healthKeys(p)) await app.tap(p, '[data-act="ob-health"][data-k="' + k + '"][data-v="' + (o.healthYes.includes(k) ? 1 : 0) + '"]');
+  t.equal(await p.locator('[data-act="ob-health"][aria-pressed="true"]').count(), 8, 'health questions answered after the taps');
+  t.equal(await p.locator('[data-act="ob-health-none"]').getAttribute('aria-pressed'), String(!o.healthYes.length), '"None of these apply to me" marked');
+  if (o.healthYes.length) t.has(await app.text(p), 'Check with your doctor', 'PAR-Q warning');
+  else t.lacks(await app.text(p), 'Check with your doctor', 'health step with all No');
+  t.check(await p.locator('.ob-cta [data-act="ob-next"]').isEnabled(), 'health: Next is off with every question answered');
+  await t.look(p, 'health questions');
   await next(p);
 
   t.step('height');
@@ -92,15 +115,6 @@ async function walk(t, o) {
   await t.look(p, 'target weight');
   await next(p);
 
-  t.step('health');
-  await expectStep(t, p, 'Before you');
-  t.equal(await p.locator('[data-act="ob-health"][data-v="1"][aria-pressed="true"]').count(), 0, 'health questions answered yes before any tap');
-  for (const k of o.healthYes) await app.tap(p, '[data-act="ob-health"][data-k="' + k + '"][data-v="1"]');
-  if (o.healthYes.length) t.has(await app.text(p), 'Check with your doctor', 'PAR-Q warning');
-  else t.lacks(await app.text(p), 'Check with your doctor', 'health step with all No');
-  await t.look(p, 'health questions');
-  await next(p);
-
   t.step('sore spots');
   await expectStep(t, p, 'sore spots');
   if (!o.sore.length) await app.tap(p, '[data-act="ob-none"]');
@@ -129,7 +143,11 @@ async function walk(t, o) {
   t.equal(await p.locator('[data-k="days"][aria-pressed="true"]').getAttribute('data-v'), String(o.days), 'days picked');
   await next(p);
   await expectStep(t, p, 'How long');
+  // 45 minutes is more than either person's first week fills: the step says how long their sessions really are
+  await app.tap(p, '[data-act="ob-pick-stay"][data-k="minutes"][data-v="45"]');
+  t.has(await p.locator('#min-real').innerText().catch(() => 'nothing'), /Your first sessions take \d+( to \d+)? minutes/, 'minutes step at 45');
   await app.tap(p, '[data-act="ob-pick-stay"][data-k="minutes"][data-v="' + o.minutes + '"]');
+  t.equal(await p.locator('#min-real').count(), 0, 'real-length line at ' + o.minutes + ' minutes, which the sessions fill');
   await next(p);
   await expectStep(t, p, 'home');
   for (const k of o.kitTaps) await app.tap(p, '[data-act="ob-multi"][data-k="kit"][data-v="' + k + '"]');
@@ -147,13 +165,18 @@ async function walk(t, o) {
   const build = await p.locator('#b-steps').innerText();
   for (const line of o.buildSays) t.has(build, line, 'build steps');
   // the doses line names the level the plan really uses (a PAR-Q yes keeps it at beginner), in plain English
-  t.has(build, new RegExp('Setting doses for ' + { b: 'beginner', i: 'intermediate', a: 'advanced' }[o.planLevel], 'i'), 'build steps');
+  t.has(build, new RegExp('Setting doses for ' + { b: 'beginners', i: 'intermediates', a: 'advanced' }[o.planLevel] + '$', 'im'), 'build steps');
   t.lacks(build, /advanceds/i, 'build steps');
+  t.lacks(build, /moves for (lose|build|move|stay)/i, 'build steps');
+  const sched = /Scheduling (\d) days a week, (\d+)(?: to (\d+))? minutes each/.exec(build);
+  t.check(sched, () => 'build steps: no "Scheduling N days a week, M minutes each" line in "' + build.replace(/\s+/g, ' ') + '"');
   await expectStep(t, p, 'Your plan is ready');
   const sum = await app.text(p);
   for (const line of o.summarySays) t.has(sum, line, 'summary');
+  const sumMin = await p.evaluate(() => { const s = [...document.querySelectorAll('.summary .trio span')].find((x) => x.textContent === 'Minutes'); return s ? +s.previousElementSibling.textContent : null; });
   await t.look(p, 'summary');
   await app.tap(p, '[data-act="ob-finish"]');
+  p.qa = { sched: sched ? [+sched[1], +sched[2], +(sched[3] || sched[2])] : null, sumMin };
   return p;
 }
 
@@ -171,7 +194,10 @@ async function checkSaved(t, p, o) {
   t.near(pr.cm, o.cm, 0.6, 'saved height (cm)');
   t.near(pr.kg, o.kg, 0.3, 'saved weight (kg)');
   t.equal(pr.injuries, o.sore, 'saved sore spots');
-  t.equal(Object.keys(pr.health).filter((k) => pr.health[k]), o.healthYes, 'saved health answers');
+  const hk = await healthKeys(p);
+  t.equal(hk.filter((k) => pr.health[k] === true), o.healthYes, 'saved health answers (yes)');
+  t.equal(hk.filter((k) => typeof pr.health[k] !== 'boolean'), [], 'health questions saved without an answer');
+  t.equal(pr.health.confirmed, L.TODAY, 'date the health answers were confirmed');
   t.equal(pr.days, o.days, 'saved days');
   t.equal(pr.minutes, o.minutes, 'saved minutes');
   t.equal(pr.kit.slice().sort(), o.kit.slice().sort(), 'saved kit');
@@ -196,6 +222,10 @@ async function checkSaved(t, p, o) {
   t.equal(plan.level, o.planLevel, 'plan level');
   t.equal(plan.unsafe, [], 'moves the answers rule out, still in the plan');
   if (o.healthYes.length) t.equal(plan.cardio, 0, 'cardio days in gentle mode');
+  // real lengths: the summary's minutes are the 28 days' sessions added up; the build step names week 1's shortest and longest
+  const all = await realSecs(p), wk1 = minutesOf(await realSecs(p, 1));
+  t.near(p.qa.sumMin, all.reduce((a, b) => a + b, 0) / 60, 1, 'summary minutes against the sessions the plan builds');
+  t.equal(p.qa.sched, [o.days, Math.min(...wk1), Math.max(...wk1)], 'build step "Scheduling N days a week, M to M minutes" against week 1 [days, shortest, longest]');
 }
 
 const METRIC = {
@@ -203,12 +233,13 @@ const METRIC = {
   heightSteps: 2, heightShows: '180cm', cm: 180,
   weightSteps: -2, weightShows: '79kg', kg: 79, bmiWord: 'Healthy',
   targetSteps: -1, targetSays: 'lose 7.6%',                  // 79 kg: the ruler starts at 73.5 (7% less), one mark down is 73
-  healthYes: [], sore: [], soreSays: null,
+  healthYes: [], healthNone: true, sore: [], soreSays: null,
   activeRight: -1, activeSays: 'I sit most of the day',
   push: 2, testLevel: 'Intermediate', planLevel: 'i',
   days: 4, minutes: 30, kitTaps: ['db'], kit: ['chair', 'table', 'db'], name: 'Sam',
-  buildSays: ['lose fat', 'intermediates', '4 days a week, 30 minutes each', 'abs and legs & glutes'],
-  summarySays: ['Done, Sam', '180', '79', 'Age', '36', 'BMI 24.4', 'Lose fat', '−6 kg', 'Intermediate', 'Abs, Legs & glutes', '28-day fat burner', '480']
+  buildSays: ['Choosing moves to lose fat', 'Setting doses for intermediates', 'Scheduling 4 days a week', 'abs and legs & glutes'],
+  // the minutes are the real total, checked against the plan in checkSaved (not 16 workouts x 30 = 480)
+  summarySays: ['Done, Sam', '180', '79', 'Age', '36', 'BMI 24.4', 'Lose fat', 'Target weight', '−6 kg', 'Intermediate', 'Abs, Legs & glutes', '28-day fat burner']
 };
 const IMPERIAL = {
   imperial: true, goal: 'strength', focus: ['full'], want: [], sex: 'f', born: 1958,
@@ -219,13 +250,13 @@ const IMPERIAL = {
   activeRight: 1, activeSays: "I'm on my feet and moving a lot",
   push: 3, testLevel: 'Advanced', planLevel: 'b',
   days: 2, minutes: 10, kitTaps: ['table'], kit: ['chair'], name: '',
-  buildSays: ['build strength', 'Leaving out moves that load your knee', 'Leaving out jumps for your other sore spot', '2 days a week, 10 minutes each'],
+  buildSays: ['Choosing moves to build strength', 'Leaving out moves that load your knee', 'Leaving out jumps for your other sore spot', 'Setting doses for beginners', 'Scheduling 2 days a week'],
   summarySays: ['Your plan is ready', '5′7″', '147', '68', 'Build strength', 'Keep', 'Beginner', 'Full body', 'Knee, Other', 'Gentle mode', '28-day strength builder']
 };
 
 module.exports = {
   name: 'onboarding',
-  about: 'the whole onboarding by tapping, in cm/kg and in ft/lb, to a built plan; Me: change sore spots, Edit and Back, Edit after an old Change, Edit all the way',
+  about: 'the whole onboarding by tapping, in cm/kg and in ft/lb, to a built plan, with real session lengths; Me: change sore spots, Edit and Back, Edit after an old Change, Edit keeps the health answers, Edit all the way',
   async run(t) {
     await t.flow('metric (cm, kg)', async () => {
       const o = METRIC;
@@ -239,6 +270,9 @@ module.exports = {
       const txt = await app.text(p);
       t.has(txt, 'Start day 1', 'plan');
       t.has(txt, '28-day fat burner', 'plan');
+      // the plan card gives the next session's real length, not the minutes picked
+      const day1 = minutesOf((await realSecs(p, 1)).slice(0, 1))[0];
+      t.has(await p.locator('.pc-grid').innerText(), new RegExp('\\b' + day1 + ' min\\s+Next session', 'i'), 'plan card');
       t.equal(await p.locator('.wk-days button.dd').count(), o.days * 4, 'training days on the 28-day grid');
       await t.look(p, 'plan after onboarding');
       await checkSaved(t, p, o);
@@ -331,6 +365,28 @@ module.exports = {
       await next(p);
       await app.waitTitle(p, 'Me', 5000);
       t.equal(bookkeeping((await app.stored(p)).profile), [], 'onboarding bookkeeping left in the profile');
+    });
+
+    await t.flow('Me: Edit keeps the health answers; the minutes step gives real lengths', async () => {
+      // a beginner who picked 45 minutes; one PAR-Q yes (cleared by a doctor) and an older profile that never stored a No
+      const p = await t.page({ state: L.member({ level: 'b', push: 0, goal: 'fat', days: 4, minutes: 45, focus: ['full'], health: { joint: true, cleared: true } }) });
+      await app.tap(p, '.tab[data-tab="me"]');
+      await app.tap(p, '[data-act="ob-edit"]');
+      await expectStep(t, p, 'main goal');
+      await p.evaluate(() => WBF.app.go('onboard', { step: 'health' }));
+      await expectStep(t, p, 'Before you');
+      const keys = await healthKeys(p);
+      const shown = await p.evaluate((ks) => ks.map((k) => { const b = document.querySelector('[data-act="ob-health"][data-k="' + k + '"][aria-pressed="true"]'); return b ? b.textContent : '-'; }), keys);
+      t.equal(shown, keys.map((k) => (k === 'joint' ? 'Yes' : 'No')), 'saved answers on the health step (' + keys.join(', ') + ')');
+      t.check(await p.locator('.ob-cta [data-act="ob-next"]').isEnabled(), 'health: Next is off although every answer is saved');
+      t.step('minutes');
+      await p.evaluate(() => WBF.app.go('onboard', { step: 'minutes' }));
+      await expectStep(t, p, 'How long');
+      const wk1 = minutesOf(await realSecs(p, 1));
+      const range = Math.min(...wk1) === Math.max(...wk1) ? Math.min(...wk1) + ' minutes' : Math.min(...wk1) + ' to ' + Math.max(...wk1) + ' minutes';
+      t.has(await p.locator('#min-real').innerText().catch(() => 'nothing'), 'Your first sessions take ' + range + '.', 'minutes step for a beginner at 45 minutes');
+      t.check(Math.max(...wk1) <= 42, 'control: a beginner\'s first week should run well under 45 minutes (got ' + wk1.join(', ') + ')');
+      await t.look(p, 'minutes step with real lengths');
     });
 
     await t.flow('Me: Edit, all the way', async () => {

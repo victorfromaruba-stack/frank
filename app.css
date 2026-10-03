@@ -582,6 +582,7 @@ a { color: var(--sky); }
 .switch::after { content: ''; position: absolute; top: 4px; left: 4px; width: 24px; height: 24px; border-radius: 99px; background: var(--ink-3); transition: transform 0.18s ease, background 0.18s ease; }
 .switch[aria-checked="true"] { background: var(--sky); box-shadow: none; }
 .switch[aria-checked="true"]::after { transform: translateX(20px); background: var(--on-sky); }
+.switch[disabled] { opacity: 0.55; }
 .set-row { display: flex; align-items: center; gap: 8px 12px; min-height: 58px; padding: 8px 0; flex-wrap: wrap; }
 .set-row > div { flex: 1 1 140px; min-width: 0; }
 .set-row > .seg { margin-left: auto; }

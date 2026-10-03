@@ -63,6 +63,18 @@ module.exports = {
       await snap(p, 'onboarding who demonstrates');
       await app.tap(p, '[data-act="ob-pick"][data-k="sex"][data-v="f"]');
       await snap(p, 'onboarding year of birth');
+      // a year under 18 shows the note; then back to the year the wheel started on
+      const born = await p.evaluate(() => document.querySelector('#wheel button.on').getAttribute('data-year'));
+      await app.tap(p, '#wheel button[data-year="' + (+L.TODAY.slice(0, 4) - 14) + '"]');
+      await snap(p, 'onboarding year of birth under 18');
+      await app.tap(p, '#wheel button[data-year="' + born + '"]');
+      await app.tap(p, '.ob-cta [data-act="ob-next"]');
+      // the health questions: nothing picked yet, then two yes answers, then "None of these apply to me"
+      await snap(p, 'onboarding health unanswered');
+      await app.tap(p, '[data-act="ob-health"][data-k="joint"][data-v="1"]');
+      await app.tap(p, '[data-act="ob-health"][data-k="pregnant"][data-v="1"]');
+      await snap(p, 'onboarding health with yes answers');
+      await app.tap(p, '[data-act="ob-health-none"]');
       await app.tap(p, '.ob-cta [data-act="ob-next"]');
       await snap(p, 'onboarding height cm');
       await app.tap(p, '[data-act="hunits"][data-v="ft"]');
@@ -75,12 +87,6 @@ module.exports = {
       await app.tap(p, '[data-act="units"][data-v="kg"]');
       await app.tap(p, '.ob-cta [data-act="ob-next"]');
       await snap(p, 'onboarding target weight');
-      await app.tap(p, '.ob-cta [data-act="ob-next"]');
-      await app.tap(p, '[data-act="ob-health"][data-k="joint"][data-v="1"]');
-      await app.tap(p, '[data-act="ob-health"][data-k="pregnant"][data-v="1"]');
-      await snap(p, 'onboarding health with yes answers');
-      await app.tap(p, '[data-act="ob-health"][data-k="joint"][data-v="0"]');
-      await app.tap(p, '[data-act="ob-health"][data-k="pregnant"][data-v="0"]');
       await app.tap(p, '.ob-cta [data-act="ob-next"]');
       await app.tap(p, '[data-k="injuries"][data-v="knee"]'); await app.tap(p, '[data-k="injuries"][data-v="other"]');
       await snap(p, 'onboarding sore spots');
@@ -127,7 +133,7 @@ module.exports = {
       await snap(p, 'workout program (Gravity)');
       await go(p, 'workout', { coach: 'in1' });
       await snap(p, 'workout from Frank');
-      // one sheet, its three tabs tapped like a finger (WBF.app.sheet again on an open sheet loses the tab: see known.cjs)
+      // one sheet, its three tabs tapped like a finger
       await p.evaluate(() => WBF.app.sheet('goblet-squat'));
       for (const tb of ['video', 'muscle', 'howto']) {
         await app.tap(p, '#overlay [data-act="xs-tab"][data-v="' + tb + '"]');
@@ -221,6 +227,8 @@ module.exports = {
       await app.tap(p, '[data-act="browse"]');
       await tab(p, 'plan');
       await snap(p, 'plan without a profile');
+      await tab(p, 'today');
+      await snap(p, 'today without a profile');
     });
 
     await t.flow('personal prototype', async () => {

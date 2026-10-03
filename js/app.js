@@ -114,6 +114,8 @@
         for (var k in got) if (got[k] != null) d[k] = got[k];
         d.settings = Object.assign(defaults().settings, got.settings || {});
         d.profile = migrate(d.profile);
+        // the food card's switches: older versions kept them mixed with what the profile said; every one that was on stays on
+        if (d.flags && !d.flags.manual) d.flags = { manual: { pregnant: !!d.flags.pregnant, child: !!d.flags.child, medical: !!d.flags.medical } };
       }
     } catch (e) { /* private mode: start fresh */ }
     return d;
@@ -155,20 +157,30 @@
     if (!p || !p.start) return 1;
     return clamp(Math.floor((new Date() - fromIso(p.start)) / 864e5) + 1, 1, 28);
   }
-  function ctx(day, level) {
-    var p = S.profile || {};
+  // prof: build for this profile (the onboarding draft) instead of the saved one
+  function ctx(day, level, prof) {
+    var p = prof || S.profile || {};
     var wm = day ? WBF.WEEK_MULT[day.week - 1] : 1;
     var av = WBF.plan.avoidFor(p);
-    return { level: level || (S.profile ? WBF.plan.levelFor(p) : 'b'), kit: p.kit || WBF.DEFAULT_KIT, swaps: S.swaps, goal: p.goal, avoid: av, older: av.older,
+    return { level: level || (prof || S.profile ? WBF.plan.levelFor(p) : 'b'), kit: p.kit || WBF.DEFAULT_KIT, swaps: S.swaps, goal: p.goal, avoid: av, older: av.older,
              mult: wm * (S.adjust || 1) * (1 + 0.15 * ((p.round || 1) - 1)), restOverride: +S.settings.rest || 0, minutes: day ? p.minutes : null,
              focus: day ? p.focus : null, day: day ? day.day : 0 };
   }
-  function session(wid, day, level) {
+  function session(wid, day, level, prof) {
     var w = WBF.WORKOUT[wid];
     var lvl = level || (w && w.kind === 'area' ? w.level : null);
-    var s = WBF.plan.build(wid, ctx(day, lvl));
+    var s = WBF.plan.build(wid, ctx(day, lvl, prof));
     if (s) { s.day = day ? day.day : null; s.week = day ? day.week : null; }
     return s;
+  }
+  // how long the plan's sessions really are, in seconds: every training day, or week 1 only
+  function planSecs(p, week) {
+    return WBF.plan.days(p).filter(function (x) { return x.train && (!week || x.week === week); }).map(function (x) { return session(x.workoutId, x, null, p).estSec; });
+  }
+  // "13 to 16 minutes": the shortest and longest of a list of sessions
+  function minRange(secs) {
+    var m = secs.map(function (s) { return Math.max(1, Math.round(s / 60)); }), lo = Math.min.apply(null, m), hi = Math.max.apply(null, m);
+    return (lo === hi ? lo : lo + ' to ' + hi) + ' minutes';
   }
   function mainMoves(s) {
     var seen = {}, out = [];
@@ -490,7 +502,9 @@
       var m = WBF.KIT.filter(function (x) { return x.id === k; })[0];
       return m ? m.name : k;
     });
-    var alts = (ex.alts || []).filter(function (a) { return EX[a]; });
+    // other moves for the same job: only the ones this person may do, with the kit they have
+    var av = WBF.plan.avoidFor(S.profile), have = (S.profile && S.profile.kit) || WBF.DEFAULT_KIT;
+    var alts = (ex.alts || []).filter(function (a) { return EX[a] && WBF.plan.safe(EX[a], av) && WBF.plan.canDo(EX[a], have); });
     var m = media(id), tabFig;
     if (XS.tab === 'muscle') tabFig = figHtml(id, { mode: 'muscle', drag: true, note: false, video: false, orbit: 20 });
     else if (XS.tab === 'howto') tabFig = m && m.howto && !/youtu/.test(m.howto) ? '<div class="fig-box is3d"><video src="' + esc(m.howto) + '"' + (m.poster ? ' poster="' + esc(m.poster) + '"' : '') + ' controls playsinline></video></div>'
@@ -514,14 +528,17 @@
       '<section class="stack"><p class="label">Frank\'s cues</p><ul class="bul">' + ex.cue.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ul></section>' +
       '<section class="stack"><p class="label">Watch out for</p><ul class="bul x">' + ex.mistakes.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ul></section>' +
       '<div class="card"><p class="label">Why it works</p><p class="note s">' + esc(ex.why) + '</p></div>' +
-      (alts.length && !XS.player ? '<section class="stack"><p class="label">Easier options</p><div class="list">' + alts.map(function (a) {
+      (alts.length && !XS.player ? '<section class="stack"><p class="label">Other options</p><div class="list">' + alts.map(function (a) {
         return '<button class="item" data-act="ex" data-id="' + a + '">' + thumbHtml(a) + '<span class="grow"><b>' + esc(EX[a].name) + '</b><span class="meta">' + esc(EX[a].area.map(function (x) { return WBF.AREAS[x]; }).join(' · ')) + '</span></span>' + ic('chev', 'chev') + '</button>';
       }).join('') + '</div></section>' : '') +
       '<div class="xs-foot">' + (n > 1 ? '<div class="pager"><button class="icon-btn" data-act="xs-go" data-d="-1" aria-label="Previous move"' + (XS.i === 0 ? ' disabled style="opacity:.3"' : '') + '>' + ic('back') + '</button><span>' + (XS.i + 1) + '/' + n + '</span>' +
         '<button class="icon-btn" data-act="xs-go" data-d="1" aria-label="Next move"' + (XS.i === n - 1 ? ' disabled style="opacity:.3"' : '') + '>' + ic('chev') + '</button></div>' : '') +
       '<button class="btn grow" data-act="close">' + (XS.player ? 'Back to the workout' : 'Close') + '</button></div></div>';
-    if (first || overlay.hidden) openSheet(html, function () { var cb = XS && XS.onClose; XS = null; if (cb) cb(); }, true);
-    else {
+    if (first || overlay.hidden) {
+      // a sheet opened from this one replaces it: closing this one must not clear the new one's XS
+      var mine = XS;
+      openSheet(html, function () { var cb = mine.onClose; if (XS === mine) XS = null; if (cb) cb(); }, true);
+    } else {
       var sheet = $('.sheet', overlay);
       sheet.innerHTML = '<div class="grab"></div>' + html;
       mountFigures(sheet);
@@ -589,12 +606,13 @@
   };
 
   // ---- onboarding: three parts, then the plan --------------------------------------------------
+  // The health questions come before height and weight: a pregnancy or a medical yes changes what those steps may say.
   var OB = [
     { id: 'p1', part: 1, intro: true },
     { id: 'goal', part: 1 }, { id: 'focus', part: 1 }, { id: 'want', part: 1 },
     { id: 'p2', part: 2, intro: true },
-    { id: 'sex', part: 2 }, { id: 'born', part: 2 }, { id: 'height', part: 2 }, { id: 'weight', part: 2 }, { id: 'target', part: 2 },
-    { id: 'health', part: 2 }, { id: 'sore', part: 2 },
+    { id: 'sex', part: 2 }, { id: 'born', part: 2 }, { id: 'health', part: 2 }, { id: 'height', part: 2 }, { id: 'weight', part: 2 },
+    { id: 'target', part: 2 }, { id: 'sore', part: 2 },
     { id: 'p3', part: 3, intro: true },
     { id: 'active', part: 3 }, { id: 'pushups', part: 3 }, { id: 'days', part: 3 }, { id: 'minutes', part: 3 }, { id: 'kit', part: 3 },
     { id: 'coach', part: 3 }, { id: 'name', part: 3 },
@@ -607,12 +625,20 @@
     2: ['Part 2', 'Know your <i>body</i>', 'So the plan fits you, and stays safe.'],
     3: ['Part 3', 'Fitness <i>check</i>', 'Where you start, and the time you have.']
   };
+  // the eight health questions: the PAR-Q+ and pregnancy. Each starts unanswered (neither Yes nor No).
+  var HQ = WBF.PARQ.map(function (q) { return q[0]; }).concat(['pregnant']);
+  function healthDone(d) { return HQ.every(function (k) { return typeof d.health[k] === 'boolean'; }); }
+  // the answers that shape a plan, to compare: a missing answer is a No, and the date they were confirmed doesn't count
+  function healthSig(h) { h = h || {}; return HQ.concat(['cleared', 'injury']).map(function (k) { return h[k] ? 1 : 0; }).join(''); }
   function newDraft() {
     var p = S.profile;
     if (p) {
       // without the onboarding's bookkeeping: phones that used Change before saved it in the profile
       var d = JSON.parse(JSON.stringify(p));
       delete d.only; delete d.edit; delete d.soreDone;
+      // a saved profile has answered them all: a question left out was a No
+      d.health = d.health || {};
+      HQ.forEach(function (k) { d.health[k] = !!d.health[k]; });
       return d;
     }
     return { goal: null, focus: [], want: [], sex: null, birthYear: null, cm: null, kg: null, targetKg: null, health: {}, injuries: [],
@@ -621,6 +647,8 @@
   function obNext(from) {
     var i = OB_I[from] + 1;
     if (OB[i] && OB[i].intro && draft.edit) i++;     // Edit skips the Part intros, both ways (ob-back)
+    // no weight target for anyone who may be under 18, is pregnant or has a medical condition (both ways too)
+    if (OB[i] && OB[i].id === 'target' && atRisk(draft)) { draft.targetKg = draft.kg; i++; }
     return OB[i] ? OB[i].id : 'ready';
   }
   function obGo(id) { replaceTop('onboard', { step: id }); }
@@ -651,18 +679,20 @@
     return '<div class="ruler-wrap"><div class="big-val num" id="rv-' + id + '">' + (fmt === 'ftin' ? ftIn(val) : val + '<small>' + unit + '</small>') + '</div>' +
       '<div class="ruler" id="rl-' + id + '"' + (fmt ? ' data-fmt="' + fmt + '"' : '') + ' data-min="' + min + '" data-max="' + max + '" data-step="' + step + '" data-val="' + val + '" aria-label="Slide to set" role="slider" aria-valuemin="' + min + '" aria-valuemax="' + max + '" aria-valuenow="' + val + '" tabindex="0"><canvas></canvas></div><div class="ruler-needle"></div></div>';
   }
-  function bmiBox(kg, cm) {
+  // p: the person. No verdict while growing up or pregnant, and no food or weight-loss advice for anyone at risk
+  function bmiBox(kg, cm, p) {
     var b = bmiOf(kg, cm);
-    if (!b) return '';
+    if (!b || noBmi(p)) return '';
     var pct = clamp((b - 15) / 25 * 100, 0, 100), word = bmiWord(b);
-    var say = word === 'Healthy' ? 'A healthy range. Training keeps it there and builds strength.' : word === 'Underweight' ? 'Below the healthy range. Strength training and enough food matter more than burning calories.'
+    var say = word === 'Healthy' ? 'A healthy range. Training keeps it there and builds strength.' : atRisk(p) ? 'Ask your doctor which weight is right for you.'
+      : word === 'Underweight' ? 'Below the healthy range. Strength training and enough food matter more than burning calories.'
       : 'A little training most days, plus your food, will move this. Small losses already lower blood pressure and diabetes risk.';
     return '<div class="infobox"><p class="label" style="color:var(--sky-lo)">Your BMI</p><div class="between"><b class="big num">' + b.toFixed(1) + '</b><b>' + word + '</b></div>' +
       '<div class="bmi-bar"><i style="left:' + pct + '%"></i></div><div class="bmi-scale"><span>15</span><span>18.5</span><span>25</span><span>30</span><span>40</span></div><p>' + say + ' BMI is a rough guide: it can\'t tell muscle from fat.</p></div>';
   }
   function targetBox(d) {
     var cur = d.kg, tgt = d.targetKg;
-    if (!cur || !tgt) return '';
+    if (!cur || !tgt || atRisk(d)) return '';
     var diff = tgt - cur, pct = Math.abs(diff) / cur * 100;
     if (Math.abs(diff) < 0.5) return '<div class="infobox"><b>Keep your weight</b><p>The plan will focus on strength and fitness. Weigh yourself once a week to keep an eye on it.</p></div>';
     if (diff > 0) return '<div class="infobox"><b>Gain ' + kgShow(diff) + ' ' + wUnit() + '</b><p>Muscle comes from strength training plus enough protein, about 1.6 g per kg of body weight a day. Expect it to come slowly.</p></div>';
@@ -676,7 +706,7 @@
   }
   function weightChart(d) {
     var cur = d.kg, tgt = d.targetKg;
-    if (!cur || !tgt || tgt >= cur - 0.5) return '';
+    if (!cur || !tgt || tgt >= cur - 0.5 || atRisk(d)) return '';
     var weeks = Math.ceil((cur - tgt) / (cur * 0.0075)), Wd = 320, Hh = 130;
     var pts = [];
     for (var i = 0; i <= 20; i++) { var t = i / 20; pts.push([24 + t * (Wd - 48), 18 + (Hh - 46) * (1 - Math.pow(1 - t, 1.6))]); }
@@ -730,14 +760,13 @@
         foot = cta('Next', 'ob-next', !sel.length);
       } else if (id === 'want') {
         q = 'What do you want <em>most</em>?';
-        sub = 'Pick any. Frank uses it to keep you going.';
+        sub = 'Pick any.';
         body = '<div class="opt-grid">' + WANTS.map(function (w) {
           var on = (d.want || []).indexOf(w[0]) !== -1;
           return '<button class="tile" role="checkbox" data-act="ob-multi" data-k="want" data-v="' + w[0] + '" aria-checked="' + on + '"><span class="ti icon"><span class="big">' + ic(w[2]) + '</span></span>' + w[1] + '</button>';
         }).join('') + '</div>';
       } else if (id === 'sex') {
         q = 'Who should <em>demonstrate</em> your moves?';
-        sub = 'Also used for the calorie estimate.';
         body = '<div class="opt-grid">' + [['m', 'Male'], ['f', 'Female']].map(function (s) {
           return '<button class="tile" data-act="ob-pick" data-k="sex" data-v="' + s[0] + '" aria-pressed="' + (d.sex === s[0]) + '"><span class="ti tall"><img data-portrait="' + s[0] + '" width="170" height="226" alt="" hidden>' +
             '<span class="big" style="font-size:20px;color:var(--ink-d2)">' + (s[0] === 'm' ? 'He' : 'She') + '</span></span>' + s[1] + '</button>';
@@ -751,12 +780,13 @@
             for (var k = y - 90; k <= y - 12; k++) out += '<button data-year="' + k + '" class="' + (k === (d.birthYear || y - 35) ? 'on' : '') + '">' + k + '</button>';
             return out + '<div style="height:92px"></div>';
           })() + '</div></div>';
-        if (d.birthYear && new Date().getFullYear() - d.birthYear < 18) body += '<p class="warnbox">This app is made for adults. Train with a parent\'s OK; the food tracking stays off.</p>';
+        // shows and hides as the wheel settles (bornSet)
+        body += '<p class="warnbox" id="born-warn"' + (d.birthYear && WBF.plan.possiblyMinor(d) ? '' : ' hidden') + '>This app is made for adults. If you\'re under 18, train with a parent\'s OK. Food tracking and weight targets stay off.</p>';
       } else if (id === 'height') {
         q = 'How <em>tall</em> are you?';
         var ft = S.settings.hunits === 'ft';
         var cm = d.cm || (d.sex === 'f' ? 165 : 178);
-        body = coachLine('With your weight, this gives your BMI and a safe weekly pace.') +
+        body = (noBmi(d) ? '' : coachLine(atRisk(d) ? 'With your weight, this gives your BMI.' : 'With your weight, this gives your BMI and a safe weekly pace.')) +
           '<div class="ruler-wrap"><span class="unit-seg" role="group" aria-label="Units"><button data-act="hunits" data-v="cm" aria-pressed="' + !ft + '">cm</button><button data-act="hunits" data-v="ft" aria-pressed="' + ft + '">ft</button></span></div>' +
           (ft ? ruler('h', Math.round(cm / 2.54), 48, 90, 1, 'in', 'ftin') : ruler('h', Math.round(cm), 120, 220, 1, 'cm'));
       } else if (id === 'weight') {
@@ -764,24 +794,27 @@
         var lb = S.settings.units === 'lb';
         var kg = d.kg || (d.sex === 'f' ? 65 : 80);
         body = '<div class="ruler-wrap"><span class="unit-seg" role="group" aria-label="Units"><button data-act="units" data-v="kg" aria-pressed="' + !lb + '">kg</button><button data-act="units" data-v="lb" aria-pressed="' + lb + '">lb</button></span></div>' +
-          (lb ? ruler('w', Math.round(kg * 2.20462), 70, 440, 1, 'lb') : ruler('w', Math.round(kg * 2) / 2, 30, 200, 0.5, 'kg')) + '<div id="bmi-box">' + bmiBox(kg, d.cm) + '</div>';
+          (lb ? ruler('w', Math.round(kg * 2.20462), 70, 440, 1, 'lb') : ruler('w', Math.round(kg * 2) / 2, 30, 200, 0.5, 'kg')) + '<div id="bmi-box">' + bmiBox(kg, d.cm, d) + '</div>';
       } else if (id === 'target') {
         q = 'What\'s your <em>target</em> weight?';
         var lb2 = S.settings.units === 'lb', cur = d.kg || 80;
-        var tg = d.targetKg || (d.goal === 'fat' ? Math.round(cur * 0.93 * 2) / 2 : cur);
+        var tg = d.targetKg || (d.goal === 'fat' && !atRisk(d) ? Math.round(cur * 0.93 * 2) / 2 : cur);
         d.targetKg = tg;
         body = (lb2 ? ruler('t', Math.round(tg * 2.20462), 70, 440, 1, 'lb') : ruler('t', Math.round(tg * 2) / 2, 30, 200, 0.5, 'kg')) + '<div id="tg-box">' + targetBox(d) + weightChart(d) + '</div>';
       } else if (id === 'health') {
         q = 'Before you <em>start</em>';
         sub = 'The PAR-Q+ questions trainers use. Answer for how you are now.';
         var any = WBF.PARQ.some(function (x) { return d.health[x[0]]; });
+        // every question answered on purpose: nothing is picked until the person taps it
         body = '<div class="yn-list">' + WBF.PARQ.concat([['pregnant', 'Are you pregnant, or did you give birth in the last six months?']]).map(function (x) {
-          var v = !!d.health[x[0]];
+          var v = d.health[x[0]];
           return '<div class="yn-q"><p>' + x[1] + '</p><span class="unit-seg" role="group" aria-label="' + esc(x[1]) + '">' +
-            '<button data-act="ob-health" data-k="' + x[0] + '" data-v="0" aria-pressed="' + !v + '">No</button><button data-act="ob-health" data-k="' + x[0] + '" data-v="1" aria-pressed="' + v + '">Yes</button></span></div>';
+            '<button data-act="ob-health" data-k="' + x[0] + '" data-v="0" aria-pressed="' + (v === false) + '">No</button><button data-act="ob-health" data-k="' + x[0] + '" data-v="1" aria-pressed="' + (v === true) + '">Yes</button></span></div>';
         }).join('') + '</div>' +
+          opt('ob-health-none', 'health', 'none', 'None of these apply to me', '', HQ.every(function (k) { return d.health[k] === false; })) +
           (any ? '<p class="warnbox">Check with your doctor or a qualified exercise professional before you train hard, and tell Frank. Until then your plan stays gentle: no jumping, nothing vigorous. When you\'re cleared, switch it off in Me.</p>' : '') +
           (d.health.pregnant ? '<p class="warnbox">Pregnancy mode: no lying on your back or front, no jumping, no balance pad or rings. Talk to your midwife or doctor first, and stop if you feel dizzy, short of breath before effort, or any pain.</p>' : '');
+        foot = cta('Next', 'ob-next', !healthDone(d));
       } else if (id === 'sore') {
         q = 'Any <em>sore spots</em> or recent injuries?';
         sub = 'Your coach swaps out the moves that load them.';
@@ -821,9 +854,13 @@
         }).join('') + '</div>' + coachLine(+d.days <= 2 ? 'Two days covers the minimum: every muscle twice a week. Walks on the other days count too.' : +d.days >= 5 ? 'Plenty. Plans alternate body parts so muscles get 48 hours before working hard again.' : 'A good rhythm: a rest day between most sessions.');
       } else if (id === 'minutes') {
         q = 'How long can each <em>workout</em> be?';
+        // the sessions the plan really builds for these answers: a beginner stays at two rounds, so often shorter
+        var wk1 = planSecs(d, 1);
         body = '<div class="opt-list">' + [[10, 'Short and sharp', '10 minutes'], [20, 'The sweet spot', '20 minutes'], [30, 'Room to build', '30 minutes'], [45, 'Full sessions', '45 minutes']].map(function (x) {
           return opt('ob-pick-stay', 'minutes', x[0], x[2], x[1], +d.minutes === x[0], 'clock');
-        }).join('') + '</div>' + coachLine('Short sessions work. Even a few minutes of hard effort a day adds up.');
+        }).join('') + '</div>' +
+          (Math.round(Math.max.apply(null, wk1) / 60) <= +d.minutes - 3 ? '<div class="infobox" id="min-real"><p>Your first sessions take ' + minRange(wk1) + '. They grow a little each week.</p></div>' : '') +
+          coachLine('Short sessions work. Even a few minutes of hard effort a day adds up.');
       } else if (id === 'kit') {
         q = 'What do you have at <em>home</em>?';
         sub = 'Moves that need kit you don\'t have are swapped for ones that don\'t.';
@@ -860,13 +897,18 @@
         wh.addEventListener('scroll', function () {
           clearTimeout(t);
           t = setTimeout(function () {
-            var mid = wh.scrollTop + wh.clientHeight / 2, best = null, bd = 1e9;
-            $$('button', wh).forEach(function (b) { var c = b.offsetTop + b.offsetHeight / 2, dd = Math.abs(c - mid); if (dd < bd) { bd = dd; best = b; } });
-            if (best) { $$('button', wh).forEach(function (b) { b.classList.toggle('on', b === best); }); d.birthYear = +best.getAttribute('data-year'); }
+            // a tapped year holds until the wheel has glided there
+            if (wh._want && wheelMiddle(wh) !== wh._want) return;
+            wh._want = null;
+            bornSet();
           }, 90);
         });
+        // a finger or the keys on the wheel: the year in the middle counts again
+        ['pointerdown', 'wheel', 'keydown'].forEach(function (ev) { wh.addEventListener(ev, function () { wh._want = null; }, { passive: true }); });
         wh.addEventListener('click', function (e) {
           var b = e.target.closest('button'); if (!b) return;
+          wh._want = b;
+          bornSet();
           wh.scrollTo({ top: b.offsetTop - wh.clientHeight / 2 + b.offsetHeight / 2, behavior: reduce ? 'auto' : 'smooth' });
         });
       }
@@ -886,12 +928,35 @@
       if (id === 'build') runBuild();
     }
   };
+  // the year button in the middle of the wheel
+  function wheelMiddle(wh) {
+    var mid = wh.scrollTop + wh.clientHeight / 2, best = null, bd = 1e9;
+    $$('button', wh).forEach(function (b) { var dd = Math.abs(b.offsetTop + b.offsetHeight / 2 - mid); if (dd < bd) { bd = dd; best = b; } });
+    return best;
+  }
+  // the year of birth: the year tapped while the wheel glides there, else the one in the middle. The under-18 note
+  // shows and hides with it. Returns true when the note has just come up (Next then waits, so it is seen).
+  function bornSet() {
+    var wh = $('#wheel'), warn = $('#born-warn');
+    if (!wh || !draft) return false;
+    var best = wh._want || wheelMiddle(wh);
+    if (!best) return false;
+    $$('button', wh).forEach(function (b) { b.classList.toggle('on', b === best); });
+    draft.birthYear = +best.getAttribute('data-year');
+    if (!warn) return false;
+    var show = WBF.plan.possiblyMinor(draft), was = !warn.hidden;
+    warn.hidden = !show;
+    return show && !was;
+  }
+  var GOAL_DOING = { fat: 'Choosing moves to lose fat', strength: 'Choosing moves to build strength', move: 'Choosing moves to move better', fit: 'Choosing moves to stay fit' };
+  var LEVEL_WHO = { b: 'beginners', i: 'intermediates', a: 'advanced' };
   function buildSteps(d) {
-    var out = ['Choosing moves for ' + (WBF.GOALS[d.goal] || WBF.GOALS.fit).name.toLowerCase()];
+    var out = [GOAL_DOING[d.goal] || GOAL_DOING.fit];
     if (soreKnown(d.injuries).length) out.push('Leaving out moves that load your ' + soreWords(d.injuries));
     if ((d.injuries || []).indexOf('other') !== -1) out.push('Leaving out jumps for your ' + (soreKnown(d.injuries).length ? 'other ' : '') + 'sore spot');
-    out.push('Setting doses for ' + (WBF.LEVELS[d.level || 'b'] || 'Beginner').toLowerCase() + 's');
-    out.push('Scheduling ' + d.days + ' days a week, ' + d.minutes + ' minutes each');
+    // the level the plan really uses: a health yes keeps it at beginner
+    out.push('Setting doses for ' + LEVEL_WHO[WBF.plan.levelFor(d)]);
+    out.push('Scheduling ' + d.days + ' days a week, ' + minRange(planSecs(d, 1)) + ' each');
     var fw = (d.focus || []).filter(function (f) { return f !== 'full' && WBF.BODY_BY_ID[f]; });
     if (fw.length) out.push('Adding extra work for your ' + fw.map(function (f) { return WBF.BODY_BY_ID[f].name.toLowerCase(); }).join(' and '));
     out.push('Checking every muscle gets two sessions a week');
@@ -911,15 +976,16 @@
   }
   function readyHtml() {
     var d = S.profile || draft, days = WBF.plan.days(d), train = days.filter(function (x) { return x.train; });
-    var a = ageNow(d), b = bmiOf(d.kg, d.cm), av = WBF.plan.avoidFor(d);
-    var minutes = train.length * (d.minutes || 20);
+    var a = ageNow(d), b = noBmi(d) ? null : bmiOf(d.kg, d.cm), av = WBF.plan.avoidFor(d);
+    // the 28 days' real total: every session as the plan builds it, not days x the minutes picked
+    var minutes = Math.round(planSecs(d).reduce(function (x, y) { return x + y; }, 0) / 60);
     var target = d.kg && d.targetKg && Math.abs(d.targetKg - d.kg) >= 0.5 ? (d.targetKg < d.kg ? '−' : '+') + kgShow(Math.abs(d.targetKg - d.kg)) + ' ' + wUnit() : 'Keep';
     return '<div class="ob"><div class="between"><div><p class="label" style="color:var(--sky-lo)">Done' + (d.name ? ', ' + esc(d.name) : '') + '</p><h1 class="ob-q">Your plan is ready</h1></div></div>' +
       '<div class="summary"><p class="label" style="color:var(--ink-d2)">About you</p><div class="trio"><div><b>' + (d.cm ? heightShow(d.cm).replace(' cm', '') : '–') + '</b><span>' + (S.settings.hunits === 'ft' ? 'Height' : 'Height, cm') + '</span></div>' +
       '<div><b>' + (d.kg ? kgShow(d.kg) : '–') + '</b><span>Weight, ' + wUnit() + '</span></div><div><b>' + (a || '–') + '</b><span>Age</span></div></div>' +
       (b ? '<div><div class="between"><span style="font-weight:800">BMI ' + b.toFixed(1) + '</span><span class="tag" style="color:var(--ink-d2);border-color:var(--paper-3)">' + bmiWord(b) + '</span></div><div class="bmi-bar"><i style="left:' + clamp((b - 15) / 25 * 100, 0, 100) + '%"></i></div></div>' : '') +
       '<div class="sum-row"><span>Goal</span><b>' + esc(WBF.GOALS[d.goal].name) + '</b></div>' +
-      '<div class="sum-row"><span>Target weight</span><b>' + target + '</b></div>' +
+      (atRisk(d) ? '' : '<div class="sum-row"><span>Target weight</span><b>' + target + '</b></div>') +
       '<div class="sum-row"><span>Level</span><b>' + WBF.LEVELS[WBF.plan.levelFor(d)] + '</b></div>' +
       '<div class="sum-row"><span>Focus</span><b>' + esc(focusWords(d)) + '</b></div>' +
       ((d.injuries || []).length ? '<div class="sum-row"><span>Sore spots</span><b>' + d.injuries.map(soreName).join(', ') + '<small>' + (d.injuries.indexOf('other') === -1 ? 'Moves that load them are left out' : soreKnown(d.injuries).length ? 'Moves that load them, and jumps, are left out' : 'Jumps are left out') + '</small></b></div>' : '') +
@@ -975,7 +1041,7 @@
     if (id === 'h') { d.cm = S.settings.hunits === 'ft' ? v * 2.54 : v; }
     if (id === 'w') {
       d.kg = S.settings.units === 'lb' ? v / 2.20462 : v;
-      var bx = $('#bmi-box'); if (bx) bx.innerHTML = bmiBox(d.kg, d.cm);
+      var bx = $('#bmi-box'); if (bx) bx.innerHTML = bmiBox(d.kg, d.cm, d);
     }
     if (id === 't') {
       d.targetKg = S.settings.units === 'lb' ? v / 2.20462 : v;
@@ -1025,7 +1091,7 @@
         var s = session(nd.workoutId, nd);
         hero = '<div class="plan-card"><div class="pc-media is3d">' + figHtml(firstMove(s), { deco: true, note: false }) + '<span class="pc-badge">Built for you</span></div>' +
           '<div class="pc-body"><h2 class="pc-title">' + esc(planName(p)) + '</h2>' +
-          '<div class="pc-grid"><div>' + ic('clock') + '<span><b>' + p.minutes + ' min</b><span>Daily time</span></span></div>' +
+          '<div class="pc-grid"><div>' + ic('clock') + '<span><b>' + mins(s.estSec) + '</b><span>Next session</span></span></div>' +
           '<div>' + ic('bars') + '<span><b>' + WBF.LEVELS[s.level] + '</b><span>Level</span></span></div>' +
           '<div>' + ic('target') + '<span><b>' + esc(focusWords(p)) + '</b><span>Focus</span></span></div>' +
           '<div>' + ic('db') + '<span><b>' + esc(kitWords(p)) + '</b><span>Equipment</span></span></div></div>' +
@@ -1503,13 +1569,19 @@
   };
 
   // ---- today ------------------------------------------------------------------------------------
-  function flags() {
-    if (!S.flags) {
-      var h = (S.profile && S.profile.health) || {}, a = ageNow();
-      S.flags = { pregnant: !!h.pregnant, child: a != null && a < 18, medical: false };
-    }
-    return S.flags;
+  // Food and weight: what the profile says, worked out on every call (pregnant; maybe under 18; a medical condition
+  // from the health questions), plus the food card's switches the person set by hand (S.flags.manual). from: the
+  // profile's part, which the card's switches can't turn off. p: a profile or the onboarding draft (default: saved)
+  function flags(p) {
+    p = p === undefined ? S.profile : p;
+    var h = (p && p.health) || {}, m = (S.flags && S.flags.manual) || {};
+    var from = { pregnant: !!h.pregnant, child: WBF.plan.possiblyMinor(p), medical: !!(h.heart || h.chronic || h.meds || h.supervised) };
+    return { pregnant: from.pregnant || !!m.pregnant, child: from.child || !!m.child, medical: from.medical || !!m.medical, from: from };
   }
+  // no diet advice and no weight-loss target for anyone who may be under 18, is pregnant or has a medical condition
+  function atRisk(p) { var f = flags(p); return f.pregnant || f.child || f.medical; }
+  // BMI's adult ranges don't fit while growing up or in pregnancy
+  function noBmi(p) { var f = flags(p); return f.child || f.pregnant; }
   function foodDay(d) {
     if (!S.food[d]) S.food[d] = { water: 0, meals: [] };
     return S.food[d];
@@ -1544,7 +1616,7 @@
     var wkIso = iso(monday(new Date())), train = 0, walk = 0;
     S.sessions.forEach(function (r) { if (r.date >= wkIso) train += r.sec / 60; });
     Object.keys(S.walks || {}).forEach(function (d) { if (d >= wkIso) walk += S.walks[d]; });
-    var goal = S.profile && S.profile.goal === 'fat' ? 250 : 150;
+    var goal = S.profile && S.profile.goal === 'fat' && !atRisk(S.profile) ? 250 : 150;
     var total = Math.round(train + walk), pct = Math.min(100, total / goal * 100);
     var todayWalk = (S.walks || {})[iso()] || 0;
     return '<section class="card"><div class="between"><p class="label">Moving minutes this week</p><p class="meta num">' + total + ' of ' + goal + '</p></div>' +
@@ -1560,11 +1632,18 @@
     return '<section class="card"><div class="between"><p class="label">Water</p><p class="meta num">' + fd.water + ' of 8 glasses</p></div><div class="glasses">' + glasses + '</div></section>';
   }
   function foodCard() {
-    var f = flags(), any = f.pregnant || f.child || f.medical;
+    // no profile yet (Look around first): age and health are unknown, so no journal
+    if (!S.profile) {
+      return '<div class="card"><p class="label">Food</p><p class="note s">For a diet or a medical question, talk to a dietitian or your doctor first.</p>' +
+        '<p class="small">The food journal comes with your plan: it needs your age and health answers.</p><button class="btn two block" data-act="ob-start">Get my plan</button></div>';
+    }
+    var f = flags(), any = atRisk();
     var flagBox = '<details class="card"' + (any ? ' open' : '') + '><summary class="label" style="cursor:pointer;min-height:24px">Before you track food</summary>' +
       '<p class="small">Tick any that apply. They change what this card shows.</p><div class="stack tight">' +
       [['pregnant', 'Pregnant or breastfeeding'], ['child', 'Under 18'], ['medical', 'A medical condition that affects what I eat']].map(function (x) {
-        return '<div class="set-row"><div><b>' + x[1] + '</b></div><button class="switch" role="switch" data-act="flag" data-k="' + x[0] + '" aria-checked="' + !!f[x[0]] + '" aria-label="' + x[1] + '"></button></div>';
+        // what the profile says stays on: it changes with the answers in Me, not here
+        var fixed = f.from[x[0]];
+        return '<div class="set-row"><div><b>' + x[1] + '</b>' + (fixed ? '<span class="meta">From your plan answers</span>' : '') + '</div><button class="switch" role="switch" data-act="flag" data-k="' + x[0] + '" aria-checked="' + !!f[x[0]] + '" aria-label="' + x[1] + '"' + (fixed ? ' disabled' : '') + '></button></div>';
       }).join('') + '</div></details>';
     if (any) {
       return '<div class="card"><p class="label">Food</p><p class="note s">For a diet or a medical question, talk to a dietitian or your doctor first.</p>' +
@@ -1581,7 +1660,7 @@
     return '<section class="card"><div class="stack tight"><p class="label">Meals today</p>' + (fd.meals.length ? '<p class="meta">' + plural(fd.meals.length, 'meal') + ': ' + pN + ' with protein, ' + vN + ' with vegetables</p>' : '') + '</div>' +
       (meals ? '<div class="list">' + meals + '</div>' : '<p class="empty">Write down what you eat. Just the food, no counting.</p>') +
       '<form class="inline-form" data-form="meal"><label for="meal-in" class="sr">What did you eat?</label><input class="input" id="meal-in" placeholder="What did you eat?" autocomplete="off" maxlength="120"><button class="btn small" type="submit" aria-label="Add meal">' + ic('plus') + '</button></form>' +
-      '<p class="small">General habits, not a diet. Frank is a sports nutritionist: for a plan made for you, ask him.</p></section>' + flagBox;
+      '<p class="small">General habits, not a diet. Frank is trained in sports nutrition: for a plan made for you, ask him.</p></section>' + flagBox;
   }
 
   // ---- me -----------------------------------------------------------------------------------------
@@ -1650,7 +1729,8 @@
     var form = '<form class="inline-form" data-form="weight"><label for="w-in" class="sr">Weight in ' + u + '</label><input class="input" id="w-in" inputmode="decimal" placeholder="Today, in ' + u + '" autocomplete="off"><button class="btn small" type="submit">Log</button></form>';
     if (!ws.length) return '<section class="card"><p class="label">Weight</p><p class="empty">Log your weight once a week, same time of day, to see the trend.</p>' + form + '</section>';
     var lastW = ws[ws.length - 1], firstW = ws[0];
-    var goal = pr.targetKg && Math.abs(pr.targetKg - lastW.kg) >= 0.3 ? pr.targetKg : null;
+    // no weight goal for anyone at risk, even one saved before (a target from an older version, or Pregnancy mode since)
+    var goal = !atRisk(pr) && pr.targetKg && Math.abs(pr.targetKg - lastW.kg) >= 0.3 ? pr.targetKg : null;
     var chart = '';
     if (ws.length >= 2) {
       var pts = ws.slice(-12), Wd = 340, Hh = 140, padL = 8, padR = 44, top = 14, bottom = 22;
@@ -1670,7 +1750,7 @@
     }
     var ch = lastW.kg - firstW.kg;
     var chTxt = Math.abs(ch) < 0.05 ? 'No change since ' + fmtShort.format(fromIso(firstW.date)) : (ch > 0 ? '+' : '−') + kgShow(Math.abs(ch)) + ' ' + u + ' since ' + fmtShort.format(fromIso(firstW.date));
-    var b = bmiOf(lastW.kg, pr.cm);
+    var b = noBmi(pr) ? null : bmiOf(lastW.kg, pr.cm);
     return '<section class="card"><div class="wt-top"><div><p class="label">Current</p><b>' + kgShow(lastW.kg) + '<small>' + u + '</small></b></div>' +
       (goal ? '<div style="text-align:right"><p class="label dim">Goal</p><b>' + kgShow(goal) + '<small>' + u + '</small></b></div>' : '') + '</div>' +
       '<p class="meta">' + esc(chTxt) + '</p>' + chart +
@@ -1925,8 +2005,9 @@
     d.days = +d.days || 3;
     d.minutes = +d.minutes || 20;
     if (!d.focus || !d.focus.length) d.focus = ['full'];
+    if (atRisk(d)) d.targetKg = null;                 // no weight target for anyone at risk
     var changed = !old || ['goal', 'level', 'days', 'minutes'].some(function (k) { return String(old[k]) !== String(d[k]); }) ||
-      String(old.kit) !== String(d.kit) || String(old.injuries) !== String(d.injuries) || JSON.stringify(old.health) !== JSON.stringify(d.health);
+      String(old.kit) !== String(d.kit) || String(old.injuries) !== String(d.injuries) || healthSig(old.health) !== healthSig(d.health);
     if (changed) { d.start = iso(); d.round = old ? (old.round || 1) : 1; S.done = {}; }
     if (d.kg && (!S.weights.length || Math.abs(S.weights[S.weights.length - 1].kg - d.kg) > 0.01)) {
       S.weights = S.weights.filter(function (w) { return w.date !== iso(); });
@@ -1934,7 +2015,6 @@
     }
     delete d.edit; delete d.soreDone; delete d.only;
     S.profile = d;
-    S.flags = null; flags();
     save();
     setCoachFigure();
     return changed;
@@ -1965,6 +2045,7 @@
       if (i > 0) {
         var prev = OB[i - 1];
         if (prev.intro && draft && draft.edit) prev = OB[i - 2];
+        if (prev && prev.id === 'target' && draft && atRisk(draft)) prev = OB[i - 2];      // skipped going forward too (obNext)
         if (prev && (!draft || !draft.edit || OB_I[prev.id] >= OB_I.goal)) { obGo(prev.id); return; }
       }
       if (stack.length > 1) back();
@@ -1974,6 +2055,11 @@
       var id = cur().params.step || 'p1';
       readObInputs();
       if (id === 'focus' && !(draft.focus || []).length) return toast('Pick at least one');
+      if (id === 'born' && bornSet()) return;                  // the under-18 note came up: read it first
+      if (id === 'health') {
+        if (!healthDone(draft)) return;                         // every question needs an answer (Next is off until then)
+        draft.health.confirmed = iso();
+      }
       if (draft.only) { if (finishProfile()) toast('Your plan was updated'); back(); return; }
       obGo(obNext(id));
     },
@@ -2001,6 +2087,10 @@
     'ob-none': function () { draft.injuries = []; draft.soreDone = true; var y = W.scrollY; obGo('sore'); W.scrollTo(0, y); },
     'ob-health': function (el) {
       draft.health[el.getAttribute('data-k')] = el.getAttribute('data-v') === '1';
+      var y = W.scrollY; obGo('health'); W.scrollTo(0, y);
+    },
+    'ob-health-none': function () {
+      HQ.forEach(function (k) { draft.health[k] = false; });
       var y = W.scrollY; obGo('health'); W.scrollTo(0, y);
     },
     'ob-push': function (el) { draft.push = +el.getAttribute('data-v'); draft.level = levelFromTest(draft); var y = W.scrollY; obGo('pushups'); W.scrollTo(0, y); },
@@ -2153,12 +2243,14 @@
       if (m) toast('Activity logged: ' + m + ' min');
     },
     flag: function (el) {
-      var f = flags(), k = el.getAttribute('data-k');
-      f[k] = !f[k]; save(); render(false);
+      // the food card's own switches; what the profile says is worked out by flags() and stays apart
+      var k = el.getAttribute('data-k');
+      if (!S.flags || !S.flags.manual) S.flags = { manual: {} };
+      S.flags.manual[k] = !S.flags.manual[k]; save(); render(false);
     },
     health: function (el) {
       var k = el.getAttribute('data-k'), h = S.profile.health = S.profile.health || {};
-      h[k] = !h[k]; S.flags = null; save(); render(false);
+      h[k] = !h[k]; save(); render(false);
       toast(k === 'cleared' ? (h[k] ? 'Your plan can include vigorous work now' : 'Your plan stays gentle') : (h[k] ? 'Pregnancy mode is on' : 'Pregnancy mode is off'));
     },
     water: function (el) {

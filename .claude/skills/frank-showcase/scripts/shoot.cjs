@@ -173,7 +173,9 @@ const SCREENS = {
   } },
   weight: { state: 'new', what: 'onboarding: weight ruler and BMI', run: async (p, o) => {
     await toCoaches(p, o); await click(p, '[data-act="ob-pick"][data-v="' + o.coach + '"]');
-    await click(p, '.ob-cta .btn'); await ruler(p, 'h', o.coach === 'f' ? 168 : 180); await click(p, '.ob-cta .btn');
+    await click(p, '.ob-cta .btn');                                                         // year of birth
+    await click(p, '[data-act="ob-health-none"]'); await click(p, '.ob-cta .btn');          // health questions: none apply
+    await ruler(p, 'h', o.coach === 'f' ? 168 : 180); await click(p, '.ob-cta .btn');
     await ruler(p, 'w', o.coach === 'f' ? 68.5 : 86);
   } },
   target: { state: 'new', what: 'onboarding: target weight, healthy pace and dates', run: async (p, o) => {
@@ -181,7 +183,7 @@ const SCREENS = {
   } },
   ready: { state: 'new', what: 'onboarding: "Your plan is ready" summary', run: async (p, o) => {
     await SCREENS.target.run(p, o);
-    for (let k = 0; k < 3; k++) await click(p, '.ob-cta .btn');                        // target, health, sore spots
+    for (let k = 0; k < 2; k++) await click(p, '.ob-cta .btn');                        // target, sore spots
     await click(p, '.part .btn');                                                           // part 3
     for (const s of ['.ob-cta .btn', '[data-act="ob-push"][data-v="1"]', '.ob-cta .btn', '.ob-cta .btn', '.ob-cta .btn', '.ob-cta .btn', '.ob-cta .btn']) await click(p, s);
     await p.fill('#ob-name', o.coach === 'f' ? 'Ana' : 'Marco');

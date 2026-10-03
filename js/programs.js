@@ -192,6 +192,11 @@
     if (profile.birthYear) return new Date().getFullYear() - profile.birthYear;
     return { u30: 25, 30: 37, 45: 52, 60: 65 }[profile.age] || null;
   }
+  // under 18, or may be: age counts the year only, so someone born 18 years ago can still be 17. An unknown age counts too.
+  function possiblyMinor(profile) {
+    var a = age(profile);
+    return a == null || a <= 18;
+  }
 
   // Returns 28 days: { day, week, train, workoutId }
   function planDays(profile) {
@@ -507,5 +512,5 @@
   W.WBF.WEEK_MULT = WEEK_MULT;
   W.WBF.DEFAULT_KIT = DEFAULT_KIT;
   W.WBF.plan = { avoidFor: avoidFor, safe: safe, days: planDays, build: buildSession, custom: buildCustom, stepSeconds: stepSeconds,
-                 restAfter: restAfter, kcal: kcal, pick: pick, canDo: canDo, age: age, levelFor: levelFor, musclesOf: musclesOf, bodyOf: bodyOf };
+                 restAfter: restAfter, kcal: kcal, pick: pick, canDo: canDo, age: age, possiblyMinor: possiblyMinor, levelFor: levelFor, musclesOf: musclesOf, bodyOf: bodyOf };
 })(window);

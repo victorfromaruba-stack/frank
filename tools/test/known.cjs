@@ -5,24 +5,6 @@
 // Keep `match` narrow (flow name + check), so a known bug can't hide a new one.
 module.exports = [
   {
-    suite: 'onboarding',
-    match: /build steps is missing \/Setting doses for beginner\//,
-    why: 'Building your plan says "Setting doses for advanceds" when a PAR-Q yes keeps the plan at Beginner (buildSteps uses d.level, not WBF.plan.levelFor).',
-    since: '2026-10-02'
-  },
-  {
-    suite: 'onboarding',
-    match: /build steps should not show \/advanceds\/i/,
-    why: 'Building your plan: "Setting doses for advanceds" (buildSteps adds an "s" to every level name).',
-    since: '2026-10-02'
-  },
-  {
-    suite: 'smoke',
-    match: /^easier options in the sheet: tab in the sheet of an easier option \([^)]*\): got "video"/,
-    why: 'A move opened from "Easier options" inside an exercise sheet has dead Muscle and How-to tabs: openSheet() closes the old sheet, whose onClose sets XS = null after exerciseSheet() already set the new XS (js/app.js exerciseSheet/openSheet).',
-    since: '2026-10-02'
-  },
-  {
     suite: 'paywall',
     match: /^trial: days left: paywall during the trial should not show Start my 7-day free trial/,
     why: 'Me > See membership during a running trial still offers "Start my 7-day free trial", and tapping it says "Your 7-day free trial has started" (SCREENS.pay only tells ended from not ended).',
