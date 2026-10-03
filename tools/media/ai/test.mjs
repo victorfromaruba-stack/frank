@@ -113,9 +113,9 @@ part('3. dry run of the pilot');
     'start poses name the picked photos they send (stand-ins in a dry run before the pick)');
   ok(clips.every((c) => {
     const i = c.body.instances[0], p = c.body.parameters;
-    return c.body.instances.length === 1 && typeof i.prompt === 'string' && i.image.inlineData.mimeType && JSON.stringify(i.image) === JSON.stringify(i.lastFrame) &&
+    return c.body.instances.length === 1 && typeof i.prompt === 'string' && /^image\/(jpeg|png)$/.test(i.image.mimeType) && /^<base64 of /.test(i.image.bytesBase64Encoded) && !i.image.inlineData && JSON.stringify(i.image) === JSON.stringify(i.lastFrame) &&
       JSON.stringify(p) === '{"aspectRatio":"16:9","resolution":"720p","durationSeconds":8,"personGeneration":"allow_adult"}' && !i.referenceImages;
-  }), 'clips: image = lastFrame (the same start pose), 16:9, 720p, 8 s, allow_adult');
+  }), 'clips: image = lastFrame (the same start pose, as bytesBase64Encoded), 16:9, 720p, 8 s, allow_adult');
   const big = calls.filter((f) => /[A-Za-z0-9+/]{400,}/.test(fs.readFileSync(f, 'utf8')));
   ok(!big.length, 'the written bodies carry notes, not base64, so they stay readable');
   fs.writeFileSync(path.join(tmp, 'pilot-dry-run.txt'), r.out);

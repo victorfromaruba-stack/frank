@@ -1,5 +1,5 @@
 {
-  "about": "Pilot, part 3: one 8 s clip per picked start pose, and the review sheet.",
+  "about": "Pilot, part 3: one 8 s clip per picked start pose, and the review sheet. Second try: Veo refused the first one's pictures as inlineData (a 400, no cost).",
   "steps": ["clip", "review"],
   "coaches": ["f", "m"],
   "moves": ["squat", "push-up", "plank"],

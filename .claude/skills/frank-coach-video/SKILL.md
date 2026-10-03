@@ -257,7 +257,9 @@ Read on 3 October 2026: ai.google.dev/gemini-api/docs/veo, /image-generation, /i
 Checked:
 
 - **Veo:** `POST /v1beta/models/veo-3.1-fast-generate-preview:predictLongRunning` with
-  `instances[0]` (`prompt`, `image`, `lastFrame`, each `{"inlineData": {"mimeType", "data"}}`)
+  `instances[0]` (`prompt`, `image`, `lastFrame`, each `{"bytesBase64Encoded", "mimeType"}`, as
+  Google's JS SDK sends them; the docs write `{"inlineData": {"mimeType", "data"}}`, which the API
+  refused on 3 October 2026: "`inlineData` isn't supported by this model", a 400 at no cost)
   and `parameters` (`aspectRatio` 16:9 or 9:16, `resolution` 720p, 1080p or 4k, `durationSeconds`
   4, 6 or 8, 8 for 1080p, 4k or reference images, `personGeneration` "allow_adult", the only
   value for image-to-video and first-and-last frames, and in the EU). Up to 3 `referenceImages`
@@ -271,24 +273,20 @@ Checked:
   `response_format` (`{"type": "image", "aspect_ratio", "image_size", "mime_type": "image/jpeg"}`);
   the picture comes back in `steps`, a `model_output` step's `content`. `store: false` keeps it
   out of the 55-day log. Gemini 3.1 Flash Image keeps up to 4 photos of people consistent.
-  `generateContent` "remains fully supported" (`--image-api generate-content`).
+  `generateContent` "remains fully supported" (`--image-api generate-content`). Pilot runs 1 and
+  2 (3 October 2026) confirmed the model name `gemini-3.1-flash-image` and the answer's shape.
 - **Prices** as in the table above.
 
 Not checked, because no call was made:
 
-- That the API takes these exact bodies. Two spots where Google's own sources differ, each with
-  a switch: the docs write Veo's pictures as `inlineData`, the JS SDK sends
-  `{"bytesBase64Encoded", "mimeType"}` (`--veo-image-form bytesBase64Encoded`); the docs' table
-  writes `durationSeconds` as "8", the SDK sends the number 8, as the scripts do (a one-line
-  change in `veoCall` in `lib.mjs` if a 400 names it).
+- That Veo takes the rest of the body as sent. One spot where Google's own sources differ: the
+  docs' table writes `durationSeconds` as "8", the SDK sends the number 8, as the scripts do (a
+  one-line change in `veoCall` in `lib.mjs` if a 400 names it). The picture's form has a switch
+  too: `--veo-image-form inlineData`, or `"veoImageForm"` in a request file.
 - That Veo takes a JPEG start pose as well as a PNG (the docs' examples use PNG; the image model
   sends JPEG).
-- The raw shape of an image answer from the Interactions API. It's read from the SDK's types and
-  the docs' examples; the parser also reads the shape from before May 2026 and generateContent's.
 - Whether the video link redirects to another host (handled either way), the rate limits for the
   key's tier, and how much the model's thinking adds to a photo's cost (the $0.01 allowance).
-- The image model's name: the image docs and the pricing page say `gemini-3.1-flash-image`; the
-  Veo page's example still says `gemini-3.1-flash-image-preview`. `--image-model` changes it.
 - Whether `referenceImages` can go with `image` and `lastFrame` in one request. The scripts don't
   send them: the start pose already carries the coach.
 
