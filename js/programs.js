@@ -23,17 +23,24 @@
     // node tools/client-code.mjs <code>. Like the paywall, it's a check on the phone, not a lock.
     codes: [
       '3423e93ea2938ccbb786555bc73794e7b5216f5f85a319ebe19c57d723e3b57b'   // 2026-10-02
+    ],
+    // Frank's coach code: typed on Frank > "Frank? Unlock coach tools", it opens Coach tools on that phone (session
+    // links open the app on other phones, so only Frank may make them). Hashes of 'wbf-coach:' + code, made with
+    // node tools/client-code.mjs --coach <code>. A new hash here locks every phone that had the old code.
+    coachCodes: [
+      '7a00c150f2fde2ae79464d959979167f99509926ccda819b6284ca6abcbe0de0'   // 2026-10-03
     ]
   };
 
   // Membership for people who train with the app, in euro (Frank sells from the Netherlands).
   // The monthly price is decided; the yearly price and the trial are placeholders. paymentLink: any checkout link
   // (Mollie, Stripe, Paddle). Frank's own clients don't pay here. See docs/ACCOUNTS-AND-PAYMENTS.md.
+  // approved: Frank said yes to this price. The price screen shows only approved plans.
   var BILLING = {
     trialDays: 7, paymentLink: '',
     plans: [
       { id: 'year', name: 'Yearly', price: '€119.99', per: 'year', perWeek: '€2.31', best: true },
-      { id: 'month', name: 'Monthly', price: '€15', per: 'month', perWeek: '€3.46' }
+      { id: 'month', name: 'Monthly', price: '€15', per: 'month', perWeek: '€3.46', approved: true }
     ]
   };
 

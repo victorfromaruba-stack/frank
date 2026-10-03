@@ -89,7 +89,7 @@
   function defaults() {
     return { v: 2, profile: null, settings: { sound: true, voice: true, vibrate: true, rest: 0, ready: 15, units: 'kg', hunits: 'cm' },
              adjust: 1, swaps: {}, done: {}, sessions: [], weights: [], food: {}, flags: null,
-             access: null, inbox: [], inboxDone: {}, coach: { templates: [] }, walks: {} };
+             access: null, inbox: [], inboxDone: {}, coach: { templates: [] }, coachMode: null, walks: {} };
   }
   // profiles from the first version: age bands and the six health questions
   function migrate(p) {
@@ -300,29 +300,45 @@
              w: o.w ? 1 : 0, k: o.k ? 1 : 0, x: x, d: /^\d{4}-\d{2}-\d{2}$/.test(o.d) ? o.d : iso() };
   }
   var LINK = 'frank.';
+  // the code in a link, a whole message or the code alone. The one after "#frank." first: wellnessbyfrank.com and
+  // app.wellnessbyfrank.nl have a "frank." of their own
   function codeIn(text) {
     text = String(text || '').trim();
-    var m = text.match(/frank\.([A-Za-z0-9_-]+)/);
+    var m = text.match(/#frank\.([A-Za-z0-9_-]{8,})/) || text.match(/(?:^|\s)frank\.([A-Za-z0-9_-]{8,})/);
     return m ? m[1] : (/^[A-Za-z0-9_-]{24,}$/.test(text) ? text : null);
+  }
+  // what a session asks of the client: Frank changed it if any of this differs (not the client's name or the date)
+  function sameSession(a, b) {
+    var k = function (s) { return JSON.stringify([s.t, s.n, s.r, s.f, s.rs, s.w, s.k, s.x]); };
+    return k(a) === k(b);
   }
   function importSession(text) {
     var code = codeIn(text), spec = code ? cleanSpec(unpack(code)) : null;
     if (!spec) return null;
+    // Frank changed a session and sent it again: it is a new one, not the one the client ticked off
+    var had = S.inbox.filter(function (x) { return x.i === spec.i; })[0];
+    if (had && !sameSession(had, spec)) delete S.inboxDone[spec.i];
     S.inbox = S.inbox.filter(function (x) { return x.i !== spec.i; });
     S.inbox.unshift(spec);
-    S.access = Object.assign(S.access || {}, { client: true });
+    // a link made on this phone (Frank trying his own session) adds the session, not the whole app
+    if (!S.coach.templates.some(function (x) { return x.i === spec.i; })) S.access = Object.assign(S.access || {}, { client: true });
     save();
     return spec;
   }
-  // a client code from Frank: capitals and spaces don't count; only hashes are stored (tools/client-code.mjs)
-  function clientCode(text) {
+  // codes from Frank: capitals and spaces don't count; only hashes are stored (tools/client-code.mjs). Gives the code's
+  // hash when it is in the list, else null. A client code is hashed with 'wbf:', Frank's coach code with 'wbf-coach:'
+  function codeHash(text, prefix, list) {
     var code = String(text || '').trim().toLowerCase().replace(/\s+/g, '');
-    if (!/^[a-z0-9-]{3,40}$/.test(code) || !(FR.codes || []).length || !(W.crypto && W.crypto.subtle)) return Promise.resolve(false);
-    return W.crypto.subtle.digest('SHA-256', new TextEncoder().encode('wbf:' + code)).then(function (buf) {
+    if (!/^[a-z0-9-]{3,40}$/.test(code) || !(list || []).length || !(W.crypto && W.crypto.subtle)) return Promise.resolve(null);
+    return W.crypto.subtle.digest('SHA-256', new TextEncoder().encode(prefix + code)).then(function (buf) {
       var hex = Array.prototype.map.call(new Uint8Array(buf), function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
-      return FR.codes.indexOf(hex) !== -1;
-    }).catch(function () { return false; });
+      return list.indexOf(hex) !== -1 ? hex : null;
+    }).catch(function () { return null; });
   }
+  function clientCode(text) { return codeHash(text, 'wbf:', FR.codes).then(function (h) { return !!h; }); }
+  // Coach tools are Frank's: open on a phone where his coach code was typed. The phone keeps the code's hash, so a new
+  // code in FRANK.coachCodes locks every phone that had the old one. Like the paywall, a check on the phone
+  function coachOn() { return !!S.coachMode && (FR.coachCodes || []).indexOf(S.coachMode) !== -1; }
   function specById(id) {
     return S.inbox.filter(function (x) { return x.i === id; })[0] || S.coach.templates.filter(function (x) { return x.i === id; })[0] || null;
   }
@@ -1117,24 +1133,29 @@
   }
 
   // ---- paywall --------------------------------------------------------------------------------
+  // Only plans with Frank's yes show. The trial is offered only to someone who hasn't had it; with no payment link yet,
+  // the way on is a message to Frank, not a button that does nothing
   SCREENS.pay = {
     title: function () { return 'Membership'; },
     html: function (p) {
-      var sel = p.plan || 'year', ended = status() === 'ended', link = BILL.paymentLink;
+      var st = status(), fresh = st === 'new', link = BILL.paymentLink;
+      var plans = BILL.plans.filter(function (pl) { return pl.approved; });
+      var sel = p.plan || (plans.filter(function (pl) { return pl.best; })[0] || plans[0] || {}).id;
       var planBtn = function (pl) {
         return '<button class="plan-opt" data-act="pay-plan" data-v="' + pl.id + '" aria-pressed="' + (sel === pl.id) + '">' + (pl.best ? '<span class="hot">Best value</span>' : '') +
-          '<span><b>' + (ended ? pl.name : BILL.trialDays + '-day free trial, then ' + pl.name.toLowerCase()) + '</b><span>' + pl.price + ' a ' + pl.per + '</span></span><span class="pw">' + pl.perWeek + '<br>a week</span></button>';
+          '<span><b>' + (fresh ? BILL.trialDays + '-day free trial, then ' + pl.name.toLowerCase() : pl.name) + '</b><span>' + pl.price + ' a ' + pl.per + '</span></span><span class="pw">' + pl.perWeek + '<br>a week</span></button>';
       };
       return '<div class="ob"><div class="ob-top"><button class="icon-btn" data-act="pay-close" aria-label="Close">' + ic('close') + '</button><span class="grow"></span></div>' +
-        '<div class="pay"><h1>' + (ended ? 'Keep training' : 'Get your personal plan') + '</h1>' +
+        '<div class="pay"><h1>' + (fresh ? 'Get your personal plan' : 'Keep training') + '</h1>' +
+        (st === 'trial' ? '<p class="ob-sub">' + plural(daysLeft(), 'day') + ' left of your free trial.</p>' : '') +
         '<ul class="perks">' + ['A 28-day plan for your goal, level and time, adjusted after every session', Object.keys(EX).length + ' moves shown by a 3D coach, with Frank\'s cues and the why',
           'Workouts for every body part, plus Frank\'s programs', 'Progress, weight, walks, water and food in one place', 'Plans that leave out what your body shouldn\'t do'].map(function (t) { return '<li>' + ic('check') + t + '</li>'; }).join('') + '</ul>' +
-        BILL.plans.map(planBtn).join('') +
-        (link ? '<a class="btn dark block" href="' + esc(link) + '" target="_blank" rel="noopener">' + (ended ? 'Become a member' : 'Start my free trial') + '</a>'
-              : (ended ? '<button class="btn dark block" disabled>Become a member</button><p class="fine">Payments aren\'t switched on in this preview yet.</p>'
-                       : '<button class="btn dark block" data-act="pay-trial">Start my ' + BILL.trialDays + '-day free trial</button><p class="fine">No payment needed for the trial. Payments aren\'t switched on in this preview, so nothing is charged.</p>')) +
+        plans.map(planBtn).join('') +
+        (link ? '<a class="btn dark block" href="' + esc(link) + '" target="_blank" rel="noopener">' + (fresh ? 'Start my free trial' : 'Become a member') + '</a>'
+              : (fresh ? '<button class="btn dark block" data-act="pay-trial">Start my ' + BILL.trialDays + '-day free trial</button><p class="fine">No payment needed for the trial.</p>'
+                       : '<a class="btn dark block" href="' + esc(FR.dm) + '" target="_blank" rel="noopener" data-act="pay-ask">Tell me when it opens</a><p class="fine">Membership isn\'t open yet.</p>')) +
         '<button class="btn white block" data-act="join">I\'m one of Frank\'s clients</button>' +
-        '<p class="fine">The yearly price is a placeholder for now. Cancel any time.</p></div></div>';
+        (link ? '<p class="fine">Cancel any time.</p>' : '') + '</div></div>';
     }
   };
 
@@ -1881,7 +1902,7 @@
     if (st === 'client') body = '<p class="lead">You train with Frank. His sessions show up on your plan, and the whole app is open to you.</p>';
     else if (st === 'member') body = '<p class="lead">You\'re a member. Thank you.</p>';
     else if (st === 'trial') body = '<p class="lead">Free trial: ' + plural(daysLeft(), 'day') + ' left.</p><button class="btn two block" data-act="paywall">See membership</button>';
-    else if (st === 'ended') body = '<p class="lead">Your free trial has ended.</p><button class="btn block" data-act="paywall">Become a member</button>';
+    else if (st === 'ended') body = '<p class="lead">Your free trial has ended.</p><button class="btn block" data-act="paywall">' + (BILL.paymentLink ? 'Become a member' : 'See membership') + '</button>';
     else body = '<p class="lead">Your ' + BILL.trialDays + '-day free trial starts with your first workout.</p>';
     if (st !== 'client') body += '<button class="link" data-act="join">I\'m one of Frank\'s clients</button>';
     return '<section class="card"><p class="label">Membership</p>' + body + '</section>';
@@ -1910,8 +1931,9 @@
           return '<div class="method"><p class="display s sky">' + m[0] + '</p><p class="small">' + m[1] + '</p></div>';
         }).join('') + '</div></section>' +
         '<section class="card"><p class="label">The science</p><p class="small">The rules behind the generated plans, with every source.</p><button class="btn two block" data-act="science">Why the plans work</button></section>' +
-        '<section class="card quiet"><p class="label">For Frank</p><p class="small">Write sessions for your clients and send them as a link.</p>' +
-        '<button class="btn two block" data-act="coach">Coach tools</button></section></div>';
+        (coachOn() ? '<section class="card quiet"><p class="label">For Frank</p><p class="small">Write sessions for your clients and send them as a link.</p>' +
+          '<button class="btn two block" data-act="coach">Coach tools</button></section>'
+          : '<button class="link quiet" data-act="coach">Frank? Unlock coach tools</button>') + '</div>';
     }
   };
 
@@ -1969,9 +1991,19 @@
   function backBar(label) {
     return '<div class="top-bar"><button class="icon-btn" data-act="back" aria-label="Back">' + ic('back') + '</button><p class="title">' + esc(label) + '</p><span style="width:44px"></span></div>';
   }
+  // Coach tools on a phone without Frank's coach code: the code field, nothing else
+  function coachLock() {
+    return '<div class="screen bare">' + backBar('Coach tools') +
+      '<div class="stack tight"><h1 class="h1">Unlock coach tools</h1>' +
+      '<p class="lead">Type your coach code. Coach tools then stay open on this phone.</p></div>' +
+      '<form class="stack" data-form="coach-code"><label for="coach-in" class="sr">Coach code</label>' +
+      '<input class="input" id="coach-in" maxlength="60" placeholder="Coach code" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">' +
+      '<button class="btn block" type="submit">Unlock</button></form></div>';
+  }
   SCREENS.coach = {
     title: function () { return 'Coach tools'; },
     html: function () {
+      if (!coachOn()) return coachLock();
       var list = S.coach.templates.map(function (t) {
         var s = WBF.plan.custom(t);
         return '<div class="coach-row"><div class="grow"><b>' + esc(t.t || 'Untitled session') + '</b><span class="meta">' + (t.c ? 'For ' + esc(t.c) + ' · ' : '') + metaLine(s) + '</span></div>' +
@@ -1984,12 +2016,14 @@
         '<button class="btn block" data-act="coach-new">' + ic('plus') + 'New session</button>' +
         (list ? '<section class="stack"><p class="label">Saved sessions</p><div class="list">' + list + '</div></section>' : '<p class="empty">No sessions yet. Your first one takes about a minute.</p>') +
         '<section class="card quiet"><p class="label">How your clients get in</p><p class="small">Anyone who opens one of your links gets your sessions in the app without paying the membership. You charge them for your coaching yourself.</p>' +
-        '<button class="link" data-act="paywall">See what members see</button></section></div>';
+        '<button class="link" data-act="paywall">See what members see</button></section>' +
+        '<button class="link quiet" data-act="coach-lock">Lock coach tools on this phone</button></div>';
     }
   };
   SCREENS['coach-edit'] = {
-    title: function () { return 'Session'; },
+    title: function () { return coachOn() && cdraft ? 'Session' : 'Coach tools'; },
     html: function () {
+      if (!coachOn() || !cdraft) return coachLock();
       var d = cdraft, s = WBF.plan.custom(d);
       var rows = d.x.map(function (m, i) {
         var ex = EX[m[0]], isT = ex.type === 'time';
@@ -2218,6 +2252,11 @@
     // paywall
     'pay-plan': function (el) { cur().params.plan = el.getAttribute('data-v'); render(false); },
     'pay-trial': function () { startTrial(); tab('plan'); toast('Your ' + BILL.trialDays + '-day free trial has started'); },
+    // no payment link yet: a message for Frank on the clipboard; the button itself opens his Instagram chat
+    'pay-ask': function () {
+      var msg = 'Hi Frank, I train with your app. Please tell me when the membership opens.', no = function () { toast('Tell Frank you\'d like to join.'); };
+      try { navigator.clipboard.writeText(msg).then(function () { toast('Message copied. Paste it in the chat with Frank.'); }, no); } catch (e) { no(); }
+    },
     'pay-close': function () { if (stack.length > 1) back(); else tab('plan'); },
     paywall: function () { go('pay', {}); },
     // plan and workouts
@@ -2253,6 +2292,12 @@
       if (sp) { cdraft = JSON.parse(JSON.stringify(sp)); go('coach-edit', {}); }
     },
     'coach-send': function (el) { var sp = specById(el.getAttribute('data-id')); if (sp) sendSheet(sp); },
+    'coach-lock': function () {
+      confirmBox('Lock coach tools on this phone?', 'Lock', function () {
+        S.coachMode = null; save(); replaceTop('coach', {});
+        toast('Coach tools are locked on this phone');
+      }, { body: 'Your sessions stay saved. To open them again, type your coach code.' });
+    },
     'c-add': function () { pickerSheet(); },
     'c-pick': function (el) {
       var id = el.getAttribute('data-id'), ex = EX[id];
@@ -2417,6 +2462,14 @@
         save();
         if (S.profile) tab('plan'); else A['ob-start']();
         toast('Welcome. The whole app is open to you.');
+      });
+    } else if (kind === 'coach-code') {
+      codeHash($('#coach-in').value, 'wbf-coach:', FR.coachCodes).then(function (h) {
+        if (!h) { toast('That code didn\'t work.'); return; }
+        S.coachMode = h;
+        save();
+        if (cur().name === 'coach' || cur().name === 'coach-edit') replaceTop('coach', {});
+        toast('Coach tools are open on this phone');
       });
     } else if (kind === 'weight') {
       var kg = toKg($('#w-in').value);

@@ -246,7 +246,11 @@ function spec(over) {
 // A client code that exists only in tests: its hash goes into FRANK.codes in the page (app.addCode), so no real
 // client's code is ever written in this public repo. Typed with capitals and spaces, it must still work.
 const QA_CODE = 'qatest7';
-const codeHash = (code) => require('crypto').createHash('sha256').update('wbf:' + String(code).trim().toLowerCase().replace(/\s+/g, '')).digest('hex');
+// The same for Frank's coach code, which opens Coach tools: its hash goes into FRANK.coachCodes in the page
+// (app.addCoachCode), so Frank's real coach code is never written here either.
+const QA_COACH = 'qa-coach-only-7';
+const codeHash = (code, prefix = 'wbf:') => require('crypto').createHash('sha256').update(prefix + String(code).trim().toLowerCase().replace(/\s+/g, '')).digest('hex');
+const coachHash = (code) => codeHash(code, 'wbf-coach:');
 const pack = (obj) => Buffer.from(JSON.stringify(obj)).toString('base64url');
 const unpack = (code) => JSON.parse(Buffer.from(code, 'base64url').toString('utf8'));
 
@@ -419,6 +423,21 @@ const app = {
   },
   // make a client code valid on this page (default: QA_CODE); call again after a reload
   addCode: (page, code = QA_CODE) => page.evaluate((h) => { if (WBF.FRANK.codes.indexOf(h) === -1) WBF.FRANK.codes.push(h); }, codeHash(code)),
+  // make a coach code valid on this page (default: QA_COACH), as Frank's; call again after a reload
+  addCoachCode: (page, code = QA_COACH) => page.evaluate((h) => {
+    const list = WBF.FRANK.coachCodes = WBF.FRANK.coachCodes || [];
+    if (list.indexOf(h) === -1) list.push(h);
+  }, coachHash(code)),
+  // Frank's phone: Coach tools opened the way Frank does it, Frank tab > "Frank? Unlock coach tools", with the
+  // test-only coach code. Start on a screen with the tab bar; it ends on Coach tools
+  async unlockCoach(page, code = QA_COACH) {
+    await app.addCoachCode(page, code);
+    await app.tap(page, '.tab[data-tab="frank"]');
+    await app.tap(page, '[data-act="coach"]');
+    await page.fill('#coach-in', code);
+    await app.tap(page, 'form[data-form="coach-code"] button[type="submit"]');
+    await page.waitForSelector('[data-act="coach-new"]', { timeout: 5000 }).catch(() => { throw new Error('the coach code did not open Coach tools'); });
+  },
   // tap like a finger: the element must be visible and enabled; then let the screen redraw
   async tap(page, selector, { wait = 120, nth = 0 } = {}) {
     const loc = page.locator(selector).nth(nth);
@@ -558,5 +577,5 @@ async function main(suites) {
 
 module.exports = {
   REPO, KEY, TODAY, NOW, TZ, SITE, playwright, launch, serve, fetchSite, viaNode, settle, blankFigures, screenProblems,
-  isoDay, profile, state, member, spec, pack, unpack, QA_CODE, codeHash, app, Env, Test, short, parseArgs, options, runSuites, main, loadKnown
+  isoDay, profile, state, member, spec, pack, unpack, QA_CODE, QA_COACH, codeHash, coachHash, app, Env, Test, short, parseArgs, options, runSuites, main, loadKnown
 };

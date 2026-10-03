@@ -139,10 +139,15 @@ module.exports = {
       for (const f of ['js/figure.js', 'js/exercises.js', 'js/programs.js']) vm.runInContext(read(f), ctx, { filename: f });
       const FR = ctx.WBF.FRANK, B = ctx.WBF.BILLING;
       for (const c of FR.codes || []) t.check(/^[0-9a-f]{64}$/.test(c), 'FRANK.codes holds "' + String(c).slice(0, 6) + '…", not a SHA-256 hash: use node tools/client-code.mjs <code>');
+      // the same for Frank's coach code, which opens Coach tools
+      t.check((FR.coachCodes || []).length, 'FRANK.coachCodes is empty: nobody can open Coach tools');
+      for (const c of FR.coachCodes || []) t.check(/^[0-9a-f]{64}$/.test(c), 'FRANK.coachCodes holds "' + String(c).slice(0, 6) + '…", not a SHA-256 hash: use node tools/client-code.mjs --coach <code>');
       if (FR.whatsapp) t.note('FRANK.whatsapp is set (' + FR.whatsapp.replace(/\d(?=\d{3})/g, '•') + '): only with Frank\'s yes');
       if (B.paymentLink) t.note('BILLING.paymentLink is set: payments are live for members');
       const month = (B.plans || []).find((p) => p.id === 'month');
       t.check(month && month.price === '€15', 'the monthly price is no longer €15 (decided with Frank): ' + (month && month.price));
+      // the price screen shows only plans with approved: true (Frank's yes)
+      t.check(month && month.approved === true, 'the monthly plan has no approved: true, so the price screen hides it');
     });
   }
 };

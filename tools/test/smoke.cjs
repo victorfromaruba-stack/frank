@@ -87,8 +87,13 @@ module.exports = {
       await app.waitTitle(p, 'The science');
       await t.look(p, 'science', { kcal: false });
       await app.tap(p, '[data-act="back"]');
-      await app.tap(p, '[data-act="coach"]');
+      await app.tap(p, '[data-act="coach"]');                     // "Frank? Unlock coach tools"
       await app.waitTitle(p, 'Coach tools');
+      await t.look(p, 'coach tools locked');
+      await app.addCoachCode(p);                                  // the test-only coach code (L.QA_COACH)
+      await p.fill('#coach-in', L.QA_COACH);
+      await app.tap(p, 'form[data-form="coach-code"] button[type="submit"]');
+      await p.waitForSelector('[data-act="coach-new"]', { timeout: 5000 });
       await t.look(p, 'coach tools');
     });
 

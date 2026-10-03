@@ -5,12 +5,6 @@
 // Keep `match` narrow (flow name + check), so a known bug can't hide a new one.
 module.exports = [
   {
-    suite: 'paywall',
-    match: /^trial: days left: paywall during the trial should not show Start my 7-day free trial/,
-    why: 'Me > See membership during a running trial still offers "Start my 7-day free trial", and tapping it says "Your 7-day free trial has started" (SCREENS.pay only tells ended from not ended).',
-    since: '2026-10-02'
-  },
-  {
     suite: 'client',
     match: /^long titles fit the screen: (session|finish) screen with a long title: sideways scroll/,
     why: 'A session title with one long word (Dutch "Bovenlichaamskrachttraining") does not wrap: the session and finish screens scroll sideways and cut it off (.wd-title and the finish heading need overflow-wrap: anywhere).',

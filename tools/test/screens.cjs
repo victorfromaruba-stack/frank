@@ -167,6 +167,11 @@ module.exports = {
       await go(p, 'join', {});
       await snap(p, 'join');
       await go(p, 'coach', {});
+      await snap(p, 'coach tools locked');
+      await app.addCoachCode(p);                       // Frank's phone: the test-only coach code opens Coach tools
+      await p.fill('#coach-in', L.QA_COACH);
+      await app.tap(p, 'form[data-form="coach-code"] button[type="submit"]');
+      await p.waitForSelector('[data-act="coach-new"]', { timeout: 5000 });
       await snap(p, 'coach tools');
       await app.tap(p, '[data-act="coach-edit"]');
       await snap(p, 'coach session editor');
@@ -213,6 +218,9 @@ module.exports = {
       done.done = {}; [1, 4, 8, 11, 15, 18, 22, 25].forEach((d) => { done.done[d] = 'x' + d; });
       let p = await t.page({ state: done });
       await snap(p, 'plan complete');
+      p = await t.page({ state: L.state({ profile: L.profile(), access: { trialStart: L.isoDay(-4) } }) });
+      await go(p, 'pay', {});
+      await snap(p, 'paywall during the trial');
       p = await t.page({ state: L.state({ profile: L.profile({ start: L.isoDay(-10) }), access: { trialStart: L.isoDay(-10) } }) });
       await go(p, 'pay', {});
       await snap(p, 'paywall after the trial');

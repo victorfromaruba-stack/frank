@@ -118,6 +118,8 @@ a { color: var(--sky); }
 .btn svg { width: 20px; height: 20px; }
 .link { background: none; border: 0; padding: 10px 0; min-height: 44px; color: var(--sky); font: 700 15px/1.2 var(--f-body); display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
 .link svg { width: 18px; height: 18px; }
+/* a link only some people need (Frank's coach tools): quieter than the screen's own links */
+.link.quiet { align-self: center; color: var(--ink-3); font-size: 14px; }
 .icon-btn { width: 44px; height: 44px; flex: none; display: inline-grid; place-items: center; background: transparent; border: 0; border-radius: 999px; color: inherit; }
 .icon-btn:active { background: var(--ground-3); }
 .icon-btn svg { width: 24px; height: 24px; }
@@ -469,6 +471,7 @@ body:not(.light) .warnbox { background: rgba(242, 201, 107, 0.12); color: var(--
 /* ---- paywall ---- */
 .pay { display: flex; flex-direction: column; gap: 16px; }
 .pay h1 { margin: 0; font: 900 32px/1.05 var(--f-display); text-transform: uppercase; text-align: center; }
+.pay .ob-sub { text-align: center; }
 .plan-opt { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 16px; border-radius: 18px; background: var(--paper-2); border: 2px solid var(--paper-3); color: var(--ink-d); position: relative; }
 .plan-opt b { display: block; font: 900 18px/1.2 var(--f-display); }
 .plan-opt span { display: block; color: var(--ink-d2); font-size: 14px; }

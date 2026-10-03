@@ -5,6 +5,14 @@ const L = require('./lib.cjs');
 const { app } = L;
 
 const submit = (p) => app.tap(p, 'form[data-form="join"] button[type="submit"]', { wait: 500 });
+// a code typed on the locked Coach tools screen; returns the toast it brought
+async function coachTry(p, code) {
+  const n = (await app.toasts(p)).length;
+  await p.fill('#coach-in', code);
+  await app.tap(p, 'form[data-form="coach-code"] button[type="submit"]');
+  await p.waitForFunction((k) => window.__qa.toasts.length > k, n, { timeout: 5000 }).catch(() => null);
+  return (await app.toasts(p)).slice(n).join(' | ');
+}
 // a second window on the same phone (the installed app, a browser tab, WhatsApp's browser share the storage) that
 // opens Frank's link; the first window stays the one a failure shows
 async function otherWindow(t, a, sp) {
@@ -17,7 +25,7 @@ async function otherWindow(t, a, sp) {
 
 module.exports = {
   name: 'client',
-  about: 'client codes (also typed while a coach loads), session links (opened and pasted, broken and hostile ones, opened in a second window, also during a workout), Back after the join screen, Coach tools: build, send, open the link on a fresh phone, Back',
+  about: 'client codes (also typed while a coach loads), session links (opened and pasted, from github.io and Frank\'s own domains, broken and hostile ones, opened in a second window, also during a workout, edited and sent again), Back after the join screen, Coach tools: closed without Frank\'s coach code, opened with it (also after a reload), locked again, a link made on the same phone gives no access, build, send, open the link on a fresh phone, Back',
   async run(t) {
     await t.flow('client codes', async () => {
       const p = await t.page();
@@ -156,6 +164,52 @@ module.exports = {
       await app.waitTitle(p, 'Workout');
     });
 
+    await t.flow('session link pasted from each address', async () => {
+      // Frank's message as WhatsApp hands it over, from GitHub Pages and from his own domains: the code is what follows
+      // "#frank.", not the "frank." in wellnessbyfrank.com
+      const p = await t.page();
+      const hosts = ['https://victorfromaruba-stack.github.io/frank/', 'https://wellnessbyfrank.com/', 'https://app.wellnessbyfrank.nl/'];
+      for (const [n, host] of hosts.entries()) {
+        const sp = L.spec({ i: 'qa-host' + n, t: 'Session ' + (n + 1) + ' of 3' });
+        await p.evaluate(() => WBF.app.go('join'));
+        await p.fill('#join-in', 'Hi Sam, your next session: ' + sp.t + '. Open it here: ' + host + '#frank.' + L.pack(sp));
+        await submit(p);
+        const opened = await app.waitHeading(p, sp.t, 5000).then(() => true, () => false);
+        const said = await app.toast(p);
+        t.check(opened, () => 'a message with a link on ' + host + ' did not open the session (toast: "' + said + '")');
+      }
+      t.equal((await app.stored(p)).inbox.map((x) => x.i), ['qa-host2', 'qa-host1', 'qa-host0'], 'sessions from Frank after the three messages');
+    });
+
+    await t.flow('an edited session sent again shows as new', async () => {
+      // Sam ticked off Frank's session; Frank changes it and sends the same session (same id) again
+      const v1 = L.spec({ i: 'qa-edit', t: 'Legs, week 2' });
+      const st = L.member({}, { inbox: [v1], inboxDone: { 'qa-edit': 'h1' } });
+      const open = async (page, sp) => {
+        await page.evaluate((h) => { location.hash = h; }, 'frank.' + L.pack(sp));
+        await app.waitHeading(page, sp.t);
+        await app.tap(page, '[data-act="back"]');
+        await app.waitTitle(page, 'Plan');
+      };
+      const p = await t.page({ state: st });
+      const card = async () => (await p.locator('.plan-card').first().innerText()).replace(/\s+/g, ' ');
+      t.has(await card(), 'Do it again', 'the plan card from Frank, ticked off');
+      t.step('the same link again');
+      await open(p, v1);
+      t.has(await card(), 'Do it again', 'the plan card after the same link again');
+      t.step('Frank changed the moves');
+      await open(p, Object.assign({}, v1, { x: [['squat', 12], ['plank', 30], ['glute-bridge', 12]] }));
+      const c = await card();
+      t.lacks(c, 'Do it again', 'the plan card after Frank changed the moves');
+      t.lacks(c, '· done', 'the plan card after Frank changed the moves');
+      t.equal((await app.stored(p)).inboxDone, {}, 'ticked-off sessions after Frank changed the moves');
+      await t.look(p, 'plan with an edited session from Frank');
+      t.step('Frank changed only the rounds');
+      const q = await t.page({ state: st });
+      await open(q, Object.assign({}, v1, { r: 3 }));
+      t.equal((await app.stored(q)).inboxDone, {}, 'ticked-off sessions after Frank changed the rounds');
+    });
+
     await t.flow('Back after a link or a code from the join screen', async () => {
       // the join screen hands over to the Plan (or the onboarding): the phone's Back goes back through what is on
       // screen, then leaves the app, with no dead presses, however deep the join screen was
@@ -243,10 +297,111 @@ module.exports = {
       await t.look(p, 'finish screen with a long title');
     });
 
-    await t.flow('coach tools round trip', async () => {
+    await t.flow('coach tools: closed to members', async () => {
+      // Coach tools make session links, and a link opens the app on another phone: only Frank's coach code opens them
+      const p = await t.page({ state: L.state({ profile: L.profile({ start: L.isoDay(-10) }), access: { trialStart: L.isoDay(-10) } }) });
+      await app.tap(p, '.tab[data-tab="frank"]');
+      const frank = await app.text(p);
+      t.has(frank, 'Frank? Unlock coach tools', 'the Frank tab for a member');
+      t.lacks(frank, 'Write sessions for your clients', 'the Frank tab for a member');
+      await t.look(p, 'frank for a member');
+      await app.tap(p, '[data-act="coach"]');
+      await app.waitTitle(p, 'Coach tools');
+      await t.look(p, 'coach tools locked');
+      const shut = async (what) => t.equal([await p.locator('[data-act="coach-new"]').count(), await p.locator('#c-t').count(), await p.locator('#coach-in').count()],
+        [0, 0, 1], what + ' [New session, the session editor, the code field]');
+      await shut('Coach tools for a member');
+      t.lacks(await app.text(p), 'without paying', 'Coach tools for a member');
+      t.step('wrong codes');
+      await app.addCode(p);                                  // a client code opens the app, not Coach tools
+      for (const code of ['Bob', L.QA_CODE]) {
+        t.has(await coachTry(p, code), "That code didn't work", 'the code ' + code);
+        await shut('after the code ' + code);
+      }
+      const s = (await app.stored(p)) || {};
+      t.equal([s.coachMode || null, !!(s.access || {}).client], [null, false], 'saved after the wrong codes [coach mode, client]');
+      t.step('the session editor');
+      // no button leads there for a member; the screen itself stays shut as well
+      await p.evaluate(() => WBF.app.go('coach-edit'));
+      await shut('the session editor for a member');
+    });
+
+    await t.flow("coach tools: Frank's coach code opens them on his phone", async () => {
       const p = await t.page({ state: L.member() });
       await app.tap(p, '.tab[data-tab="frank"]');
       await app.tap(p, '[data-act="coach"]');
+      await app.waitTitle(p, 'Coach tools');
+      await app.addCoachCode(p);
+      // typed with capitals and spaces, like a client code
+      t.has(await coachTry(p, ' ' + L.QA_COACH.toUpperCase().replace(/^(.{3})/, '$1 ') + ' '), 'Coach tools are open on this phone', 'the coach code');
+      await p.waitForSelector('[data-act="coach-new"]', { timeout: 5000 });
+      t.has(await app.text(p), 'How your clients get in', 'Coach tools once open');
+      const s = await app.stored(p);
+      t.equal([s.coachMode, !!(s.access || {}).client], [L.coachHash(L.QA_COACH), false], 'saved [coach mode: the code\'s hash, client]');
+      t.check(!JSON.stringify(s).toLowerCase().includes(L.QA_COACH), 'the coach code itself was saved on the phone');
+      await t.look(p, 'coach tools open');
+      t.step('a reload');
+      await p.reload();
+      await L.settle(p);
+      // FRANK.coachCodes without this code, as after a new coach code (the test-only one lives in the page): shut
+      await app.tap(p, '.tab[data-tab="frank"]');
+      t.has(await app.text(p), 'Frank? Unlock coach tools', 'the Frank tab once FRANK.coachCodes has another code');
+      // the code still in the list: open after the reload, without typing it again
+      await app.addCoachCode(p);
+      await app.tap(p, '.tab[data-tab="frank"]');
+      t.has(await app.text(p), 'Write sessions for your clients', 'the Frank tab after a reload');
+      await app.tap(p, '[data-act="coach"]');
+      await app.waitTitle(p, 'Coach tools');
+      t.equal(await p.locator('[data-act="coach-new"]').count(), 1, 'New session after a reload, without the code');
+      t.step('lock again');
+      await app.tap(p, '[data-act="coach-lock"]');
+      t.has(await app.overlay(p), 'Lock coach tools on this phone?', 'the lock box');
+      await app.tap(p, '[data-act="modal-yes"]');
+      t.has(await app.toast(p), 'Coach tools are locked on this phone', 'lock');
+      t.equal([await p.locator('[data-act="coach-new"]').count(), await p.locator('#coach-in').count()], [0, 1], 'after Lock [New session, the code field]');
+      t.equal((await app.stored(p)).coachMode, null, 'saved coach mode after Lock');
+      await app.tap(p, '[data-act="back"]');
+      await app.waitTitle(p, 'Frank');
+      t.has(await app.text(p), 'Frank? Unlock coach tools', 'the Frank tab after Lock');
+    });
+
+    await t.flow("own link: Frank's phone doesn't become a client's", async () => {
+      // how a member used to get the whole app for free: a session made here, sent, then opened on the same phone
+      const p = await t.page({ state: L.state({ profile: L.profile({ start: L.isoDay(-10) }), access: { trialStart: L.isoDay(-10) } }) });
+      await app.unlockCoach(p);
+      await app.tap(p, '[data-act="coach-new"]');
+      await p.fill('#c-t', 'My own session');
+      await app.tap(p, '[data-act="c-add"]');
+      await app.tap(p, '#pick-list [data-act="c-pick"][data-id="squat"]');
+      await app.tap(p, '#overlay [data-act="close"]');
+      await app.tap(p, '[data-act="c-send"]');
+      const link = await p.locator('#send-link').inputValue();
+      await app.tap(p, '#overlay [data-act="close"]');
+      t.step('pasted');
+      await p.evaluate(() => WBF.app.go('join'));
+      await p.fill('#join-in', 'Open it here: ' + link);
+      await submit(p);
+      await app.waitHeading(p, 'My own session');            // the session itself is added
+      const s = await app.stored(p);
+      t.equal([!!(s.access || {}).client, s.inbox.map((x) => x.t)], [false, ['My own session']], 'after pasting a link made on this phone [client, sessions from Frank]');
+      t.step('opened');
+      await p.evaluate((h) => { location.hash = h; }, link.split('#')[1]);
+      await app.waitHeading(p, 'My own session');
+      t.check(!((await app.stored(p)).access || {}).client, 'opening a link made on this phone made it a client\'s');
+      t.step('the plan still needs the membership, the session stays open');
+      await app.tap(p, '[data-act="back"]');
+      await app.waitTitle(p, 'Plan');
+      await app.tap(p, '[data-act="start-day"]');
+      await app.waitTitle(p, 'Membership');
+      await app.tap(p, '[data-act="pay-close"]');
+      await app.waitTitle(p, 'Plan');
+      await app.tap(p, '[data-act="start-coach"]');
+      await app.waitTitle(p, 'Workout');
+    });
+
+    await t.flow('coach tools round trip', async () => {
+      const p = await t.page({ state: L.member() });
+      await app.unlockCoach(p);                              // Frank's phone: his coach code opens Coach tools
       await app.waitTitle(p, 'Coach tools');
       await app.tap(p, '[data-act="coach-new"]');
       await app.waitTitle(p, 'Session');
