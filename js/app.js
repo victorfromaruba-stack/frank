@@ -128,6 +128,7 @@
   function save() {
     try { W.localStorage.setItem(KEY, JSON.stringify(S)); savedOk = true; } catch (e) { savedOk = false; }
     if (!savedOk && !saveWarned) { saveWarned = true; setTimeout(function () { toast(SAVE_FAIL); }, 0); }
+    emit('saved', savedOk);           // modules hear about every save (see "modules" at the end)
     return savedOk;
   }
   // Other windows share the phone's copy: the installed app, a browser tab, WhatsApp's browser. Before this window
@@ -300,6 +301,9 @@
              w: o.w ? 1 : 0, k: o.k ? 1 : 0, x: x, d: /^\d{4}-\d{2}-\d{2}$/.test(o.d) ? o.d : iso() };
   }
   var LINK = 'frank.';
+  // a link to the app: #frank.<code>, or a module's #<name>.<rest> like #ex.squat (see "modules" at the end). h: the
+  // address after '#'. A plain #anchor is none
+  function isLink(h) { return /^[a-z][a-z0-9-]*\./.test(h); }
   // the code in a link, a whole message or the code alone. The one after "#frank." first: wellnessbyfrank.com and
   // app.wellnessbyfrank.nl have a "frank." of their own
   function codeIn(text) {
@@ -455,6 +459,8 @@
   function tab(name, params) { setStack([{ name: name, params: params || {} }]); }
   W.addEventListener('popstate', function () {
     if (!useHistory) return;
+    // a link opened in this tab: the browser steps on to it, which isn't Back. hashchange opens it (takeLink)
+    if (isLink(location.hash.slice(1))) return;
     if (unwound) { unwound = false; return; }
     if (selfBack) { selfBack = false; pop(); return; }
     depth = Math.max(0, depth - 1);
@@ -508,9 +514,11 @@
     $$('.tab', tabsEl).forEach(function (t) {
       if (t.getAttribute('data-tab') === c.name) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
     });
-    document.title = scr.title ? scr.title(c.params || {}) + ' · ' + FR.brand : FR.brand;
+    var name = scr.title ? scr.title(c.params || {}) : '';
+    document.title = name ? name + ' · ' + FR.brand : FR.brand;
     if (scr.mount) scr.mount(c.params || {});
     mountFigures(app);
+    emit('screen', c.name, app);
     W.scrollTo(0, top ? 0 : (c.scroll || 0));
     if (toastEl.classList.contains('on')) toastEl.style.bottom = toastLift();     // a toast still showing: above this screen's buttons
     // The focus: on the same control when the screen is drawn again (an answer on the onboarding), on the control that
@@ -679,7 +687,7 @@
       '<div class="card"><p class="label">Why it works</p><p class="note s">' + esc(ex.why) + '</p></div>' +
       (alts.length && !XS.player ? '<section class="stack"><p class="label">Other options</p><div class="list">' + alts.map(function (a) {
         return '<button class="item" data-act="ex" data-id="' + a + '">' + thumbHtml(a) + '<span class="grow"><b>' + esc(EX[a].name) + '</b><span class="meta">' + esc(EX[a].area.map(function (x) { return WBF.AREAS[x]; }).join(' · ')) + '</span></span>' + ic('chev', 'chev') + '</button>';
-      }).join('') + '</div></section>' : '') +
+      }).join('') + '</div></section>' : '') + slot('sheet.foot', id) +
       '<div class="xs-foot">' + (n > 1 ? '<div class="pager"><button class="icon-btn" data-act="xs-go" data-d="-1" aria-label="Previous move"' + (XS.i === 0 ? ' disabled style="opacity:.3"' : '') + '>' + ic('back') + '</button><span>' + (XS.i + 1) + '/' + n + '</span>' +
         '<button class="icon-btn" data-act="xs-go" data-d="1" aria-label="Next move"' + (XS.i === n - 1 ? ' disabled style="opacity:.3"' : '') + '>' + ic('chev') + '</button></div>' : '') +
       '<button class="btn grow" data-act="close">' + (XS.player ? 'Back to the workout' : 'Close') + '</button></div></div>';
@@ -746,9 +754,10 @@
   var draft = null;
 
   SCREENS.welcome = {
-    html: function () {
+    html: function (p) {
       return '<div class="ob">' +
         '<div class="welcome-hero">' + figHtml('jumping-jacks', { deco: true, note: false }) + '<span class="wordmark wm">Wellness by Frank</span></div>' +
+        slot('welcome.top', p) +
         '<div class="welcome-text"><h1>Your personal plan</h1><p>Built on Frank\'s method and the research. Every move shown by a moving coach, with the why behind it.</p></div>' +
         '<div class="ob-cta"><button class="btn dark block" data-act="ob-start">Get my plan</button>' +
         '<button class="btn white block" data-act="join">I train with Frank</button>' +
@@ -1229,7 +1238,7 @@
           '<span><b>' + (fresh ? BILL.trialDays + '-day free trial, then ' + pl.name.toLowerCase() : pl.name) + '</b><span>' + pl.price + ' a ' + pl.per + '</span></span><span class="pw">' + pl.perWeek + '<br>a week</span></button>';
       };
       return '<div class="ob"><div class="ob-top"><button class="icon-btn" data-act="pay-close" aria-label="Close">' + ic('close') + '</button><span class="grow"></span></div>' +
-        '<div class="pay"><h1>' + (fresh ? 'Get your personal plan' : 'Keep training') + '</h1>' +
+        '<div class="pay">' + slot('pay.top', p) + '<h1>' + (fresh ? 'Get your personal plan' : 'Keep training') + '</h1>' +
         (st === 'trial' ? '<p class="ob-sub">' + plural(daysLeft(), 'day') + ' left of your free trial.</p>' : '') +
         '<ul class="perks">' + ['A 28-day plan for your goal, level and time, adjusted after every session', Object.keys(EX).length + ' moves shown by a 3D coach, with Frank\'s cues and the why',
           'Workouts for every body part, plus Frank\'s programs', 'Progress, weight, walks, water and food in one place', 'Plans that leave out what your body shouldn\'t do'].map(function (t) { return '<li>' + ic('check') + t + '</li>'; }).join('') + '</ul>' +
@@ -1245,15 +1254,15 @@
   // ---- plan (home) -------------------------------------------------------------------------------
   SCREENS.plan = {
     title: function () { return 'Plan'; },
-    html: function () {
+    html: function (params) {
       var now = new Date(), p = S.profile;
       var top = '<div class="hello"><div class="stack tight"><span class="wordmark">Wellness by Frank</span><span class="meta">' + esc(fmtLong.format(now)) + '</span></div>' +
-        '<button class="avatar" data-act="tab" data-tab="me" aria-label="Me">' + esc(((p && p.name) || 'F').charAt(0).toUpperCase()) + '</button></div>';
+        '<button class="avatar" data-act="tab" data-tab="me" aria-label="Me">' + esc(((p && p.name) || 'F').charAt(0).toUpperCase()) + '</button></div>' + slot('plan.top', params);
       var fromFrank = S.inbox.length ? frankCard() : '';
       if (!p) {
         return '<div class="screen">' + top + fromFrank + '<div class="plan-card"><div class="pc-media is3d">' + figHtml('squat', { deco: true, note: false }) + '<span class="pc-badge">Free for ' + BILL.trialDays + ' days</span></div>' +
           '<div class="pc-body"><h2 class="pc-title">Your 28-day plan</h2><p class="lead">A few questions about your goal, body and time. Then every session is ready to press play.</p>' +
-          '<button class="btn block" data-act="ob-start">Get my plan</button></div></div>' + quickRail() + lessonCard() + '</div>';
+          '<button class="btn block" data-act="ob-start">Get my plan</button></div></div>' + slot('plan.after-hero', params) + quickRail() + lessonCard() + '</div>';
       }
       var nd = nextDay(), days = planDays(), trainN = days.filter(function (d) { return d.train; }).length;
       var doneN = days.filter(function (d) { return d.train && S.done[d.day]; }).length;
@@ -1295,7 +1304,7 @@
             '<span class="grow"><b>Day ' + d.day + '</b><span>' + esc(ss.title) + ' · ' + mins(ss.estSec) + (kc ? ' · ' + kc + ' kcal est.' : '') + '</span></span>' +
             '<span class="state">' + (done ? ic('check') : isNext ? ic('play') : '') + '</span></button>';
         }).join('') + '</div></section>';
-      return '<div class="screen">' + top + fromFrank + hero + quickBodies() +
+      return '<div class="screen">' + top + fromFrank + hero + slot('plan.after-hero', params) + quickBodies() +
         '<section class="stack"><div class="sec-head"><h2 class="h2">Your 28 days</h2><span class="meta">Round ' + (p.round || 1) + ' · ' + doneN + '/' + trainN + ' done</span></div><div class="month">' + grid + '</div></section>' +
         thisWeek +
         lessonCard() + quickRail() + '</div>';
@@ -1688,6 +1697,7 @@
       if (s.day && S.profile && mainDid >= Math.ceil(mainTotal / 2)) S.done[s.day] = rec.id;
       if (s.coach) { rec.coach = s.coach.i; if (mainDid >= Math.ceil(mainTotal / 2)) S.inboxDone[s.coach.i] = rec.id; }
       save();
+      emit('finish', rec, s);           // before the finish screen, so a module's card there knows about this workout
     }
     PL = null;
     if (rec) setStack([{ name: 'plan', params: {} }, { name: 'done', params: { id: rec.id } }]);
@@ -1725,12 +1735,12 @@
         (rec.day && S.profile ? '<p class="meta">Day ' + rec.day + (S.done[rec.day] === rec.id ? ' is ticked off your plan.' : ' stays open: finish half the main moves to tick it off.') + '</p>' : '') +
         (rec.coach ? '<p class="meta">' + (S.inboxDone[rec.coach] === rec.id ? 'Ticked off. Frank\'s next session will show up on your plan.' : 'Finish half the main moves to tick it off.') + '</p>' : '') + '</div>' +
         '<div class="stats"><div><b>' + mmss(rec.sec) + '</b><span>Time</span></div><div><b>' + rec.moves + '</b><span>Moves</span></div>' +
-        '<div><b>' + (rec.kcal ? rec.kcal : '–') + '</b><span>' + (rec.kcal ? 'kcal, est.' : 'Add weight') + '</span></div></div>' +
+        '<div><b>' + (rec.kcal ? rec.kcal : '–') + '</b><span>' + (rec.kcal ? 'kcal, est.' : 'Add weight') + '</span></div></div>' + slot('done.after-stats', rec) +
         '<section class="stack"><h2 class="h2">How did that feel?</h2><div class="feel" role="group" aria-label="How did that feel?">' +
         [['easy', 'Too easy', '😌'], ['right', 'Just right', '💪'], ['hard', 'Too hard', '😮‍💨']].map(function (f) {
           return '<button data-act="feel" data-id="' + rec.id + '" data-v="' + f[0] + '" aria-pressed="' + (rec.feel === f[0]) + '"><span aria-hidden="true">' + f[2] + '</span>' + f[1] + '</button>';
         }).join('') + '</div><p class="meta">' + (rec.feel === 'easy' ? 'Next sessions get a little harder.' : rec.feel === 'hard' ? 'Next sessions get a little easier.' : rec.feel === 'right' ? 'Good. The plan keeps building at this pace.' : 'Your answer tunes the next sessions.') + '</p></section>' +
-        (loads ? '<section class="stack tight"><h2 class="h2">Weights you used</h2>' + loads + '</section>' : '') +
+        (loads ? '<section class="stack tight"><h2 class="h2">Weights you used</h2>' + loads + '</section>' : '') + slot('done.next', rec) +
         '<div class="card"><p class="note">Want this with Frank, in person?</p><p class="lead">He watches how you move and corrects one thing at a time.</p>' +
         '<a class="btn two block" href="' + FR.dm + '" target="_blank" rel="noopener">' + ic('msg') + 'Message Frank</a></div>' +
         '<div class="dock"><div class="dock-in"><button class="btn block" data-act="tab" data-tab="plan">Done</button></div></div></div>';
@@ -1768,7 +1778,7 @@
   }
   SCREENS.today = {
     title: function () { return 'Today'; },
-    html: function () {
+    html: function (p) {
       var today = iso(), mon = monday(new Date()), todays = sessionsOn(today);
       var strip = '';
       for (var i = 0; i < 7; i++) {
@@ -1783,7 +1793,7 @@
         var s = session(nd.workoutId, nd);
         card = '<button class="wo-card" data-act="open-day" data-day="' + nd.day + '">' + thumbHtml(firstMove(s)) + '<span class="grow"><span class="label">Next in your plan</span><b>Day ' + nd.day + ': ' + esc(s.title) + '</b><span>' + mins(s.estSec) + '</span></span>' + ic('chev', 'chev') + '</button>';
       }
-      return '<div class="screen"><div class="stack tight"><p class="label">' + esc(fmtLong.format(new Date())) + '</p><h1 class="h1">Today</h1></div>' +
+      return '<div class="screen"><div class="stack tight"><p class="label">' + esc(fmtLong.format(new Date())) + '</p><h1 class="h1">Today</h1></div>' + slot('today.top', p) +
         '<div class="week-strip" aria-label="This week">' + strip + '</div>' +
         '<div class="act-card"><div class="act"><b>' + minToday + '<small>/ ' + goalMin + ' min</small></b><span>Active today</span><div class="bar"><i style="width:' + Math.min(100, minToday / goalMin * 100) + '%"></i></div></div>' +
         '<div class="act"><b>' + kcToday + '<small>kcal</small></b><span>Burned in workouts, est.</span></div></div>' +
@@ -1876,12 +1886,12 @@
         cal += '<span class="d' + (on[di] ? ' on' : '') + (di === todayIso ? ' today' : '') + '"' + (on[di] ? ' aria-label="' + d + ': ' + plural(on[di], 'workout') + '"' : '') + '>' + d + '</span>';
       }
       var monthCount = all.filter(function (r) { return r.date.slice(0, 7) === iso(first).slice(0, 7); }).length;
-      return '<div class="screen">' + head + tiles + weeklyChart() + weightCard() +
+      return '<div class="screen">' + head + slot('me.top', p) + tiles + weeklyChart() + weightCard() +
         '<section class="card"><div class="between"><button class="icon-btn" data-act="cal" data-m="' + (off - 1) + '" aria-label="Previous month">' + ic('back') + '</button>' +
         '<div class="stack tight" style="align-items:center"><p class="label">' + esc(fmtMonth.format(first)) + '</p><p class="meta">' + plural(monthCount, 'workout') + '</p></div>' +
         '<button class="icon-btn" data-act="cal" data-m="' + (off + 1) + '" aria-label="Next month"' + (off >= 0 ? ' disabled style="opacity:.3"' : '') + '>' + ic('chev') + '</button></div>' +
         '<div class="cal">' + cal + '</div><div class="streak">' + ic('flame') + plural(streakDays(), 'day') + ' in a row</div></section>' +
-        historyCard() + loadsCard() + settingsCards() + '</div>';
+        historyCard() + loadsCard() + settingsCards(p) + '</div>';
     }
   };
   function weeklyChart() {
@@ -1956,7 +1966,8 @@
       return '<div class="item" style="min-height:52px"><span class="grow"><b>' + esc(r.title) + '</b><span class="meta">' + esc(fmtShort.format(fromIso(r.date))) + ' · ' + mmss(r.sec) + (r.kcal ? ' · ' + r.kcal + ' kcal est.' : '') + (r.feel ? ' · ' + feel[r.feel] : '') + '</span></span></div>';
     }).join('') + '</div></section>';
   }
-  function settingsCards() {
+  // p: the Me screen's params (for the modules' me.data slot)
+  function settingsCards(p) {
     var st = S.settings, pr = S.profile, h = (pr && pr.health) || {};
     var parq = WBF.PARQ.some(function (q) { return h[q[0]]; });
     var standalone = (W.matchMedia && W.matchMedia('(display-mode: standalone)').matches) || W.navigator.standalone;
@@ -1981,7 +1992,7 @@
       '<section class="card"><p class="label">The science</p><p class="small">How the plans follow the research on strength, cardio, balance and safety, with every source.</p>' +
       '<button class="btn two block" data-act="science">Why the plans work</button></section>' +
       '<section class="card quiet"><p class="label">Your data</p>' + (savedOk ? '' : '<p class="warnbox" id="save-fail">' + esc(SAVE_FAIL) + '</p>') + '<p class="small">Everything you enter stays on this phone. Nothing is sent to Frank or anyone else. Clearing your browser data clears it too.</p>' +
-      '<button class="link" data-act="reset">Delete my data and start over</button></section>';
+      slot('me.data', p) + '<button class="link" data-act="reset">Delete my data and start over</button></section>';
   }
   function membershipCard() {
     var st = status(), body;
@@ -1997,7 +2008,7 @@
   // ---- frank -----------------------------------------------------------------------------------
   SCREENS.frank = {
     title: function () { return 'Frank'; },
-    html: function () {
+    html: function (p) {
       var wa = FR.whatsapp ? 'https://wa.me/' + FR.whatsapp.replace(/\D/g, '') + '?text=' + encodeURIComponent('Hi Frank, I train with your app and I would like a session with you.') : '';
       var method = [
         ['ESSENTiALS', 'Scapula and hips first. Get these two moving well and the rest has a base to build on.'],
@@ -2006,7 +2017,7 @@
         ['NOT ONLY A TRAINER, BUT PURPOSELY AN EDUCATOR', 'Every exercise comes with its why, so you understand what you train.']
       ];
       return '<div class="screen"><div class="frank-hero"><img src="' + img('img/wellness-4.jpg') + '" alt="Frank\'s graphic: Not only a trainer, but purposely an educator"></div>' +
-        '<div class="stack tight"><h1 class="display xl sky">Frank</h1><p class="note s">' + esc(FR.bio) + '</p></div>' +
+        '<div class="stack tight"><h1 class="display xl sky">Frank</h1><p class="note s">' + esc(FR.bio) + '</p></div>' + slot('frank.top', p) +
         '<section class="card"><p class="label">Train with Frank in person</p><p class="lead">The app teaches the method. In ' + esc(FR.city) + ', Frank starts with an assessment of how you move, then trains you at your level and fixes one thing at a time. He coaches at several gyms, so you train at the one you go to.</p>' +
         '<a class="btn block" href="' + FR.dm + '" target="_blank" rel="noopener">' + ic('msg') + 'Message on Instagram</a>' +
         (wa ? '<a class="btn two block" href="' + wa + '" target="_blank" rel="noopener">WhatsApp</a>' : '') +
@@ -2226,6 +2237,7 @@
       S.profile = d;
       save();
       setCoachFigure();
+      emit('profile', old, d, updated);
       if (then) then(updated);
     }
     if (renew && old && Object.keys(S.done).length) {
@@ -2655,24 +2667,172 @@
     if (!overlay.hidden) swap(overlay);
   }
   W.addEventListener('wbf-three', upgrade3d);
-  function fromLink() {
+
+  // ---- modules: a feature in its own file ------------------------------------------------------------------------------
+  // A module is a js/<feature>.js, listed in index.html before app.js and in SHELL in sw.js. It queues its start:
+  //   var WBF = W.WBF = W.WBF || {};
+  //   (WBF.ext = WBF.ext || []).push(function keep(app) { app.card('plan.top', ...); app.on('finish', ...); });
+  // app.js starts the queue before it reads a link or draws a screen. What `app` holds, the slots and events, the rules,
+  // and a template to copy: .claude/skills/frank-module/SKILL.md. A module that throws as it starts is left out, with all it
+  // had added taken back; one that throws later loses only that card, screen, action or event. Either way the console
+  // names the module and the place, and the app carries on.
+  var ONE = ['welcome.top', 'plan.top', 'today.top', 'me.top', 'frank.top', 'pay.top', 'done.next'];   // the card with the highest priority
+  var PLAIN = ['plan.after-hero', 'done.after-stats', 'me.data', 'sheet.foot'];                        // every module's piece, in order
+  var EVENTS = ['boot', 'hash', 'screen', 'finish', 'profile', 'saved'];
+  var SLOTS = {}, EV = {}, OWNER = {}, APP_KEYS = defaults(), failed = {}, hearing = {}, started = 0;
+  // a module's function, run so that its error stays in the module: undefined comes back, the console says it once
+  function guard(mod, where, fn, args, self) {
+    try { return fn.apply(self || null, args || []); } catch (e) {
+      var k = mod.name + ' ' + where;
+      if (!failed[k]) { failed[k] = 1; try { console.error('Wellness by Frank: module ' + mod.name + ' failed (' + where + ')', e); } catch (x) { /* no console */ } }
+      return undefined;
+    }
+  }
+  // every module's handler for an event, in the order they started. 'boot' and 'hash' give true when a module opened the
+  // link, and stop there: a link opens one thing. An event set off while the modules hear the same event (a save in a
+  // 'saved' handler, a screen drawn in a 'screen' handler) isn't passed on: no module hears it, and nothing loops
+  function emit(name) {
+    var args = Array.prototype.slice.call(arguments, 1), link = name === 'boot' || name === 'hash', took = false;
+    if (!EV || !EV[name] || hearing[name]) return false;
+    hearing[name] = true;
+    try {
+      EV[name].slice().some(function (h) { took = guard(h.mod, 'on:' + name, h.fn, args) === true; return took && link; });
+    } finally { hearing[name] = false; }
+    return took && link;
+  }
+  // What the modules put in a slot: in a one-card slot the card with the highest priority (on a tie, the module that
+  // started first), in the others every module's piece. Each sits in a wrapper that takes no room, so the screen keeps
+  // its own spacing; with nothing to show, the screen is exactly as without modules
+  function slot(name, arg) {
+    var list = (SLOTS && SLOTS[name]) || [], best = null, out = '';
+    var wrap = function (mod, html, id) {
+      return '<div style="display:contents" data-slot="' + name + '" data-module="' + esc(mod.name) + '"' + (id != null ? ' data-card="' + esc(id) + '"' : '') + '>' + html + '</div>';
+    };
+    list.forEach(function (r) {
+      var c = guard(r.mod, name, r.fn, [arg]);
+      if (ONE.indexOf(name) === -1) { if (c && typeof c === 'string') out += wrap(r.mod, c); }
+      else if (c && c.html && typeof c.html === 'string' && (!best || (+c.priority || 0) > (+best.c.priority || 0))) best = { c: c, mod: r.mod };
+    });
+    return best ? wrap(best.mod, best.c.html, best.c.id) : out;
+  }
+  // A module's screen. If it fails to draw, the screen it replaced shows instead (a screen of its own shows just its Back
+  // button), so nobody is left on a blank page
+  function safeScreen(mod, name, def, old) {
+    var shown = def, where = 'screen:' + name;
+    return {
+      title: function (p) {
+        if (shown === def) return def.title ? guard(mod, where, def.title, [p], def) : '';
+        return shown && shown.title ? shown.title(p) : '';
+      },
+      html: function (p) {
+        shown = def;
+        var h = guard(mod, where, function () {
+          var out = def.html(p);
+          if (typeof out !== 'string') throw new Error('html() gave no html');
+          return out;
+        });
+        if (h !== undefined) return h;
+        shown = old;
+        return old ? old.html(p) : '<div class="screen bare">' + backBar('') + '</div>';
+      },
+      mount: function (p) {
+        if (shown === def) { if (def.mount) guard(mod, where, def.mount, [p], def); } else if (shown && shown.mount) shown.mount(p);
+      }
+    };
+  }
+  // The app's own functions: for the modules (each gets them with its own ways in, below), the tests and the showcase
+  // captures (.claude/skills/frank-showcase)
+  var base = W.WBF.app = {
+    state: function () { return S; }, save: save, render: render, refresh: refresh, go: go, back: back, tab: tab, cur: cur,
+    toast: toast, openSheet: openSheet, closeOverlay: closeOverlay, confirmBox: confirmBox,
+    status: status, daysLeft: daysLeft, planDays: planDays, nextDay: nextDay, session: session, kcalOf: kcalOf, kcal: kcalOf,
+    mountFigures: mountFigures,
+    sheet: function (id, tabName) { exerciseSheet(id); if (tabName && XS) { XS.tab = tabName; paintExMedia(); } },
+    util: { esc: esc, iso: iso, fromIso: fromIso, addDays: addDays, monday: monday, mins: mins, mmss: mmss, plural: plural, ic: ic,
+            figHtml: figHtml, thumbHtml: thumbHtml, backBar: backBar, fmtShort: fmtShort, fmtLong: fmtLong }
+  };
+  // starts one module: init(app) gets WBF.app plus its own ways in
+  function use(init) {
+    var mod = { name: (init && init.name) || 'module-' + (started + 1), undo: [], key: null }, me = Object.create(base);
+    started++;
+    var add = function (reg, k, fn) {
+      var r = { mod: mod, fn: fn };
+      (reg[k] = reg[k] || []).push(r);
+      mod.undo.push(function () { reg[k].splice(reg[k].indexOf(r), 1); });
+    };
+    var known = function (list, k) { if (list.indexOf(k) === -1) throw new Error('"' + k + '" is none of: ' + list.join(', ')); };
+    // fn(params) gives null or { id, priority, html }: of all the modules' cards in the slot, one shows
+    me.card = function (name, fn) { known(ONE, name); add(SLOTS, name, fn); };
+    // fn(params) gives html, or '' for nothing
+    me.html = function (name, fn) { known(PLAIN, name); add(SLOTS, name, fn); };
+    me.on = function (name, fn) { known(EVENTS, name); add(EV, name, fn); };
+    // data-act="<name>" runs fn(el, event). The names are shared with the app's own, so a clash is refused
+    me.action = function (name, fn) {
+      if (A[name]) throw new Error('the action "' + name + '" exists already');
+      A[name] = function (el, e) { return guard(mod, 'action:' + name, fn, [el, e]); };
+      mod.undo.push(function () { delete A[name]; });
+    };
+    me.screen = function (name, def) {
+      if (SCREENS[name]) throw new Error('the screen "' + name + '" exists already: override() replaces one');
+      SCREENS[name] = safeScreen(mod, name, def, null);
+      mod.undo.push(function () { delete SCREENS[name]; });
+    };
+    // replaces a screen of the app (or of a module that started earlier); gives back the one it replaced, to draw it still
+    me.override = function (name, def) {
+      var old = SCREENS[name];
+      if (!old) throw new Error('there is no screen "' + name + '" to override');
+      SCREENS[name] = safeScreen(mod, name, def, old);
+      mod.undo.push(function () { SCREENS[name] = old; });
+      return old;
+    };
+    // the module's own data: one key in wbf.v1 for the whole module, made by fresh() the first time it is asked for with
+    // one. Ask each time: another window's save or Delete my data puts a new object there
+    me.data = function (key, fresh) {
+      if (mod.key == null) {
+        if (!/^[a-z][A-Za-z0-9]*$/.test(key) || Object.prototype.hasOwnProperty.call(APP_KEYS, key) || OWNER[key]) throw new Error('the data key "' + key + '" is taken or not a plain name');
+        mod.key = key; OWNER[key] = mod;
+        mod.undo.push(function () { delete OWNER[key]; });
+      } else if (key !== mod.key) throw new Error('one data key per module: this one has "' + mod.key + '"');
+      if (S[key] == null && fresh) S[key] = fresh();
+      return S[key];
+    };
+    if (guard(mod, 'start', function () { init(me); return true; }) !== true) mod.undo.reverse().forEach(function (f) { f(); });
+  }
+
+  // A link to the app (#frank.<code>, or a module's, like #ex.squat) leaves the address bar before anything opens it, so
+  // a reload or the phone's Back doesn't open it again. Gives the link without its '#' ('' for none, or a plain #anchor)
+  function takeLink() {
     var h = (location.hash || '').slice(1);
+    if (!isLink(h)) return '';
+    if (useHistory) { try { W.history.replaceState({ wbf: stack.length }, '', location.href.split('#')[0]); } catch (e) { /* ignore */ } }
+    return h;
+  }
+  // Frank's session from a link: added to the phone and opened. During a workout it only waits on the Plan: a link
+  // never ends a workout
+  function fromLink(h) {
     if (h.indexOf(LINK) !== 0) return false;
     var spec = importSession(h);
-    if (useHistory) { try { W.history.replaceState({ wbf: 1 }, '', location.href.split('#')[0]); } catch (e) { /* ignore */ } }
     if (!spec) { setTimeout(function () { toast('That session link didn\'t work. Ask Frank to send it again.'); }, 300); return false; }
+    setTimeout(function () { toast('New session from Frank: ' + spec.t); }, 300);
+    if (cur().name === 'player') return false;
     stack = [{ name: 'plan', params: {} }, { name: 'workout', params: { coach: spec.i } }];
     pushState();
-    setTimeout(function () { toast('New session from Frank: ' + spec.t); }, 300);
     return true;
   }
-  W.addEventListener('hashchange', function () { if (fromLink()) render(true); });
-  fromLink();
+  // a link opened in a tab that has the app: a sheet or a box that is open closes (not during a workout), then the
+  // modules and Frank's sessions get the link
+  W.addEventListener('hashchange', function () {
+    var h = takeLink();
+    if (!h) return;
+    if (cur().name !== 'player') closeOverlay();
+    if (!emit('hash', h) && fromLink(h)) render(true);
+  });
+  // the modules first (one that comes after app.js starts as it comes, too late for 'boot'), then a link, then the screen
+  var queue = [].concat(W.WBF.ext || []);
+  W.WBF.ext = { push: use };
+  queue.forEach(function (init) { use(init); });
+  var link = takeLink();
+  if (!emit('boot', link)) fromLink(link);
   if (W.THREE && WBF.fig3d) WBF.fig3d.init();
   render(true);
-  // hooks for tests and the showcase captures (.claude/skills/frank-showcase)
-  // for tests and the showcase captures (.claude/skills/frank-showcase)
-  W.WBF.app = { state: function () { return S; }, go: go, tab: tab,
-                sheet: function (id, tabName) { exerciseSheet(id); if (tabName && XS) { XS.tab = tabName; paintExMedia(); } },
-                nextDay: nextDay, session: session, kcal: kcalOf };
 })(window);

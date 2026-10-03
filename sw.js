@@ -7,7 +7,7 @@ const VERSION = 'wbf-11';
 const SHELL = [
   './', 'index.html', 'app.css', 'manifest.webmanifest',
   'fonts/fonts.css', 'fonts/Nunito-latin.woff2', 'fonts/Nunito-latin-ext.woff2', 'fonts/GildaDisplay-latin.woff2', 'fonts/GildaDisplay-latin-ext.woff2',
-  'js/figure.js', 'js/exercises.js', 'js/programs.js', 'js/science.js', 'js/sound.js', 'js/figure3d.js', 'js/media.js', 'js/app.js',
+  'js/figure.js', 'js/exercises.js', 'js/programs.js', 'js/science.js', 'js/sound.js', 'js/figure3d.js', 'js/media.js', 'js/links.js', 'js/app.js',
   'vendor/three.module.min.js', 'vendor/jsm/GLTFLoader.js', 'vendor/jsm/BufferGeometryUtils.js', 'vendor/jsm/RoomEnvironment.js',
   'assets/coach-m.glb',
   'img/wellness-1.jpg', 'img/wellness-2.jpg', 'img/wellness-3.jpg', 'img/wellness-4.jpg',

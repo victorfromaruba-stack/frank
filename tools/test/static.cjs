@@ -26,10 +26,11 @@ function png(file) {
 
 module.exports = {
   name: 'static',
-  about: 'syntax, tools/check-plans.cjs, the offline file list and its VERSION bump, the manifest, no outside loads, no GPL, no secrets',
+  about: 'syntax, tools/check-plans.cjs, the offline file list and its VERSION bump, every js file loaded and kept offline (modules before app.js), the manifest, no outside loads, no GPL, no secrets',
   async run(t) {
     await t.flow('syntax', async () => {
-      const files = [...list('js', /\.js$/), 'sw.js', ...list('personal', /\.js$/), ...list('tools', /\.(mjs|cjs|js)$/), ...list('tools/test', /\.cjs$/)];
+      const files = [...list('js', /\.js$/), 'sw.js', ...list('personal', /\.js$/), ...list('tools', /\.(mjs|cjs|js)$/), ...list('tools/test', /\.cjs$/),
+        ...list('.claude/skills/frank-module', /\.js$/)];
       for (const f of files) {
         try { cp.execFileSync(process.execPath, ['--check', path.join(R, f)], { stdio: ['ignore', 'ignore', 'pipe'] }); } catch (e) {
           t.fail(f + ': ' + String(e.stderr || e.message).split('\n').filter(Boolean).slice(0, 4).join(' | '));
@@ -86,6 +87,23 @@ module.exports = {
       if (all.length && old.version === sw.version) {
         t.fail('cached files changed since ' + base + ' (' + all.slice(0, 6).join(', ') + (all.length > 6 ? ', …' : '') + ') but sw.js VERSION is still ' + sw.version + ': bump it so installed phones update');
       } else if (all.length) t.note('VERSION ' + old.version + ' → ' + sw.version + ' for ' + all.length + ' changed cached file' + (all.length > 1 ? 's' : ''));
+    });
+
+    await t.flow('modules: every js file loads and is kept offline', async () => {
+      // A feature lives in a js/<feature>.js that queues its start on WBF.ext (.claude/skills/frank-module): index.html
+      // loads it before js/app.js, which starts the queue, and SHELL in sw.js keeps it. tools/build.mjs packs what
+      // index.html loads, so a file left out of index.html is left out of the app everywhere
+      const sw = swInfo(read('sw.js'));
+      const loads = [...read('index.html').replace(/<!--[\s\S]*?-->/g, '').matchAll(/<script\b[^>]*?\bsrc\s*=\s*["']?([^"'\s>]+)/g)].map((m) => m[1].replace(/^\.\//, ''));
+      const appAt = loads.indexOf('js/app.js');
+      t.check(appAt !== -1, 'index.html does not load js/app.js');
+      for (const f of loads) if (!/^js\/[\w.-]+\.js$/.test(f)) t.fail('index.html loads ' + f + ' with <script src>: tools/build.mjs packs only js/*.js files, so the single-file builds stop');
+      for (const f of list('js', /\.js$/)) {
+        if (!loads.includes(f)) t.fail(f + ' is not loaded by index.html: add <script src="' + f + '"></script> before js/app.js');
+        else if (f !== 'js/app.js' && /\bWBF\.ext\b|\bext\.push\(/.test(stripComments(read(f))) && loads.indexOf(f) > appAt) t.fail(f + ' is a module, but index.html loads it after js/app.js: it misses the start (boot) and the first screen');
+        if (sw.shell && !sw.shell.includes(f)) t.fail(f + ' is missing from SHELL in sw.js: the app breaks offline without it');
+      }
+      t.log(loads.length + ' scripts: ' + loads.join(', '));
     });
 
     await t.flow('install manifest', async () => {

@@ -1,11 +1,12 @@
 // smoke: a quick walk through every tab and the main sheets. Fast enough to run after any change.
 'use strict';
+const path = require('path');
 const L = require('./lib.cjs');
 const { app } = L;
 
 module.exports = {
   name: 'smoke',
-  about: 'every tab, the exercise sheet, a workout, the player starts, logging walks, water, meals and weight, delete my data, a phone that can\'t save, other options in the sheet, muscle maps when the coach comes in late, Back after a tab switch, the scroll after Back and after a workout, the activity slider, the keyboard\'s focus (new screens, Back, choices, an open sheet, Space in the player), toasts clear of the main button, the BMI bar\'s colours, the iPhone status bar on light screens, the Personal prototype',
+  about: 'every tab, the exercise sheet, a workout, the player starts, logging walks, water, meals and weight, delete my data, a phone that can\'t save, other options in the sheet, muscle maps when the coach comes in late, Back after a tab switch, the scroll after Back and after a workout, the activity slider, the keyboard\'s focus (new screens, Back, choices, an open sheet, Space in the player), toasts clear of the main button, the BMI bar\'s colours, the iPhone status bar on light screens, feature modules (the template, slots, events, broken modules), links to a move or a workout, the Personal prototype',
   async run(t) {
     await t.flow('first visit', async () => {
       const p = await t.page();
@@ -506,6 +507,167 @@ module.exports = {
       }
       await p.evaluate(() => WBF.app.tab('workouts'));
       t.equal((await band()).content, 'none', 'a dark screen: the band');
+    });
+
+    await t.flow('modules: the template, slots, events and broken modules', async () => {
+      // A feature in its own file plugs in through WBF.ext (js/app.js, .claude/skills/frank-module). The template module
+      // runs its own test here; test modules next to it check the seam: one card per slot (the highest priority), a
+      // module that throws as it starts is left out with all it added, a clash with the app's names is refused, a card,
+      // an event, an action or a replaced screen that throws leaves the rest of the screen, a screen of its own that gives
+      // no html shows its Back button, and the app carries on
+      const p = await t.page({ state: L.member({}, { example: { v: 1, done: 1, hidden: null } }), speed: 50, go: false });
+      await p.addInitScript({ path: path.join(L.REPO, '.claude/skills/frank-module/template.js') });
+      await p.addInitScript(() => {
+        const ext = (window.WBF = window.WBF || {}).ext = window.WBF.ext || [];
+        const heard = window.__mods = { screens: [], saved: 0 };
+        ext.push(function qaLow(app) {
+          app.card('today.top', () => ({ id: 'qa-low', priority: 1, html: '<section class="card"><p class="small">QA low card</p>' +
+            '<button class="btn two small" data-act="qa-throw">QA action</button></section>' }));
+          app.action('qa-throw', () => { throw new Error('qa: action broken on purpose'); });
+          app.on('screen', (name) => { heard.screens.push(name); });
+          app.on('saved', () => { heard.saved++; app.save(); });              // saves while it hears: no loop
+        });
+        ext.push(function qaBroken(app) {
+          app.card('me.top', () => ({ id: 'qa-broken', html: '<p class="small">QA broken card</p>' }));
+          app.action('qa-broken', () => {});
+          throw new Error('qa: broken on purpose');
+        });
+        ext.push(function qaClash(app) { app.action('tab', () => {}); });
+        ext.push(function qaCardThrows(app) {
+          app.card('frank.top', () => { throw new Error('qa: card broken on purpose'); });
+          app.html('me.data', () => '<p class="small" id="qa-me-data">QA data</p>');
+          app.on('screen', () => { throw new Error('qa: event broken on purpose'); });
+        });
+        ext.push(function qaOverride(app) { app.override('frank', { title: () => 'QA', html: () => { throw new Error('qa: screen broken on purpose'); } }); });
+        ext.push(function qaNoHtml(app) { app.screen('qa-blank', { title: () => 'QA blank', html: () => {} }); });
+      });
+      // the broken modules say so in the console, once for each place: collected here instead of failing the flow, and
+      // checked at the end (any other console error fails it there)
+      const errors = [];
+      for (const f of p.listeners('console')) p.off('console', f);
+      p.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+      await p.goto(p.srv.home + 'index.html#example.open');
+      await L.settle(p);
+      // the template's own test (its file ends with it)
+      await app.waitTitle(p, 'Example');
+      t.equal(await p.evaluate(() => location.hash), '', 'the link left in the address bar');
+      await t.look(p, 'the example screen');
+      await app.tap(p, '[data-act="back"]');
+      await app.waitTitle(p, 'Plan');
+      await app.tap(p, '.tab[data-tab="today"]');
+      t.has(await p.locator('[data-card="example"]').innerText(), '1 workout done', 'the card on Today');
+      t.equal([await p.locator('[data-card="example"]').count(), await p.locator('[data-card="qa-low"]').count()], [1, 0],
+        "Today's one-card slot [the template's card, priority 10; another, priority 1]");
+      await t.look(p, 'today with the example card');
+      await app.tap(p, '[data-act="example-open"]');
+      await app.waitTitle(p, 'Example');
+      await app.tap(p, '[data-act="back"]');
+      await app.waitTitle(p, 'Today');
+      await app.tap(p, '[data-act="example-hide"]');
+      t.equal(await p.locator('[data-card="example"]').count(), 0, 'the card after Hide');
+      t.equal((await app.stored(p)).example.hidden, L.TODAY, 'saved after Hide: hidden');
+      t.has(await p.locator('[data-card="qa-low"]').innerText().catch(() => ''), 'QA low card', 'the slot after Hide: the next card');
+      await app.tap(p, '[data-act="qa-throw"]');
+      t.equal([await app.title(p), await p.locator('[data-card="qa-low"]').count()], ['Today', 1], 'after an action that throws [screen, its card]');
+      t.step('a finished workout');
+      await app.tap(p, '.tab[data-tab="plan"]');
+      await app.tap(p, '[data-act="start-day"]');
+      await app.waitTitle(p, 'Workout');
+      await p.waitForFunction(() => document.querySelector('[data-act="pl-done"]') || document.querySelectorAll('.pl-segs i.on').length > 0);
+      if (await p.locator('[data-act="pl-done"]').count()) await app.tap(p, '[data-act="pl-done"]');
+      await p.waitForFunction(() => document.querySelectorAll('.pl-segs i.on').length > 0);
+      await app.tap(p, '[data-act="quit"]');
+      await app.tap(p, '[data-act="modal-yes"]');
+      await app.waitTitle(p, 'Workout complete');
+      t.equal((await app.stored(p)).example.done, 2, 'workouts counted after one more');
+      t.step('broken modules');
+      await app.tap(p, '.dock [data-act="tab"][data-tab="plan"]');
+      await app.tap(p, '.tab[data-tab="me"]');
+      t.equal([await p.locator('[data-card="qa-broken"]').count(), await p.locator('.card #qa-me-data').count()], [0, 1],
+        'Me [cards of the module that threw as it started, the data piece of another]');
+      await p.evaluate(() => WBF.ext.push(function qaLate(app) { app.html('me.data', () => '<p class="small" id="qa-late">QA late</p>'); }));
+      await app.tap(p, '.tab[data-tab="today"]');
+      await app.tap(p, '.tab[data-tab="me"]');
+      t.equal(await p.locator('#qa-late').count(), 1, 'a module that came after the app had started');
+      t.step('a link opens one thing');
+      await p.evaluate(() => WBF.ext.push(function qaLinks(app) {
+        app.on('hash', (h) => { window.__mods.links = (window.__mods.links || []).concat(h); return true; });
+      }));
+      await p.evaluate(() => { location.hash = '#example.open'; });
+      await app.waitTitle(p, 'Example');
+      await p.evaluate(() => { location.hash = '#qa.other'; });
+      await p.waitForTimeout(300);
+      t.equal([await app.title(p), await p.evaluate(() => window.__mods.links)], ['Example', ['qa.other']],
+        "links [the screen the template's link opened, the links a module that started later got]");
+      await app.tap(p, '[data-act="back"]');
+      await app.waitTitle(p, 'Me');
+      t.step('screens that fail, the events and the console');
+      await app.tap(p, '.tab[data-tab="frank"]');
+      t.equal(await app.title(p), 'Frank', 'the Frank tab, replaced by a screen that throws: the app\'s own');
+      t.has(await app.text(p), 'Train with Frank in person', 'the Frank tab under a card that throws');
+      await t.look(p, 'frank with broken modules');
+      await p.evaluate(() => WBF.app.go('qa-blank'));
+      t.equal([await app.title(p), await p.locator('#app [data-act="back"]').count()], ['Wellness by Frank', 1],
+        "a module's own screen that gives no html [the title, its Back button]");
+      await app.tap(p, '#app [data-act="back"]');
+      await app.waitTitle(p, 'Frank');
+      const seen = await p.evaluate(() => [[...new Set(window.__mods.screens)].sort(), window.__mods.saved > 0]);
+      t.equal(seen, [['done', 'example', 'frank', 'me', 'plan', 'player', 'qa-blank', 'today'], true], 'events [screens drawn, saves heard]');
+      const said = errors.map((e) => { const m = /Wellness by Frank: module (\w+) failed (\([^)]*\))/.exec(e); return m ? m[1] + ' ' + m[2] : e.slice(0, 160); });
+      t.equal(said.sort(), ['qaBroken (start)', 'qaCardThrows (frank.top)', 'qaCardThrows (on:screen)', 'qaClash (start)', 'qaLow (action:qa-throw)',
+        'qaNoHtml (screen:qa-blank)', 'qaOverride (screen:frank)'],
+        'console errors [each broken module, once for each place it broke; nothing else]');
+    });
+
+    await t.flow('links to a move or a workout (js/links.js)', async () => {
+      // Frank can send a link to one move or one workout. A move's link opens its sheet over the Plan; a workout's link
+      // opens the workout over the screen that is showing, and Back goes back there. A link that comes to a tab that has
+      // the app isn't Back: what was open closes, and a workout goes on (Frank's session from a link waits on the Plan)
+      const p = await t.page({ hash: 'ex.goblet-squat' });
+      const name = await p.evaluate(() => WBF.EX['goblet-squat'].name);
+      t.equal([await app.title(p), await p.locator('#overlay h2').first().innerText().catch(() => ''), await p.evaluate(() => location.hash)],
+        ['Plan', name, ''], "a move's link [screen, sheet, address bar]");
+      await t.look(p, 'a move from a link');
+      await app.tap(p, '#overlay .xs-foot [data-act="close"]');
+      t.has(await app.text(p), 'Your 28-day plan', 'the screen under the sheet');
+      t.step('a workout');
+      await p.evaluate(() => { location.hash = '#w.desk-reset'; });
+      await app.waitTitle(p, 'Desk reset');
+      t.equal(await p.evaluate(() => location.hash), '', "a workout's link left in the address bar");
+      await t.look(p, 'a workout from a link');
+      await p.goBack({ timeout: 5000 }).catch(() => null);
+      await app.waitTitle(p, 'Plan', 5000);
+      t.step('a move that does not exist');
+      await p.evaluate(() => { location.hash = '#ex.no-such-move'; });
+      await p.waitForTimeout(300);
+      t.equal([await app.title(p), await app.overlay(p), await p.evaluate(() => location.hash)], ['Plan', '', ''], 'a link to a move that does not exist [screen, sheet, address bar]');
+      t.step('a workout over a sheet, a screen deep');
+      await p.evaluate(() => WBF.app.go('workout', { id: 'mobility' }));
+      await app.waitTitle(p, 'Mobility flow');
+      await app.tap(p, '[data-act="ex-wo"]');
+      t.check(await app.overlay(p), "a move's sheet did not open on Mobility flow");
+      await p.evaluate(() => { location.hash = '#w.desk-reset'; });
+      await app.waitTitle(p, 'Desk reset');
+      t.equal(await app.overlay(p), '', "the sheet after a workout's link");
+      await app.tap(p, '[data-act="back"]');
+      await app.waitTitle(p, 'Mobility flow');
+      t.step('links during a workout');
+      await app.tap(p, '.dock [data-act="start"]');
+      await app.waitTitle(p, 'Workout');
+      // the player, not a workout's screen (Frank's session is called Workout too)
+      const player = () => p.evaluate(() => document.title.split(' · ')[0] + (document.querySelector('#app .player') ? ', the player' : ''));
+      await p.evaluate(() => { location.hash = '#ex.squat'; });
+      await p.waitForTimeout(300);
+      t.equal([await player(), await app.overlay(p), await p.evaluate(() => location.hash)], ['Workout, the player', '', ''],
+        "a move's link during a workout [screen, box or sheet, address bar]");
+      await p.evaluate((h) => { location.hash = h; }, 'frank.' + L.pack(L.spec({ i: 'qa-mid', t: 'After this workout' })));
+      await p.waitForFunction(() => window.__qa.toasts.some((x) => /^New session from Frank/.test(x)), null, { timeout: 5000 }).catch(() => null);
+      t.equal([await player(), await app.overlay(p), (await app.stored(p)).inbox.map((x) => x.i), await app.toast(p)],
+        ['Workout, the player', '', ['qa-mid'], 'New session from Frank: After this workout'], "Frank's session link during a workout [screen, box or sheet, sessions from Frank, toast]");
+      await app.tap(p, '[data-act="quit"]');
+      await app.tap(p, '[data-act="modal-yes"]');
+      await app.waitTitle(p, 'Plan');
+      t.has(await app.text(p), 'After this workout', "Frank's session on the Plan after the workout");
     });
 
     await t.flow('personal prototype', async () => {

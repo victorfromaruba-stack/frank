@@ -12,10 +12,17 @@ const dataUri = (f, type) => `data:${type};base64,` + fs.readFileSync(path.join(
 
 const images = ['img/wellness-1.jpg', 'img/wellness-2.jpg', 'img/wellness-3.jpg', 'img/wellness-4.jpg'];
 const imgMap = Object.fromEntries(images.map((f) => [f, dataUri(f, 'image/jpeg')]));
-const scripts = ['js/figure.js', 'js/exercises.js', 'js/programs.js', 'js/science.js', 'js/sound.js', 'js/figure3d.js', 'js/media.js', 'js/app.js'].map(read).join('\n');
+const html = read('index.html');
+// the app's scripts in the order index.html loads them, so a module added there (js/<feature>.js) comes along. The
+// importmap and the three.js loader at the end have no src: the single files load three.js below
+const files = [...html.replace(/<!--[\s\S]*?-->/g, '').matchAll(/<script\b[^>]*?\bsrc\s*=\s*["']?([^"'\s>]+)/g)].map((m) => m[1].replace(/^\.\//, ''));
+const bad = files.filter((f) => !/^js\/[\w.-]+\.js$/.test(f));
+if (bad.length) throw new Error('index.html loads ' + bad.join(', ') + ': the build packs only js/*.js files');
+if (!files.includes('js/app.js')) throw new Error('index.html does not load js/app.js');
+// one script: a ';' between files, so one that ends without it can't run into the next one's opening '('
+const scripts = files.map(read).join('\n;\n');
 if (/<\/script/i.test(scripts)) throw new Error('a script contains </script>');
 const css = read('app.css');
-const html = read('index.html');
 const body = html.slice(html.indexOf('<body>') + '<body>'.length, html.indexOf('<script')).trim();
 // Frank's two fonts go inside the file (fonts/, SIL Open Font License)
 const fonts = '<style>\n' + read('fonts/fonts.css').replace(/url\(([\w.-]+\.woff2)\)/g, (m, f) => `url(${dataUri('fonts/' + f, 'font/woff2')})`) + '</style>';
@@ -91,5 +98,6 @@ fs.mkdirSync(path.join(root, 'dist'), { recursive: true });
 fs.writeFileSync(path.join(root, 'dist/wellness-by-frank.html'), standalone);
 fs.writeFileSync(path.join(root, 'dist/artifact.html'), artifact);
 const kb = (s) => (Buffer.byteLength(s) / 1024).toFixed(0) + ' KB';
+console.log('scripts from index.html: ' + files.join(', '));
 console.log('dist/wellness-by-frank.html', kb(standalone));
 console.log('dist/artifact.html', kb(artifact));
