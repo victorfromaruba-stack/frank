@@ -1,0 +1,8 @@
+{
+  "about": "Full set, batch 1: two start poses per move for the man coach, for the first 20 moves but the pilot's three (squat, push-up, plank). Victor, 4 October: the man coach only.",
+  "steps": ["keyframe"],
+  "coaches": ["m"],
+  "moves": ["march", "arm-circles", "leg-swings", "forward-fold", "hip-hinge", "single-leg-rdl", "jumping-jacks", "split-squat", "jump-squat", "childs-pose", "cat-cow", "mountain-climber", "cobra", "knee-to-chest", "hip-flexor-stretch", "box-squat", "table-row"],
+  "candidates": 2,
+  "budget": 5
+}
