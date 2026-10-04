@@ -23,7 +23,11 @@ const noSwitch = (steps) => steps.flatMap(sentences).filter((x) => !/\bswitch\b|
 export const START = {
   squat: 'standing tall at the top of the squat: feet a little wider than the hips, toes turned slightly out, weight over the whole foot, arms relaxed by the sides, chest up, looking ahead',
   'push-up': 'at the top of the push-up: arms straight, hands flat on the floor a little wider than the shoulders and under the chest, fingers spread and pointing forward, the body one straight line from head to heels, balanced on the toes, neck long, looking at the floor just ahead of the hands',
-  plank: 'in a forearm plank: forearms flat on the floor, elbows under the shoulders, hands relaxed, legs straight and back, feet together on the toes, the body one straight line from head to heels, neck long, looking at the floor'
+  plank: 'in a forearm plank: forearms flat on the floor, elbows under the shoulders, hands relaxed, legs straight and back, feet together on the toes, the body one straight line from head to heels, neck long, looking at the floor',
+  // full set, batch 1: both start poses came out wrong (the top of the move; a face-down row; no arm reaching up)
+  cobra: 'lying face down on the floor at the start of the cobra: legs long and together, the tops of the feet on the floor, hands flat under the shoulders, elbows bent and tucked in close to the ribs, forehead just above the floor, hips relaxed on the floor',
+  'hip-flexor-stretch': 'in a half-kneeling hip flexor stretch on the right knee: the right knee down on a thin cushion, the left foot flat in front with the left knee over the ankle, the pelvis tucked under, the torso tall and upright, the right arm reaching straight up overhead, the left hand resting on the hip',
+  'table-row': 'lying on the back, face up, under a sturdy plain wooden table, the chest just under its long edge: both arms straight up, hands gripping that edge with the palms facing the feet, legs straight, heels on the floor with the toes pointing up, the body one straight line from heels to shoulders, hanging from the arms with the back just off the floor, head in line, looking up at the table'
 };
 const startOf = (m) => START[m.id] || third(mainVersion(m.setup)) + (m.kind === 'hold' ? ' Show the held position: ' + third(noSwitch(m.steps).slice(0, 2).join(' ')) : '');
 

@@ -1,0 +1,8 @@
+{
+  "about": "Full set, batch 1 again for three start poses that came out wrong (cobra at the top, a face-down table row, a hip flexor stretch without the arm up): now written out in START.",
+  "steps": ["keyframe"],
+  "coaches": ["m"],
+  "moves": ["cobra", "hip-flexor-stretch", "table-row"],
+  "candidates": 2,
+  "budget": 2
+}

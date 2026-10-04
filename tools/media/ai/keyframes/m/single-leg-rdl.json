@@ -1,0 +1,23 @@
+{
+  "step": "keyframe",
+  "coach": "m",
+  "move": "single-leg-rdl",
+  "candidate": 2,
+  "camera": "45°",
+  "run": "gh-37165450529-1-full-1-start-poses",
+  "model": "gemini-3.1-flash-image",
+  "api": "interactions",
+  "imageSize": "1K",
+  "aspectRatio": "16:9",
+  "references": [
+    "tools/media/ai/coaches/m/front.jpg",
+    "tools/media/ai/coaches/m/side.jpg",
+    "tools/media/ai/coaches/m/45.jpg"
+  ],
+  "prompt": "The reference photos show one person, the coach, from the front, the side and 45 degrees. Keep exactly that person: the same face, hair, body, skin tone and clothes.\nMake one photorealistic photo, landscape 16:9, for a fitness app's exercise demonstration: the coach in the start position of the exercise \"Single-leg hinge\".\nStart position: Stand on one leg, knee soft.\nThe move is shown on the right side: the right arm or leg is the one that works.\nNo equipment: only the coach on the studio floor.\nCorrect form, as the trainer teaches it: Hips still square. Back leg and chest move together. Soft standing knee.\nAvoid these mistakes: The hip of the free leg rolling open. Locking the standing knee.\nCamera: a three-quarter view: the camera stands 45 degrees off the person's front, toward their right side, so the front and the right side of the body both show. The person faces toward the right of the frame. The camera is level at hip height, about 3.5 metres away, with a natural 35 mm lens. The whole body is in the frame with about a hand's width of space above the head and below the feet, and the person is in the middle of the frame.\nPlace: a clean, bright, minimal photo studio: a plain off-white backdrop that curves smoothly into a light grey floor with a faint green-grey tint, with no corners, edges, windows, furniture or decorations in view. Light: soft, even, diffused light from the front and both sides, true-to-life colours, and a soft natural contact shadow on the floor under the person.\nClothes: a fitted short-sleeved training T-shirt in deep forest green (close to #104A2A), black training shorts to just above the knee, and plain grey training shoes with white soles; no logos, no text, no jewellery.\nIt must look like a real photo of a real person, not a 3D render, a game character or an illustration: natural skin, natural fabric folds, correct anatomy (two arms, two legs, five fingers on each hand, natural joints), and hands and feet in full, flat contact with the floor where they rest on it. No text, no logos, no watermark, no mirror, no other people.",
+  "estimatedCost": 0.077,
+  "made": "2026-10-04T00:37:38.482Z",
+  "sha256": "6ee30027c20acd71962bad4facec27f529457ed7cb68ac6708388e4a274b168f",
+  "picked": "2026-10-04",
+  "by": "Claude (Victor's go-ahead)"
+}

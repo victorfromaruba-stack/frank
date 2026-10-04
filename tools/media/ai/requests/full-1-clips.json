@@ -1,0 +1,9 @@
+{
+  "about": "Full set, batch 1: one 8 s clip per picked start pose for the man coach, 14 moves of the first 20, and the review sheet. Victor said go ahead (4 October).",
+  "steps": ["clip", "review"],
+  "coaches": ["m"],
+  "moves": ["arm-circles", "box-squat", "cat-cow", "childs-pose", "forward-fold", "hip-hinge", "jump-squat", "jumping-jacks", "knee-to-chest", "leg-swings", "march", "mountain-climber", "single-leg-rdl", "split-squat"],
+  "takes": 1,
+  "resolution": "720p",
+  "budget": 12
+}
