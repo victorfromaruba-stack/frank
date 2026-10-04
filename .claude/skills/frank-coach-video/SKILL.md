@@ -140,6 +140,7 @@ Same scripts, with the key in the shell. A request file works here too:
 | Pick a look | `node tools/media/ai/pick.mjs look f 2 --by Victor` | `tools/media/ai/coaches/f/` (commit it) |
 | 2. Start poses | `node tools/media/ai/keyframe.mjs --moves squat,push-up,plank --candidates 2` | `out/<run>/keyframes/<coach>/<move>/1.jpg, 2.jpg` |
 | Pick one | `node tools/media/ai/pick.mjs start squat f 1` | `tools/media/ai/keyframes/f/squat.jpg` (commit it) |
+| A jump's pick, with room above the head | `node tools/media/ai/pick.mjs start burpee m 1 --wider 0.85` | the photo at 85% on the same frame, the studio extended around it, and `wider` in its `.json` |
 | 3. Clips | `node tools/media/ai/clip.mjs --moves squat,push-up,plank` | `out/<run>/takes/<coach>/<move>/take-1.mp4` |
 | 4. Review | `node tools/media/ai/review.mjs` | `out/<run>/review/index.html` and `sheet.png` |
 | Approve | `node tools/media/ai/approve.mjs squat f take-1 --by Frank` | an entry in `tools/media/ai/approved.json` (commit it) |
@@ -158,6 +159,11 @@ Same scripts, with the key in the shell. A request file works here too:
   out wrong, write its start position in `START` in `prompts.mjs`. The pilot moves have one, and
   so do the moves whose set-up text left the start open: the image model tends to draw the top of
   a bridge or a raise, or a squat or lunge halfway down, where the clip should start.
+- A move that jumps needs room above the head, or the jump leaves the frame (day 2's jump squat).
+  The image model draws a standing person top to bottom whatever the framing words say, so pick
+  the start pose with `--wider` (0.85; 0.8 for a jump squat): the photo goes smaller on the same
+  frame and the plain studio is extended around it. Look at the result before committing it: it
+  suits the plain backdrop, not a picture with things near its edges.
 - A start pose the image model won't draw (its answer has no picture) is left out with a warning,
   and the other start poses go on. Ask for that move again in a later request.
 
