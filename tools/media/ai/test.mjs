@@ -155,6 +155,12 @@ const env = { FRANK_AI_HOME: home, GEMINI_API_BASE: mock.base, GEMINI_API_KEY: T
   ok(p1.code === 0 && ['front', 'side', '45'].every((v) => exists(path.join(home, 'coaches/f', v + '.jpg'))) && readJ(path.join(home, 'coaches/f/look.json')).by === 'Tester', 'pick look: the photos and look.json in coaches/f/');
   const k = await run([S('keyframe.mjs'), '--moves', 'squat,push-up,plank', '--coaches', 'f', '--candidates', '1', '--run', 'mock1'], env);
   ok(k.code === 0 && mock.log.filter((e) => e.path === '/v1beta/interactions').slice(-3).every((e) => e.images === 3), 'start poses: three requests, each with the coach\'s 3 photos');
+  // an answer with no picture (a filter) leaves only that candidate out
+  mock.setImage((t) => (/"March in place"/.test(t) ? 'none' : 'ok'));
+  const kf = await run([S('keyframe.mjs'), '--moves', 'march,squat', '--coaches', 'f', '--candidates', '1', '--run', 'mock-nopic'], env);
+  mock.setImage(() => 'ok');
+  ok(kf.code === 0 && !exists(path.join(runs, 'mock-nopic/keyframes/f/march/1.jpg')) && exists(path.join(runs, 'mock-nopic/keyframes/f/squat/1.jpg')) && /start-f-march-1: No image.*Left out/.test(kf.out),
+    'a start pose the model answers without a picture is left out, and the next ones are made' + (kf.code ? ' ' + kf.out.slice(-300) : ''));
   for (const id of ['squat', 'push-up', 'plank']) await run([S('pick.mjs'), 'start', id, 'f', '1'], env);
   ok(['squat', 'push-up', 'plank'].every((id) => exists(path.join(home, 'keyframes/f', id + '.jpg'))), 'pick start: keyframes/f/<move>.jpg');
   const before = mock.log.length;
@@ -256,7 +262,9 @@ if (!haveFfmpeg()) {
   fs.writeFileSync(path.join(R, 'js/label.js'), "function tag(m) { return m.ai ? 'AI demo' : 'Frank'; }\n");
   const labelled = await run([S('process.mjs'), '--moves', 'push-up', '--root', R, '--from', tmp], env);
   ok(labelled.code === 0 && !/DON'T ADD/.test(labelled.out) && /bump VERSION in sw\.js/.test(labelled.out), 'once the app reads ai: true, no warning, and it says to bump VERSION');
-  fs.writeFileSync(path.join(R, 'js/media.js'), fs.readFileSync(path.join(R, 'js/media.js'), 'utf8').replace('W.WBF.MEDIA = {', "W.WBF.MEDIA = {\n    'push-up': { video: 'media/push-up.mp4', poster: 'media/push-up.jpg' },"));
+  // in place of the push-up's line, if the repo's js/media.js has one (an AI clip)
+  fs.writeFileSync(path.join(R, 'js/media.js'), fs.readFileSync(path.join(R, 'js/media.js'), 'utf8').replace(/^\s*'push-up'\s*:.*\n/m, '')
+    .replace('W.WBF.MEDIA = {', "W.WBF.MEDIA = {\n    'push-up': { video: 'media/push-up.mp4', poster: 'media/push-up.jpg' },"));
   const franks = await run([S('process.mjs'), '--moves', 'push-up', '--root', R, '--from', tmp], env);
   ok(franks.code === 1 && /Frank's own clip is in js\/media\.js/.test(franks.out), 'Frank\'s own clip (no ai: true) is never replaced');
   ok(aiLabel(ROOT).reads, 'the app in this repo reads ai: true (js/app.js tags an AI clip AI demo), so its lines go in without a warning');

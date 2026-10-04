@@ -37,8 +37,10 @@ function media(dir) {
 }
 
 // opts.clip(prompt) says what a clip does: 'ok', 'filtered' or 'error'. opts.checks: polls before done.
+// opts.image(prompt): 'ok', or 'none' for an answer with words and no picture (a filter); setImage changes it later.
 // opts.busyOnce: the first POST gets a 429 with Retry-After, as a busy API would.
-export async function startMock({ key = TEST_KEY, checks = 2, clip = () => 'ok', busyOnce = false } = {}) {
+export async function startMock({ key = TEST_KEY, checks = 2, clip = () => 'ok', image = () => 'ok', busyOnce = false } = {}) {
+  let imageRule = image;
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'frank-ai-mock-'));
   const m = media(dir);
   const log = [];
@@ -71,6 +73,9 @@ export async function startMock({ key = TEST_KEY, checks = 2, clip = () => 'ok',
       if (problems.length) return fail(res, 400, 'INVALID_ARGUMENT', problems.join('; '));
       const data = m.images[body.response_format.aspect_ratio] || m.images['16:9'] || TINY_JPEG;
       entry.images = body.input.filter((x) => x.type === 'image').length;
+      if (imageRule(body.input.filter((x) => x.type === 'text').map((x) => x.text).join(' ')) === 'none') {
+        return json(res, 200, { id: 'int_mock_' + ++n, status: 'completed', model: body.model, steps: [{ type: 'model_output', content: [{ type: 'text', text: 'Mock: no picture on purpose.' }] }] });
+      }
       return json(res, 200, {
         id: 'int_mock_' + ++n, status: 'completed', model: body.model,
         steps: [{ type: 'model_output', content: [{ type: 'text', text: 'Here is the photo.' }, { type: 'image', mime_type: 'image/jpeg', data }] }]
@@ -114,7 +119,7 @@ export async function startMock({ key = TEST_KEY, checks = 2, clip = () => 'ok',
   await new Promise((ok) => storage.listen(0, '127.0.0.1', ok));
   await new Promise((ok) => api.listen(Number(process.env.MOCK_PORT) || 0, '127.0.0.1', ok));
   return {
-    base: `http://127.0.0.1:${api.address().port}/v1beta`, key, log, video: m.video, realMedia: !!m.images['16:9'],
+    base: `http://127.0.0.1:${api.address().port}/v1beta`, key, log, video: m.video, realMedia: !!m.images['16:9'], setImage: (f) => { imageRule = f; },
     close: () => { api.close(); storage.close(); fs.rmSync(dir, { recursive: true, force: true }); }
   };
 }

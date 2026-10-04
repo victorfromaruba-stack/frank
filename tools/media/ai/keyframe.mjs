@@ -10,8 +10,8 @@
 // Writes out/<run>/keyframes/<coach>/<move>/<n>.jpg, each with a .json beside it. About $0.08 a photo at 1K.
 import path from 'node:path';
 import {
-  DEFAULTS, HOME, VIEWS, VIEW_NAME, Stop, budget, coachIds, count, imageInput, imagePrice, isMain, main, move, moveIds, parseArgs,
-  pickedLook, placeholder, say, show, usd
+  ApiError, DEFAULTS, HOME, VIEWS, VIEW_NAME, Stop, budget, coachIds, count, imageInput, imagePrice, isMain, main, move, moveIds, parseArgs,
+  pickedLook, placeholder, say, show, usd, warn
 } from './lib.mjs';
 import { makeImage, startRun } from './calls.mjs';
 import { startPrompt } from './prompts.mjs';
@@ -47,10 +47,19 @@ export async function run(o, ctx) {
     for (const id of p.moves) {
       const m = move(id);
       for (let k = 1; k <= p.candidates; k++) {
-        await makeImage(ctx, {
-          name: `start-${coach}-${id}-${k}`, prompt: startPrompt(coach, m), images: refs, aspectRatio: '16:9', o,
-          out: path.join(ctx.run.dir, 'keyframes', coach, id, String(k)), meta: { step: 'keyframe', coach, move: id, candidate: k, camera: m.camera }
-        });
+        const name = `start-${coach}-${id}-${k}`;
+        try {
+          await makeImage(ctx, {
+            name, prompt: startPrompt(coach, m), images: refs, aspectRatio: '16:9', o,
+            out: path.join(ctx.run.dir, 'keyframes', coach, id, String(k)), meta: { step: 'keyframe', coach, move: id, candidate: k, camera: m.camera }
+          });
+        } catch (e) {
+          // an answer with no picture (a safety filter, or words only) leaves this candidate out; the others go on.
+          // Anything else (the key, the quota, a body the API refuses) still stops the step.
+          if (!(e instanceof ApiError) || e.status !== 200) throw e;
+          (ctx.failed = ctx.failed || []).push({ name, status: 'filtered', error: e.message });
+          warn(`  ${name}: ${e.message} Left out; the other start poses go on.`);
+        }
       }
     }
   }

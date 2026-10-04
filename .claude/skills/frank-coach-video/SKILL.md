@@ -155,7 +155,11 @@ Same scripts, with the key in the shell. A request file works here too:
   video 2 days: `node tools/media/ai/clip.mjs --fetch --from <run folder>` gets it, at no cost.
 - The words sent to the models are in `prompts.mjs` (built from `js/exercises.js` and the shot
   list) and `coaches.json` (the coaches and the studio). When a move's start poses keep coming
-  out wrong, write its start position in `START` in `prompts.mjs`. The pilot moves have one.
+  out wrong, write its start position in `START` in `prompts.mjs`. The pilot moves have one, and
+  so do the moves whose set-up text left the start open: the image model tends to draw the top of
+  a bridge or a raise, or a squat or lunge halfway down, where the clip should start.
+- A start pose the image model won't draw (its answer has no picture) is left out with a warning,
+  and the other start poses go on. Ask for that move again in a later request.
 
 ## The pilot
 

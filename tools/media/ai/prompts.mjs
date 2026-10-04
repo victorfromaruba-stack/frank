@@ -23,7 +23,27 @@ const noSwitch = (steps) => steps.flatMap(sentences).filter((x) => !/\bswitch\b|
 export const START = {
   squat: 'standing tall at the top of the squat: feet a little wider than the hips, toes turned slightly out, weight over the whole foot, arms relaxed by the sides, chest up, looking ahead',
   'push-up': 'at the top of the push-up: arms straight, hands flat on the floor a little wider than the shoulders and under the chest, fingers spread and pointing forward, the body one straight line from head to heels, balanced on the toes, neck long, looking at the floor just ahead of the hands',
-  plank: 'in a forearm plank: forearms flat on the floor, elbows under the shoulders, hands relaxed, legs straight and back, feet together on the toes, the body one straight line from head to heels, neck long, looking at the floor'
+  plank: 'in a forearm plank: forearms flat on the floor, elbows under the shoulders, hands relaxed, legs straight and back, feet together on the toes, the body one straight line from head to heels, neck long, looking at the floor',
+  // full set, batch 1: both start poses came out wrong (the top of the move; a face-down row; no arm reaching up)
+  cobra: 'lying face down on the floor at the start of the cobra: legs long and together, the tops of the feet on the floor, hands flat under the shoulders, elbows bent and tucked in close to the ribs, forehead just above the floor, hips relaxed on the floor',
+  'hip-flexor-stretch': 'in a half-kneeling hip flexor stretch on the right knee: the right knee down on a thin cushion, the left foot flat in front with the left knee over the ankle, the pelvis tucked under, the torso tall and upright, the right arm reaching straight up overhead, the left hand resting on the hip',
+  'table-row': 'lying on the back, face up, under a sturdy plain wooden table, the chest just under its long edge: both arms straight up, hands gripping that edge with the palms facing the feet, legs straight, heels on the floor with the toes pointing up, the body one straight line from heels to shoulders, hanging from the arms with the back just off the floor, head in line, looking up at the table',
+  // full set, batches 2 and 3: both start poses came out wrong (hips already up; feet on the floor, not the knees
+  // above the hips; the top of the raise; halfway down the squat or the lunge)
+  'glute-bridge': 'lying on the back with the hips resting on the floor: knees bent, feet flat on the floor hip-width apart, about a foot\'s length from the seat, arms long by the sides with the palms down, head resting on the floor',
+  'single-leg-bridge': 'lying on the back with the hips resting on the floor: the right knee bent with the right foot flat on the floor, the left leg straight and lifted so the left thigh lines up with the right thigh, arms long by the sides with the palms down, head resting on the floor',
+  'dead-bug': 'lying on the back, head resting on the floor: both arms straight up toward the ceiling over the shoulders, the hips and knees bent at 90 degrees, the knees directly above the hips and the shins level with the floor, the feet off the floor, the lower back resting on the floor',
+  'prone-y-raise': 'lying face down on the floor: legs straight and relaxed on the floor, the chest on the floor, the forehead just above the floor, both arms straight overhead resting on the floor in a wide Y, thumbs pointing up toward the ceiling',
+  'sumo-squat': 'standing tall at the top of the squat: feet wider than the shoulders, toes turned out, legs straight, hands together at the chest, chest up, looking ahead',
+  'lateral-lunge': 'standing tall in the middle, before the first lunge: feet wide apart, about twice the width of the shoulders, toes pointing forward, both legs straight, hands together at the chest, looking ahead',
+  // written before their first start poses: the set-up text leaves the start open (the top or the bottom of the move)
+  crunch: 'lying on the back with the head and shoulders resting on the floor: knees bent, feet flat on the floor hip-width apart, arms long with the hands resting on the front of the thighs',
+  'leg-raise': 'lying flat on the back, head resting on the floor: both legs straight and together, held just off the floor, hands flat on the floor by the sides',
+  'v-up': 'lying flat on the back: legs straight and together resting on the floor, both arms straight overhead resting on the floor beyond the head',
+  'reverse-crunch': 'lying on the back, head and shoulders resting on the floor, arms long by the sides with the palms down: the hips and knees bent at 90 degrees, the knees directly above the hips and the shins level with the floor, the feet off the floor',
+  'bicycle-crunch': 'lying on the back with the head and shoulders curled a little off the floor, fingertips lightly behind the ears, elbows wide: the hips and knees bent at 90 degrees, the knees above the hips and the shins level with the floor',
+  'goblet-squat': 'standing tall at the top of the squat: one dumbbell held upright against the chest with both hands cupping its top end, elbows down, feet a little wider than the hips, toes slightly out, looking ahead',
+  'heel-squat': 'standing tall at the top of the squat: feet hip-width apart, the heels raised a few centimetres on a plain grey slant board, arms relaxed by the sides, chest up, looking ahead'
 };
 const startOf = (m) => START[m.id] || third(mainVersion(m.setup)) + (m.kind === 'hold' ? ' Show the held position: ' + third(noSwitch(m.steps).slice(0, 2).join(' ')) : '');
 
