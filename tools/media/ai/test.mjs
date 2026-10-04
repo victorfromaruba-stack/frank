@@ -224,6 +224,18 @@ if (!haveFfmpeg()) {
   await run([S('approve.mjs'), 'push-up', 'm', 'take-1', '--by', 'Tester', '--from', fake], env);
   const pw = await run([S('process.mjs'), '--moves', 'push-up', '--root', R, '--from', path.join(tmp, 'runs')], env);
   ok(pw.code === 0 && exists(path.join(R, 'media/push-up.mp4')) && probe(path.join(R, 'media/push-up.mp4')).width === 1280, 'a move on the floor keeps the whole 16:9 frame (process.sh --wide)');
+  // --end: a take whose last moments jump loops at an earlier frame that matches its first
+  const pl = path.join(fake, 'takes/f/plank'), len = probe(path.join(t, 'take-1.mp4')).duration;
+  fs.mkdirSync(pl, { recursive: true });
+  fs.copyFileSync(path.join(t, 'take-1.mp4'), path.join(pl, 'take-1.mp4'));
+  fs.writeFileSync(path.join(pl, 'take-1.json'), '{"status":"done"}');
+  ok((await run([S('approve.mjs'), 'plank', 'f', 'take-1', '--by', 'Tester', '--from', fake, '--end', String(len + 1)], env)).code === 2, 'approve --end past the take\'s end is refused');
+  const cut = +(len / 2).toFixed(3);
+  const ae = await run([S('approve.mjs'), 'plank', 'f', 'take-1', '--by', 'Tester', '--from', fake, '--end', String(cut)], env);
+  const pe = await run([S('process.mjs'), '--moves', 'plank', '--root', R, '--from', fake], env);
+  const pd = exists(path.join(R, 'media/plank.mp4')) ? probe(path.join(R, 'media/plank.mp4')).duration : 0;
+  ok(ae.code === 0 && readJ(path.join(home, 'approved.json')).approved.some((x) => x.move === 'plank' && x.end === cut) && pe.code === 0 && Math.abs(pd - cut) < 0.1,
+    `approve --end ${cut}: approved.json keeps it, and process cuts the clip just before that frame (${pd.toFixed(2)} s of ${len.toFixed(2)})`);
   // one clip per move: both coaches approved for one move needs --coach
   fs.copyFileSync(path.join(t, 'take-1.mp4'), path.join(fake, 'squat-m.mp4'));
   fs.mkdirSync(path.join(fake, 'takes/m/squat'), { recursive: true });

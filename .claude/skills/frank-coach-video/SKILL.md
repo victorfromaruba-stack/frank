@@ -178,6 +178,12 @@ Reject a take when any of these is true:
 - The face or clothes changing, or a look like a cartoon or a game.
 
 Approve with who said yes: `node tools/media/ai/approve.mjs <move> <coach> <take> --by Frank`.
+
+A take that is good but jumps in its last moments (pilot 3's push-up: the feet slid back into
+place to meet the last frame) can loop earlier: find a frame after the last rep that matches the
+first one (the frames every half second on the review sheet, or ffmpeg), and approve with
+`--end <seconds>` at that frame. `process.mjs` cuts the clip just before it. Watch the cut loop a
+few times before approving.
 The approval holds the take's run and sha256, so only that exact file can be processed. Commit
 `approved.json`. To take one back, delete its entry. A rejected take needs no record: make a new
 take (`"takes": 2`, or the same request again).
