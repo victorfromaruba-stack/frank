@@ -45,13 +45,14 @@ function watchRegister() {
 // it is once Pages' 10 minutes are over, so only what the worker kept can answer. The function it returns brings the
 // network back and lists the page's requests that failed in between: files the worker didn't keep. The worker's own
 // refresh of each file fails too, out of the page's sight, and a request the next screen or page cut short
-// (ERR_ABORTED) isn't a missing file.
+// (ERR_ABORTED) isn't a missing file. Nor is a clip or still in media/: they aren't kept offline, and the app shows
+// the coach in their place (coachOffline checks that).
 async function offline(p, srv) {
   const failed = [];
   const seen = (r) => {
     const why = (r.failure() || {}).errorText || '';
     const line = r.url().replace(srv.home, '') + ' (' + why + ')';
-    if (!/ERR_ABORTED/.test(why) && !failed.includes(line)) failed.push(line);
+    if (!/ERR_ABORTED/.test(why) && !/\/media\/[^/]+$/.test(r.url()) && !failed.includes(line)) failed.push(line);
   };
   await srv.stop();
   const cdp = await p.context().newCDPSession(p);
@@ -66,14 +67,25 @@ async function offline(p, srv) {
     return failed;
   };
 }
+// Offline, no clip and no still in its place: the coach. The app doesn't ask for them when the phone says it's offline,
+// and shows the coach when one doesn't load (Chromium's offline mode doesn't always reach navigator.onLine after a
+// reload, so here both happen).
+async function coachOffline(t, p, label) {
+  const broken = () => p.evaluate(() => [...document.querySelectorAll('[data-fig] video')].map((v) => v.getAttribute('src'))
+    .concat([...document.querySelectorAll('[data-thumb] img')].filter((i) => i.complete && !i.naturalWidth).map((i) => i.getAttribute('src'))));
+  await until(p, () => !document.querySelector('[data-fig] video') && ![...document.querySelectorAll('[data-thumb] img')].some((i) => i.complete && !i.naturalWidth), null, 5000);
+  t.equal(await broken(), [], label + ': clips or stills offline (the coach goes in their place)');
+}
 // From Plan: Workouts, one of Frank's programs and Frank, the screens with his photos (img/wellness-*.jpg)
 async function photosOffline(t, p) {
   await app.tap(p, '.tab[data-tab="workouts"]');
   await app.waitTitle(p, 'Workouts');
   await t.look(p, 'workouts offline');
+  await coachOffline(t, p, 'workouts offline');
   await app.tap(p, '[data-act="open-workout"][data-id="essentials"]');
   await app.waitTitle(p, 'Essentials');
   await t.look(p, 'a program offline');
+  await coachOffline(t, p, 'a program offline');
   await app.tap(p, '[data-act="back"]');
   await app.waitTitle(p, 'Workouts');
   await app.tap(p, '.tab[data-tab="frank"]');
@@ -160,6 +172,7 @@ module.exports = {
           await p.reload(); await L.settle(p);
           await app.waitTitle(p, 'Plan');
           await t.look(p, 'plan offline');
+          await coachOffline(t, p, 'plan offline');
           await p.evaluate(() => WBF.app.sheet('squat', 'muscle'));
           await t.look(p, 'exercise sheet offline');
           await app.tap(p, '#overlay .xs-foot [data-act="close"]');
@@ -167,6 +180,7 @@ module.exports = {
           await app.waitTitle(p, 'Workout');
           await app.tap(p, '[data-act="pl-skip"]');
           await t.look(p, 'player offline');
+          await coachOffline(t, p, 'player offline');
           t.step('a session link offline');
           await p.goto(home + '#frank.' + L.pack(L.spec({ i: 'qa-off', t: 'Offline session' })));
           await app.waitHeading(p, 'Offline session');

@@ -623,7 +623,14 @@ class Test {
   watch(page) {
     page.setDefaultTimeout(this.opts.timeout || 20000);
     page.on('pageerror', (e) => this.fail('page error: ' + short(e)));
-    page.on('console', (m) => { if (m.type() === 'error') this.fail('console error: ' + m.text().slice(0, 200)); });
+    // a clip or still in media/ that can't load offline is expected (videos aren't kept offline; the app shows the
+    // coach in its place), so the browser's line about it isn't an error here. A file missing from media/ still fails:
+    // the server answers 404.
+    page.on('console', (m) => {
+      if (m.type() !== 'error') return;
+      if (/^Failed to load resource: net::/.test(m.text()) && /\/media\/[^/]+$/.test((m.location() || {}).url || '')) return;
+      this.fail('console error: ' + m.text().slice(0, 200));
+    });
     page.on('dialog', (d) => d.accept().catch(() => null));
     this.lastPage = page;
     return page;
