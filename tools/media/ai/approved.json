@@ -1,4 +1,39 @@
 {
   "about": "Takes approved for the app. tools/media/ai/approve.mjs adds them; process.mjs reads them. Each names its run and its sha256, so only that exact file is processed. To take one back, delete its entry.",
-  "approved": []
+  "approved": [
+    {
+      "move": "squat",
+      "coach": "m",
+      "take": "take-1",
+      "run": "gh-37163073450-1-pilot-3-clips",
+      "sha256": "1ea10aaeca04fc1a0622e733d66ec05becc66eb585ea50dc2b9a1fc620742693",
+      "approvedBy": "Victor",
+      "date": "2026-10-04",
+      "note": "Victor's go-ahead on 4 Oct 2026 (the man coach for the app); form checked by Claude against Frank's cues; Frank sees it",
+      "model": "veo-3.1-fast-generate-preview"
+    },
+    {
+      "move": "push-up",
+      "coach": "m",
+      "take": "take-1",
+      "run": "gh-37163450330-1-pilot-3b-man",
+      "sha256": "bfdadc86bd64e03ce3b6e87420bb8e5da286dedc4d478f2bdee5474513ed8383",
+      "approvedBy": "Victor",
+      "date": "2026-10-04",
+      "note": "Victor's go-ahead on 4 Oct 2026 (the man coach for the app); form checked by Claude against Frank's cues; Frank sees it; the loop closes at 7.625 s, before the feet slide",
+      "model": "veo-3.1-fast-generate-preview",
+      "end": 7.625
+    },
+    {
+      "move": "plank",
+      "coach": "m",
+      "take": "take-1",
+      "run": "gh-37163738022-1-pilot-3c-man",
+      "sha256": "da680affe7d1af92e1074339a3d628a11e0c81eb5fc0cbea53b0c066e977083b",
+      "approvedBy": "Victor",
+      "date": "2026-10-04",
+      "note": "Victor's go-ahead on 4 Oct 2026 (the man coach for the app); form checked by Claude against Frank's cues; Frank sees it",
+      "model": "veo-3.1-fast-generate-preview"
+    }
+  ]
 }

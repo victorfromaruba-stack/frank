@@ -11,5 +11,8 @@
 (function (W) {
   'use strict';
   W.WBF.MEDIA = {
+    'squat': { video: 'media/squat.mp4', poster: 'media/squat.jpg', ai: true },
+    'push-up': { video: 'media/push-up.mp4', poster: 'media/push-up.jpg', ai: true },
+    'plank': { video: 'media/plank.mp4', poster: 'media/plank.jpg', ai: true },
   };
 })(window);
