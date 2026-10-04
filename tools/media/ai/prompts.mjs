@@ -75,7 +75,9 @@ const FRAMING = 'The camera is level at hip height, about 3.5 metres away, with 
 // moves that jump: the camera further back, so the head stays in the frame at the top of the jump (day 2's jump
 // squat left it)
 const JUMPS = ['jump-squat', 'burpee'];
-const JUMP_FRAMING = 'The camera is level at hip height, about 5 metres away, with a natural 35 mm lens. The person stands in the lower part of the frame and fills about 60 percent of its height, with a lot of empty space above the head for the jump, and is in the middle of the frame left to right.';
+// (a level camera at hip height puts the hips in the middle of the picture: say where the head goes, not "low in the
+// frame", which the burpee's start poses ignored)
+const JUMP_FRAMING = 'The camera is level at hip height, about 5 metres away, with a natural 35 mm lens: a wide shot. The person takes up only about two thirds of the picture\'s height: the top of the head is about a fifth of the way down from the top edge, with plain wall above it for the jump, and there is floor below the feet. The person is in the middle of the frame left to right.';
 
 // Kit named in the move (eq in js/exercises.js) and the shot list's set-up.
 const KIT = {
