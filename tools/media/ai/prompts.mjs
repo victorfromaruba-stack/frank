@@ -9,6 +9,8 @@ import { coachBook } from './lib.mjs';
 // The move's text talks to the member ("your heels"); the prompts describe the coach.
 export const third = (s) => String(s)
   .replace(/\byourself\b/gi, 'themselves').replace(/\byour\b/gi, 'the').replace(/\byou're\b/gi, 'they are')
+  // "behind you", "in front of you": them, not they
+  .replace(/\b(of|to|for|with|at|behind|beside|around|under|over|from|toward|towards) you\b/gi, '$1 them')
   .replace(/\byou\b/gi, 'they');
 const sentences = (s) => String(s).match(/[^.!?]+[.!?]*/g)?.map((x) => x.trim()).filter(Boolean) || [];
 // The set-up text also offers easier versions and stand-ins ("Low impact: step one foot out", "Two full shopping
@@ -45,7 +47,10 @@ export const START = {
   'reverse-crunch': 'lying on the back, head and shoulders resting on the floor, arms long by the sides with the palms down: the hips and knees bent at 90 degrees, the knees directly above the hips and the shins level with the floor, the feet off the floor',
   'bicycle-crunch': 'lying on the back with the head and shoulders curled a little off the floor, fingertips lightly behind the ears, elbows wide: the hips and knees bent at 90 degrees, the knees above the hips and the shins level with the floor',
   'goblet-squat': 'standing tall at the top of the squat: one dumbbell held upright against the chest with both hands cupping its top end, elbows down, feet a little wider than the hips, toes slightly out, looking ahead',
-  'heel-squat': 'standing tall at the top of the squat: feet hip-width apart, the heels raised a few centimetres on a plain grey slant board, arms relaxed by the sides, chest up, looking ahead'
+  'heel-squat': 'standing tall at the top of the squat: feet hip-width apart, the heels raised a few centimetres on a plain grey slant board, arms relaxed by the sides, chest up, looking ahead',
+  // day 2's clip: the hips stayed high off the heels and the head lifted
+  burpee: 'standing tall, feet hip-width apart, arms relaxed by the sides, with clear floor space in front of them for the plank',
+  'childs-pose': 'in child\'s pose: kneeling with the big toes together and the knees apart, the hips sitting all the way back on the heels, the chest low between the thighs, both arms long in front with the palms flat on the floor, the forehead resting on the floor, the neck relaxed'
 };
 const startOf = (m) => START[m.id] || third(mainVersion(m.setup)) + (m.kind === 'hold' ? ' Show the held position: ' + third(noSwitch(m.steps).slice(0, 2).join(' ')) : '');
 
@@ -58,13 +63,19 @@ export const CAMERA = {
 };
 // Which way the body points in the frame, as the app's 3D coach does: upright facing right, on the back head left,
 // on the front or on the hands head right.
+// floor moves that start and end standing
+const STANDS = ['burpee', 'inchworm'];
 function facing(m) {
   if (m.camera === 'Front') return 'The person faces the camera.';
   if (m.pos === 'supine') return 'Lying on the back, the head is toward the left edge of the frame and the feet toward the right.';
-  if (m.wide) return 'The head is toward the right edge of the frame.';
+  if (m.wide && !STANDS.includes(m.id)) return 'The head is toward the right edge of the frame.';
   return 'The person faces toward the right of the frame.';
 }
 const FRAMING = 'The camera is level at hip height, about 3.5 metres away, with a natural 35 mm lens. The whole body is in the frame with about a hand\'s width of space above the head and below the feet, and the person is in the middle of the frame.';
+// moves that jump: the camera further back, so the head stays in the frame at the top of the jump (day 2's jump
+// squat left it)
+const JUMPS = ['jump-squat', 'burpee'];
+const JUMP_FRAMING = 'The camera is level at hip height, about 5 metres away, with a natural 35 mm lens. The person stands in the lower part of the frame and fills about 60 percent of its height, with a lot of empty space above the head for the jump, and is in the middle of the frame left to right.';
 
 // Kit named in the move (eq in js/exercises.js) and the shot list's set-up.
 const KIT = {
@@ -124,7 +135,7 @@ export function startPrompt(coachId, m) {
     kit(m),
     `Correct form, as the trainer teaches it: ${m.cues.map(third).join(' ')}`,
     `Avoid these mistakes: ${m.mistakes.map(third).join(' ')}`,
-    `Camera: ${CAMERA[m.camera]}. ${facing(m)} ${FRAMING}`,
+    `Camera: ${CAMERA[m.camera]}. ${facing(m)} ${JUMPS.includes(m.id) ? JUMP_FRAMING : FRAMING}`,
     `Place: ${book.studio}. Light: ${book.light}.`,
     `Clothes: ${c.outfit}.`,
     REAL_PHOTO
@@ -145,7 +156,16 @@ export const noBreath = (lines) => lines.filter((x) => !/\bbreath/i.test(x));
 // What a move's clip must show that its steps leave open, written after a take got it wrong. Pilot 3: the woman's
 // squat went a quarter of the way down with her hands on her knees.
 export const MOTION = {
-  squat: 'Each rep goes down until the thighs are at least parallel to the floor, heels down and chest up, the arms reaching forward for balance, then drives all the way back up to standing. The hands never rest on the knees.'
+  squat: 'Each rep goes down until the thighs are at least parallel to the floor, heels down and chest up, the arms reaching forward for balance, then drives all the way back up to standing. The hands never rest on the knees.',
+  // day 2: arms and feet out of step, the arms crossing in front of the body
+  'jumping-jacks': 'Arms and feet move together on every jump: the feet land wide at the same moment the hands meet overhead, and land together as the arms come back down to the sides. The arms sweep out to the sides in a wide arc, never in front of the body.',
+  // day 2: the back foot stayed on the floor
+  'single-leg-rdl': 'On every rep the free leg lifts off the floor and reaches straight back in line with the body while the chest lowers, until the body is close to level with the floor; only the standing foot touches the floor at the bottom. Then the leg and the chest come back up together to standing tall.',
+  // day 2: the head left the frame at the top of the jump
+  'jump-squat': 'Each rep sinks into a squat with the arms back, jumps straight up with the arms swinging forward and up, and lands softly back into the squat. The camera stays where it is and the whole body, head and feet, stays inside the frame at the top of every jump.',
+  'burpee': 'The whole body, head and feet, stays inside the frame at the top of every jump.',
+  // day 2: the hips came off the heels and the head lifted
+  'childs-pose': 'A calm, still hold: the hips stay sitting back on the heels and the forehead stays resting on the floor the whole time, the arms long in front. The back rises and falls a little, slowly and evenly; the head never lifts.'
 };
 export function clipPrompt(coachId, m) {
   const c = coachBook().coaches[coachId];
