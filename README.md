@@ -22,15 +22,25 @@ Two kinds of users:
 
 ## What it does
 
-- **Onboarding** in three parts, like the reference app. Goal and focus: goal,
-  body parts to focus on (shown on a muscle map), what you want most. Your body:
-  who demonstrates (the male or female coach), year of birth, the PAR-Q+
-  health questions and pregnancy (each answered on purpose), height and weight
-  on sliding rulers with BMI, target weight with a realistic date range, sore
-  spots. No BMI verdict while growing up or pregnant, and no target weight for
-  anyone pregnant, maybe under 18 or with a medical condition. Fitness: how
-  active you are, a push-up test that sets the level, days a week, minutes, kit
-  at home. Then Frank, your name, the plan being built, and a summary.
+- **The fast start** (`js/onboard-flow.js`): someone new answers eight questions,
+  with one bar over them: the goal, what keeps them safe (year of birth, the PAR-Q+
+  health questions and pregnancy, each answered on purpose, sore spots), days a
+  week, minutes, kit at home and who demonstrates (the male or female coach). The
+  plan is built, and **Your first week** shows Day 1's first move, the safety rows,
+  week 1's sessions with their real lengths, a line for the goal and, next to the
+  buttons, when the free trial starts (or that it has ended). **Start Day 1** opens
+  the first workout. Everyone starts at Beginner.
+- **Make it yours**: after the plan's first workout, a card on the finish screen and the
+  Plan asks the rest, one question at a time: the fitness check (how active, a
+  push-up guess) that sets the level from the next workout, height and weight on
+  sliding rulers with BMI, a target weight with a realistic date range, focus
+  areas on a muscle map, what you want most, the name. No BMI verdict while
+  growing up or pregnant; no target weight for anyone pregnant, maybe under 18,
+  with a medical condition or in gentle mode. Me's **Your answers** lists every
+  answer and changes each on its own; a new goal or new days ask before the 28
+  days restart. One of Frank's clients with no plan is offered one "for the days
+  between Frank's sessions". (Without the module, the app asks all nineteen
+  questions in three parts, then shows a summary and the price screen.)
 - **The plan**: 28 days in four weeks (Foundation, Build, Push, Peak) on a
   day grid, with this week's sessions listed. Every muscle is trained twice a
   week, the focus areas get extra work, and "Too easy / Just right / Too hard"
@@ -40,8 +50,8 @@ Two kinds of users:
   Shoulders & back, Cardio, Stretch) at three levels, filters by level and
   length, search, Frank's three programs (Essentials, Change the method,
   Gravity) and the library of 80 exercises.
-- **Every exercise** has a Video tab (a moving 3D coach, or Frank's own clip
-  once he films it), a Muscle tab (an anatomy view that turns slowly, the
+- **Every exercise** has a Video tab (a demo video made by AI and tagged AI demo,
+  or the moving 3D coach where a move has none yet, and offline), a Muscle tab (an anatomy view that turns slowly, the
   muscles the move works in red), and a How-to tab (slow motion, or Frank
   explaining it), plus steps, cues, common mistakes, "why it works" and other
   options. Drag the coach to turn it.
@@ -53,8 +63,8 @@ Two kinds of users:
   pregnant, may be under 18 or has a medical condition, the food card only
   refers them to a dietitian or doctor, and there is no water card (8 glasses
   is a goal), no lesson about food or drink and no 250 minutes.
-- **Me**: workouts, minutes, streak, minutes per week, weight trend with the
-  goal, a calendar, history, dumbbell weights, settings, health switches,
+- **Me**: Your answers, workouts, minutes, streak, minutes per week, weight trend
+  with the goal, a calendar, history, dumbbell weights, settings, health switches,
   membership, the science, a backup file and Move my plan, delete my data.
 - **Frank**: his bio, the method, "Train with Frank in person" (Instagram DM),
   and **Coach tools**: Frank builds a session from the library (moves, reps or
@@ -101,8 +111,9 @@ pose engine, dressed them in Frank's green and drew the Muscle tab's anatomy
 look from the models' own muscle detail (`--hd` makes the sharper set in
 `assets/hd/` that screenshots use).
 
-When Frank films a move, his clip replaces the coach for that move:
-`docs/FILMING-GUIDE.md` has the shot list and how to add a clip.
+The demo videos replace the coach move by move: realistic clips made by AI
+(`tools/media/ai/`, the frank-coach-video skill), tagged AI demo in the app. The
+coach stays for the Muscle tab and for moves without a clip yet.
 
 ## Decided
 
@@ -112,12 +123,18 @@ When Frank films a move, his clip replaces the coach for that move:
   the exercise texts (`js/exercises.js`), the daily lessons and the method lines
   (`js/programs.js`, `js/app.js`). New or changed text goes to him before it ships:
   `docs/TEXT-FOR-FRANK.md` holds the lines waiting for his yes.
+- **The videos (4 October 2026):** AI makes every move's demo, tagged AI demo in the
+  app. Frank films one video per move where he explains it, on YouTube; the How-to
+  tab plays it inside the app (`howto` in `js/media.js`, `docs/FILMING-GUIDE.md`).
 
 ## Frank needs to check or supply
 
 1. **His logo:** the original file of the logo on his Instagram profile. The big W
    app icon in `img/` stands in for it until then.
-2. **His videos and photos:** the list in `docs/FILMING-GUIDE.md`.
+2. **His videos and photos:** the list in `docs/FILMING-GUIDE.md`: one explanation
+   per move for YouTube, plus the Personal, food and brand ones. And a look at each AI
+   demo in the app: Victor decided (4 October) they go in once their form is checked
+   against Frank's cues; one Frank doesn't like comes out or is made again.
 3. **The yearly price, the trial and a payment provider** (now placeholders: 7 days
    free, and €119.99 a year, which the price screen hides until he says yes):
    `docs/ACCOUNTS-AND-PAYMENTS.md`.
@@ -138,8 +155,9 @@ after it (see `.claude/skills/frank-qa`). Shipping, rolling back and the move
 to Frank's own domain are in `.claude/skills/frank-release`.
 
 Any static host works. Serve the folder as it is; the phone install and
-offline mode need HTTPS. The app loads nothing from other sites: its fonts
-are in `fonts/` and three.js is in `vendor/`.
+offline mode need HTTPS. The app loads nothing from other sites but one: a tap on
+Watch Frank explain it loads YouTube's privacy-enhanced player. Its fonts are in
+`fonts/` and three.js is in `vendor/`.
 
 Before members pay:
 - **Frank's own domain first.** The app keeps each person's data per web
@@ -173,12 +191,13 @@ phones pick up the update. The `static` suite fails until you do.
 | `assets/coach-m.glb`, `assets/coach-f.glb`, `assets/CREDITS.txt` | the two coaches and their licence |
 | `vendor/` | three.js r170 and its model loader (MIT) |
 | `js/exercises.js` | the 80 exercises: text, doses, kit, swaps, muscles, animations |
-| `js/media.js` | Frank's own clips, when he films them |
+| `js/media.js` | the exercise videos: AI demos (tagged AI demo) and Frank's YouTube explanations (How-to) |
 | `js/programs.js` | Frank's details, prices, workouts, the 28-day plan, safety rules, session builder |
 | `js/science.js` | the science screen and its sources |
 | `js/app.js` | screens, onboarding, the player, access (trial, member, client), coach tools, Today, Me, and the seam modules plug into (`WBF.ext`) |
 | `js/links.js` | links to one move or one workout: a module, a feature in its own file (`.claude/skills/frank-module`) |
 | `js/keep.js` | keep my progress: the backup file, the move link (`#move.`), the Instagram warning, the Home Screen sheet, storage the browser keeps, the moved banner (a module) |
+| `js/onboard-flow.js` | the fast start: the eight questions before the plan, Your first week, Make it yours after Day 1, Me's Your answers (a module) |
 | `js/sound.js` | beeps, voice, vibration, keeping the screen on |
 | `img/` | Frank's four graphics, the app icons, and the two screenshots Android's install dialog shows (`screenshot-*.png`, not cached offline) |
 | `img/brand/`, `tools/brand/` | the "W by Frank" marks (SVG) and the scripts that draw them and the app icons |

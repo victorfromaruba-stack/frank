@@ -590,7 +590,8 @@ class Test {
   // service worker; then other sites are watched, not blocked), server (one from serve(), e.g. with Pages' caching),
   // site (a published copy such as L.SITE instead of the local server: fetched through Node, see viaNode),
   // href (open this URL), threeD (false: don't wait for the coach), go (false: don't open the page yet),
-  // ua (the browser's user agent: an iPhone's Safari, Instagram's own browser; L.UA has some).
+  // ua (the browser's user agent: an iPhone's Safari, Instagram's own browser; L.UA has some), allow (a RegExp of
+  // other sites this page may load, such as YouTube's player after a tap on play; still blocked unless routed).
   async page(o = {}) {
     const env = this.env;
     const srv = o.site ? { url: o.site, home: o.site } : (o.server || await env.server(o.prefix || ''));
@@ -602,7 +603,7 @@ class Test {
     const outside = new Set();
     ctx.on('request', (r) => {
       const u = r.url();
-      if (!u.startsWith(local) && !/^(data|blob|about):/.test(u)) outside.add(u.slice(0, 120));
+      if (!u.startsWith(local) && !/^(data|blob|about):/.test(u) && !(o.allow && o.allow.test(u))) outside.add(u.slice(0, 120));
     });
     if (o.site) await ctx.route('**/*', viaNode(o.site));
     else if (!o.sw) await ctx.route(/^https?:\/\/(?!127\.0\.0\.1[:/])/, (r) => r.abort());
@@ -622,7 +623,14 @@ class Test {
   watch(page) {
     page.setDefaultTimeout(this.opts.timeout || 20000);
     page.on('pageerror', (e) => this.fail('page error: ' + short(e)));
-    page.on('console', (m) => { if (m.type() === 'error') this.fail('console error: ' + m.text().slice(0, 200)); });
+    // a clip or still in media/ that can't load offline is expected (videos aren't kept offline; the app shows the
+    // coach in its place), so the browser's line about it isn't an error here. A file missing from media/ still fails:
+    // the server answers 404.
+    page.on('console', (m) => {
+      if (m.type() !== 'error') return;
+      if (/^Failed to load resource: net::/.test(m.text()) && /\/media\/[^/]+$/.test((m.location() || {}).url || '')) return;
+      this.fail('console error: ' + m.text().slice(0, 200));
+    });
     page.on('dialog', (d) => d.accept().catch(() => null));
     this.lastPage = page;
     return page;

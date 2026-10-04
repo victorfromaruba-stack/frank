@@ -1,13 +1,13 @@
 /* Wellness by Frank: offline cache for the app's own files. Bump VERSION when you change any file.
    Frank's videos (media/) are left to the browser's normal cache: phones ask for videos in pieces,
    which a cache can't answer. */
-const VERSION = 'wbf-12';
+const VERSION = 'wbf-14';
 // kept when the worker installs: what the app needs to open and train offline. Frank's photos too: Workouts and
 // Frank show them, also on a phone that never opened those tabs online
 const SHELL = [
   './', 'index.html', 'app.css', 'manifest.webmanifest',
   'fonts/fonts.css', 'fonts/Nunito-latin.woff2', 'fonts/Nunito-latin-ext.woff2', 'fonts/GildaDisplay-latin.woff2', 'fonts/GildaDisplay-latin-ext.woff2',
-  'js/figure.js', 'js/exercises.js', 'js/programs.js', 'js/science.js', 'js/sound.js', 'js/figure3d.js', 'js/media.js', 'js/links.js', 'js/keep.js', 'js/app.js',
+  'js/figure.js', 'js/exercises.js', 'js/programs.js', 'js/science.js', 'js/sound.js', 'js/figure3d.js', 'js/media.js', 'js/links.js', 'js/keep.js', 'js/onboard-flow.js', 'js/app.js',
   'vendor/three.module.min.js', 'vendor/jsm/GLTFLoader.js', 'vendor/jsm/BufferGeometryUtils.js', 'vendor/jsm/RoomEnvironment.js',
   'assets/coach-m.glb',
   'img/wellness-1.jpg', 'img/wellness-2.jpg', 'img/wellness-3.jpg', 'img/wellness-4.jpg',

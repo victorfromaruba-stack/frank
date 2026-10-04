@@ -1,6 +1,6 @@
 ---
 name: frank-coach-video
-description: Realistic AI exercise demo videos for Wellness by Frank, made with Google's Veo 3.1 Fast and Gemini's image model (tools/media/ai/ and the Coach video workflow), to replace the 3D cartoon coach move by move until Frank films his own clips. Use it whenever someone wants better, realistic or modern exercise demos, AI video, new coach renders or coach photos, says the 3D coach looks fake, glitchy, low-poly or childish, or wants to replace the 3D coach. Also use it whenever you touch tools/media/ai/, .github/workflows/coach-video.yml, the coach-video branch, GEMINI_API_KEY or a js/media.js line with ai: true, and before any paid Veo or Gemini image call, even if nobody says "Veo" or "AI".
+description: Realistic AI exercise demo videos for Wellness by Frank, made with Google's Veo 3.1 Fast and Gemini's image model (tools/media/ai/ and the Coach video workflow), to replace the 3D cartoon coach in every move's demo, labelled AI demo (Frank's own videos explain the moves on YouTube, in the How-to tab). Use it whenever someone wants better, realistic or modern exercise demos, AI video, new coach renders or coach photos, says the 3D coach looks fake, glitchy, low-poly or childish, or wants to replace the 3D coach. Also use it whenever you touch tools/media/ai/, .github/workflows/coach-video.yml, the coach-video branch, GEMINI_API_KEY or a js/media.js line with ai: true, and before any paid Veo or Gemini image call, even if nobody says "Veo" or "AI".
 metadata:
   owner: victor
   version: "1.0"
@@ -8,10 +8,12 @@ metadata:
 # Wellness by Frank: AI coach videos
 
 Victor finds the 3D coach (Quaternius low-poly models, posed by hand-keyed keyframes) glitchy,
-fake and childish. The fix: a realistic demo clip per move, made by AI, labelled as AI in the
-app, and replaced by Frank's own clip when he films that move. The app already plays a clip in
-place of the 3D coach when `js/media.js` lists one, so the AI clips use the same slot and the
-same processing as Frank's (`docs/FILMING-GUIDE.md`, `tools/media/process.sh`).
+fake and childish. The fix: a realistic demo clip per move, made by AI and labelled as AI in
+the app. Victor decided on 4 October 2026 that the AI demos stay: Frank doesn't film loops, he
+explains each move in a video on YouTube, which the app plays inside the How-to tab (`howto` in
+`js/media.js`). The app plays a clip in place of the 3D coach when `js/media.js` lists one, so
+the AI clips use that slot and the same processing as any clip (`docs/FILMING-GUIDE.md`,
+`tools/media/process.sh`).
 
 Everything is in `tools/media/ai/`. Plain Node 22 scripts, no npm packages; ffmpeg for the
 review and the processing. Each script explains itself at its top.
@@ -28,8 +30,8 @@ review and the processing. Each script explains itself at its top.
 4. **Review**: a sheet with each take, its frames and the move's cues. Frank looks at the form.
    Whoever says yes approves the take (`approved.json`).
 5. **Into the app**: approved takes become `media/<id>.mp4` and `media/<id>.jpg` through
-   `process.sh`, with a `js/media.js` line marked `ai: true`. Not before the app labels AI clips.
-6. **Frank films a move**: his clip takes the slot, the AI clip goes.
+   `process.sh`, with a `js/media.js` line marked `ai: true`, which the app tags AI demo.
+6. **Frank explains a move on YouTube**: the link goes in the move's `howto`; the AI demo stays.
 
 A person decides between steps 1, 2 and 3, so each runs as its own request.
 
@@ -97,7 +99,17 @@ One-time setup:
 
 A run: copy a file from `requests/examples/` to `requests/`, change it, commit, push. Only files
 directly in `requests/` run; changing one runs it again (and costs again). A run stops after
-90 minutes, so keep a request to about 40 clips. A request file:
+90 minutes, so keep a request to about 40 clips.
+
+**Google's daily limit on clips.** On 4 October 2026 the key's tier allowed about 16 Veo requests
+a day (a filtered clip counts too): the rest got `429 RESOURCE_EXHAUSTED` ("You exceeded your
+current quota"), which costs nothing, and sending them one at a time didn't help. The limit
+resets at midnight Pacific time (07:00 UTC). So send at most about 15 clips a day; pictures have
+their own, much higher limit. The project's limits are on AI Studio's rate-limit page
+(https://aistudio.google.com/rate-limit); a higher tier (Tier 2 after $100 spent and 3 days)
+raises them, or ask Google for more there. Only one run goes at a time: a second push waits, and
+a third replaces the waiting one, so its request never runs. Push the next request once the
+last one has started. A request file:
 
 ```json
 {
@@ -143,7 +155,11 @@ Same scripts, with the key in the shell. A request file works here too:
   video 2 days: `node tools/media/ai/clip.mjs --fetch --from <run folder>` gets it, at no cost.
 - The words sent to the models are in `prompts.mjs` (built from `js/exercises.js` and the shot
   list) and `coaches.json` (the coaches and the studio). When a move's start poses keep coming
-  out wrong, write its start position in `START` in `prompts.mjs`. The pilot moves have one.
+  out wrong, write its start position in `START` in `prompts.mjs`. The pilot moves have one, and
+  so do the moves whose set-up text left the start open: the image model tends to draw the top of
+  a bridge or a raise, or a squat or lunge halfway down, where the clip should start.
+- A start pose the image model won't draw (its answer has no picture) is left out with a warning,
+  and the other start poses go on. Ask for that move again in a later request.
 
 ## The pilot
 
@@ -155,7 +171,9 @@ coaches. Three requests in `requests/examples/`, each under the $5 budget:
 3. `pilot-3-clips.json`: six clips and the review sheet, $4.80. Frank reviews.
 
 Then decide: which coach the app uses (it plays one clip per move), whether the clips are good
-enough to go on, and the label's words. Before running a request, run it with `--dry-run` and
+enough to go on, and the label's words. The pilot (3 and 4 October 2026, $7.44): five good clips
+after retakes (the audio filter, a shallow squat, a push-up whose legs glitched); Victor: the AI
+demos stay, Frank explains the moves on YouTube. Still open: which coach, and the full set. Before running a request, run it with `--dry-run` and
 read a body or two in `out/<run>/calls/`.
 
 ## Reviewing a take
@@ -169,7 +187,9 @@ close the first frame is to the picked start pose. Watching decides.
 Reject a take when any of these is true:
 
 - **The form doesn't match every cue exactly**, at the start, in the middle and at the end. These
-  clips teach a move in Frank's name: Frank's yes on the form comes before an approval.
+  clips teach a move in Frank's name. Victor decided on 4 October 2026 that a clip goes in once
+  its form is checked against Frank's cues (by Claude or a person); Frank looks at each in the
+  app, and one he doesn't like comes out (its line and its approval) or is made again.
 - **Warped hands or feet:** fingers or toes that melt, merge, slide or change shape.
 - **Extra or missing limbs**, even for one frame.
 - **A wrong rep path:** a joint bending the wrong way, the wrong depth or line, reps that differ.
@@ -201,29 +221,31 @@ and the last frame cut, since the loop's first frame follows it. It prints the l
 
 It never writes `js/media.js` itself, and it refuses three things: a take nobody approved (or
 that changed since), a move approved for both coaches without `--coach` (the app plays one clip
-per move), and a move whose `js/media.js` line has no `ai: true`, which is Frank's own clip.
+per move), and a move whose `js/media.js` line has `frank: true` (Frank's own clip) or a clip
+line with neither `ai: true` nor `frank: true` (someone has to say whose it is).
 
-### Before the first AI clip goes live
+### How the app shows an AI clip
 
-Today the app can't label an AI clip. The exercise sheet's Video tab tags every clip "Frank"
-(`js/app.js`, the `tags-on` line), so an AI clip would be shown as Frank. `process.mjs` says
-"DON'T ADD THESE LINES YET" until a file in `js/` reads the `ai` flag. The app change, in its own
-commit, through the usual skills:
+A move whose `js/media.js` line has `ai: true` gets an "AI demo" tag on its video wherever it
+plays (the exercise sheet, the workout player, Next, the plan cards, the welcome screen, a
+workout), an "AI" tag on its still in the lists, and "Made by AI, not filmed." under it in the
+exercise sheet. It never gets the "Frank" tag: only a line with `frank: true` does, and a clip
+line with neither flag shows as AI (the static suite asks for one of the two on every clip).
+The How-to tab plays Frank's YouTube video when the move's `howto` has one (a panel first:
+nothing loads from YouTube until a tap), else the AI demo in slow motion, still tagged; a
+`howto` that is neither a YouTube video nor a file in `media/` is left out. The Muscle tab keeps
+the 3D muscles. Offline, or when a video or still doesn't load, the move shows the 3D coach
+without the tag and the note (videos aren't kept offline); with reduced motion the decorative
+clips (the welcome screen, the plan cards) stand still; the single-file builds show the coach.
+`tools/test/media.cjs` checks all of it.
 
-1. **The label** (frank-app, frank-module): where a clip with `ai: true` plays, the Video tab and
-   the workout player, show an "AI demo" tag in place of "Frank", and never "Frank" on an AI
-   clip. The How-to tab keeps the 3D coach in slow motion: an AI clip is never a how-to.
-2. **The words** (frank-words): the tag and a line in the exercise sheet, as drafts in
-   `docs/TEXT-FOR-FRANK.md`. For example: "AI demo" and "Made by AI, not filmed. Frank's own
-   video takes its place when he films this move." Frank says yes before it ships.
-3. **The test** (frank-qa): a move with `ai: true` shows the AI tag and no "Frank" tag; Frank's
-   own clip still shows "Frank".
-4. **The release** (frank-release): bump `VERSION` in `sw.js` (`js/media.js` is cached), the full
-   suite, Victor pushes.
+Adding the lines `process.mjs` prints: put them in `js/media.js`, keeping a move's `howto` if it
+has one, bump `VERSION` in `sw.js` (`js/media.js` is cached), run the suites, look at the moves
+in the app, and ship (frank-release). New words for the label go through frank-words first.
 
 ## Labelling AI demos honestly
 
-- Every AI clip in the app says it's AI, wherever it plays, until Frank's clip replaces it.
+- Every AI clip in the app says it's AI, wherever it plays.
 - The coaches are made-up people. Never give the models a photo, a name or a description of a
   real person: not Frank, not a client.
 - Store screenshots, posts and previews (frank-showcase) show an AI clip only with its label,
@@ -232,15 +254,16 @@ commit, through the usual skills:
 - Frank works in the Netherlands: the EU's AI Act asks for realistic AI-made video of people to
   be disclosed as AI-made. The label does that.
 
-## When Frank films a move
+## When Frank's video of a move is on YouTube
 
-1. Film it from the shot list (`docs/FILMING-GUIDE.md`), same camera and clip as the AI one.
-2. `tools/media/process.sh <clip> <id> <start> <end>` (with `--wide` for floor moves). It
-   overwrites `media/<id>.mp4` and `media/<id>.jpg`.
-3. In `js/media.js`, take `ai: true` off that move's line (and add his `howto` if he made one).
-4. Delete the move's entries in `approved.json`. From then on `process.mjs` refuses to put an AI
-   clip there.
-5. Bump `VERSION` in `sw.js` and ship it (frank-release).
+1. Put the link in the move's line in `js/media.js`: `howto: 'https://youtu.be/<id>'` (youtu.be,
+   youtube.com/watch, shorts and embed links all work). The AI demo stays.
+2. Bump `VERSION` in `sw.js` and ship it (frank-release). The How-to tab now shows his panel.
+
+If Frank ever films a loop of his own: `tools/media/process.sh <clip> <id> <start> <end>` (with
+`--wide` for floor moves) overwrites `media/<id>.mp4` and `media/<id>.jpg`; put `frank: true`
+in place of `ai: true` on the move's line, delete the move's entries in `approved.json` (from then on `process.mjs`
+refuses to put an AI clip there), bump `VERSION` and ship.
 
 ## Testing without a key
 
@@ -327,8 +350,7 @@ shows twice. On slow, controlled moves it's hard to see.
   set without Victor's yes.
 - Run the workflow on `app`, or push to `app` from this work. Agents commit; Victor pushes.
 - Commit `out/`, raw takes, or anything but the picks, `approved.json` and processed clips.
-- Add an `ai: true` line to `js/media.js` on `app` before the app labels AI clips, or label an
-  AI clip "Frank".
+- Label an AI clip "Frank", or show one anywhere without its tag.
 - Replace Frank's own clip with an AI one.
 - Give a model a real person's photo or name.
-- Approve a take whose form Frank hasn't seen.
+- Approve a take whose form nobody checked against Frank's cues.

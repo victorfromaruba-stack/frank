@@ -36,7 +36,7 @@ function contactSheet(t) {
 
 module.exports = {
   name: 'screens',
-  about: 'a screenshot of every screen and main state at 390x844 (and an index.html contact sheet) for visual review, with an iPhone status bar, toasts, the BMI bar and long titles, and keep my progress (Instagram\'s browser, a backup, the move sheet, the Home Screen sheet, the moved banner)',
+  about: 'a screenshot of every screen and main state at 390x844 (and an index.html contact sheet) for visual review, with an iPhone status bar, toasts, the BMI bar and long titles, keep my progress (Instagram\'s browser, a backup, the move sheet, the Home Screen sheet, the moved banner), and the fast start (its questions, Your first week, Make it yours, Your answers, a client with no plan)',
   timeout: 900,
   async run(t) {
     fs.rmSync(t.out, { recursive: true, force: true });
@@ -45,76 +45,90 @@ module.exports = {
     const tab = async (p, name) => { await p.evaluate((n) => WBF.app.tab(n), name); await p.waitForTimeout(150); };
 
     await t.flow('welcome and onboarding', async () => {
-      const p = await t.page();
+      // the fast start (js/onboard-flow.js): eight questions, the build, Your first week, Day 1; then Make it yours
+      const p = await t.page({ speed: 50 });
+      const next = () => app.tap(p, '.ob-cta [data-act="ob-next"]');
       await snap(p, 'welcome', { full: false });
       await app.tap(p, '[data-act="ob-start"]');
-      await snap(p, 'onboarding part 1', { full: false });
-      await app.tap(p, '.part .btn');
       await snap(p, 'onboarding goal');
       await app.tap(p, '[data-act="ob-pick"][data-k="goal"][data-v="fat"]');
-      await app.tap(p, '[data-k="focus"][data-v="abs"]'); await app.tap(p, '[data-k="focus"][data-v="legs"]');
-      await snap(p, 'onboarding focus');
-      await app.tap(p, '.ob-cta [data-act="ob-next"]');
-      await app.tap(p, '[data-k="want"][data-v="energy"]');
-      await snap(p, 'onboarding want');
-      await app.tap(p, '.ob-cta [data-act="ob-next"]');
-      await snap(p, 'onboarding part 2', { full: false });
-      await app.tap(p, '.part .btn');
-      await snap(p, 'onboarding who demonstrates');
-      await app.tap(p, '[data-act="ob-pick"][data-k="sex"][data-v="f"]');
       await snap(p, 'onboarding year of birth');
       // a year under 18 shows the note; then back to the year the wheel started on
       const born = await p.evaluate(() => document.querySelector('#wheel button.on').getAttribute('data-year'));
       await app.tap(p, '#wheel button[data-year="' + (+L.TODAY.slice(0, 4) - 14) + '"]');
       await snap(p, 'onboarding year of birth under 18');
       await app.tap(p, '#wheel button[data-year="' + born + '"]');
-      await app.tap(p, '.ob-cta [data-act="ob-next"]');
+      await next();
       // the health questions: nothing picked yet, then two yes answers, then "None of these apply to me"
       await snap(p, 'onboarding health unanswered');
       await app.tap(p, '[data-act="ob-health"][data-k="joint"][data-v="1"]');
       await app.tap(p, '[data-act="ob-health"][data-k="pregnant"][data-v="1"]');
       await snap(p, 'onboarding health with yes answers');
       await app.tap(p, '[data-act="ob-health-none"]');
-      await app.tap(p, '.ob-cta [data-act="ob-next"]');
+      await next();
+      await app.tap(p, '[data-k="injuries"][data-v="knee"]'); await app.tap(p, '[data-k="injuries"][data-v="other"]');
+      await snap(p, 'onboarding sore spots');
+      await next();
+      await app.tap(p, '[data-k="days"][data-v="4"]');
+      await snap(p, 'onboarding days');
+      await next();
+      await snap(p, 'onboarding minutes');
+      await next();
+      await snap(p, 'onboarding kit');
+      await next();
+      await p.waitForFunction(() => document.querySelectorAll('img[data-portrait]:not([hidden])').length === 2, null, { timeout: 90000 }).catch(() => null);
+      await snap(p, 'onboarding who demonstrates');
+      await app.tap(p, '[data-act="ob-pick"][data-k="sex"][data-v="f"]', { wait: 600 });
+      await t.shot(p, 'onboarding building the plan');
+      await p.waitForSelector('[data-act="ob-finish"][data-then="day"]', { timeout: 15000 });
+      await snap(p, 'onboarding your first week');
+      await app.tap(p, '[data-act="ob-finish"][data-then="day"]');
+      await app.waitTitle(p, 'Workout');
+      await app.runWorkout(p);
+      await snap(p, 'finish screen of Day 1 with make it yours');
+      // Make it yours: the fitness check, then height and weight (cm and ft, kg and lb), the target, focus, want, name
+      const row = (id) => app.tap(p, '[data-card="flow-yours"] [data-row="' + id + '"]');
+      await row('fitness');
+      await snap(p, 'onboarding how active');
+      await next();
+      await app.tap(p, '[data-act="ob-push"][data-v="1"]');
+      await snap(p, 'onboarding push-ups');
+      await next();
+      await app.waitTitle(p, 'Workout complete');
+      await row('body');
       await snap(p, 'onboarding height cm');
       await app.tap(p, '[data-act="hunits"][data-v="ft"]');
       await snap(p, 'onboarding height ft');
       await app.tap(p, '[data-act="hunits"][data-v="cm"]');
-      await app.tap(p, '.ob-cta [data-act="ob-next"]');
+      await next();
       await snap(p, 'onboarding weight kg');
       await app.tap(p, '[data-act="units"][data-v="lb"]');
       await snap(p, 'onboarding weight lb');
       await app.tap(p, '[data-act="units"][data-v="kg"]');
-      await app.tap(p, '.ob-cta [data-act="ob-next"]');
+      await next();
+      await app.waitTitle(p, 'Workout complete');
+      await row('target');
       await snap(p, 'onboarding target weight');
-      await app.tap(p, '.ob-cta [data-act="ob-next"]');
-      await app.tap(p, '[data-k="injuries"][data-v="knee"]'); await app.tap(p, '[data-k="injuries"][data-v="other"]');
-      await snap(p, 'onboarding sore spots');
-      await app.tap(p, '.ob-cta [data-act="ob-next"]');
-      await snap(p, 'onboarding part 3', { full: false });
-      await app.tap(p, '.part .btn');
-      await snap(p, 'onboarding how active');
-      await app.tap(p, '.ob-cta [data-act="ob-next"]');
-      await app.tap(p, '[data-act="ob-push"][data-v="1"]');
-      await snap(p, 'onboarding push-ups');
-      await app.tap(p, '.ob-cta [data-act="ob-next"]');
-      await app.tap(p, '[data-k="days"][data-v="4"]');
-      await snap(p, 'onboarding days');
-      await app.tap(p, '.ob-cta [data-act="ob-next"]');
-      await snap(p, 'onboarding minutes');
-      await app.tap(p, '.ob-cta [data-act="ob-next"]');
-      await snap(p, 'onboarding kit');
-      await app.tap(p, '.ob-cta [data-act="ob-next"]');
-      await snap(p, 'onboarding meet your coach');
-      await app.tap(p, '.ob-cta [data-act="ob-next"]');
+      await next();
+      await app.waitTitle(p, 'Workout complete');
+      await row('focus');
+      await app.tap(p, '[data-k="focus"][data-v="abs"]'); await app.tap(p, '[data-k="focus"][data-v="legs"]');
+      await snap(p, 'onboarding focus');
+      await next();
+      await app.waitTitle(p, 'Workout complete');
+      await row('want');
+      await app.tap(p, '[data-k="want"][data-v="energy"]');
+      await snap(p, 'onboarding want');
+      await next();
+      await app.waitTitle(p, 'Workout complete');
+      await row('name');
       await p.fill('#ob-name', 'Sanne');
       await snap(p, 'onboarding name');
-      await app.tap(p, '[data-act="ob-build"]', { wait: 1500 });
-      await t.shot(p, 'onboarding building the plan');
-      await p.waitForFunction(() => /ready/i.test((document.querySelector('.ob-q') || {}).textContent || ''), null, { timeout: 15000 });
-      await snap(p, 'onboarding summary');
-      await app.tap(p, '[data-act="ob-finish"]');
-      await snap(p, 'paywall after onboarding');
+      await next();
+      await app.waitTitle(p, 'Workout complete');
+      await tab(p, 'me');
+      await app.tap(p, '[data-act="flow-answers"]');
+      await snap(p, 'your answers');
     });
 
     await t.flow('member three weeks in', async () => {
@@ -251,6 +265,16 @@ module.exports = {
       await snap(p, 'plan without a profile');
       await tab(p, 'today');
       await snap(p, 'today without a profile');
+      // one of Frank's clients with no plan: the plan for the days between his sessions (js/onboard-flow.js)
+      p = await t.page({ state: L.state({ access: { client: true }, inbox: [L.spec({ i: 'cl', t: 'Glutes and core' })] }) });
+      await app.tap(p, '[data-act="browse"]');
+      await tab(p, 'plan');
+      await snap(p, "plan of Frank's client with no plan");
+      // a plan from before the fast start: Your answers lists what it has
+      p = await t.page({ state: L.member() });
+      await tab(p, 'me');
+      await app.tap(p, '[data-act="flow-answers"]');
+      await snap(p, 'your answers of an older plan');
       // a new version took over (the first takeover is the worker's first install, the second a deploy)
       p = await t.page({ state: L.member() });
       await p.evaluate(() => { for (let i = 0; i < 2; i++) navigator.serviceWorker.dispatchEvent(new Event('controllerchange')); });
@@ -263,7 +287,7 @@ module.exports = {
       let p = await t.page();
       await p.evaluate(() => document.documentElement.style.setProperty('--safe-t', '47px'));
       await snap(p, 'welcome with an iPhone status bar', { full: false });
-      await app.tap(p, '[data-act="ob-start"]'); await app.tap(p, '.part .btn');
+      await app.tap(p, '[data-act="ob-start"]');
       await snap(p, 'onboarding with an iPhone status bar', { full: false });
       // toasts without the tab bar sit above the main button
       p = await t.page();
@@ -281,8 +305,9 @@ module.exports = {
       p = await t.page({ state: L.member({ cm: 170, kg: 78.6, targetKg: 78.6 }, { weights: [{ date: L.TODAY, kg: 78.6 }] }) });
       await tab(p, 'me');
       await snap(p, 'me with an overweight BMI', { full: false });
-      await app.tap(p, '[data-act="ob-edit"]');
-      await go(p, 'onboard', { step: 'weight' });
+      await app.tap(p, '[data-act="flow-answers"]');
+      await app.tap(p, '[data-row="body"]');
+      await app.tap(p, '.ob-cta [data-act="ob-next"]');
       await snap(p, 'onboarding weight with an overweight BMI');
       // a title Frank writes as one long Dutch word
       const title = 'Bovenlichaamskrachttraining';
@@ -295,16 +320,15 @@ module.exports = {
       await snap(p, 'finish screen with a long Dutch title');
     });
 
-    await t.flow('Edit and saving', async () => {
-      // the question after an Edit with a new goal, on the light screen; Me when the phone can't save
+    await t.flow('Your answers and saving', async () => {
+      // the question after a new goal (Me, Your answers), on the light screen; Me when the phone can't save
       let p = await t.page({ state: L.member({}, { done: { 1: 'x1' } }) });
       await tab(p, 'me');
-      await app.tap(p, '[data-act="ob-edit"]');
+      await app.tap(p, '[data-act="flow-answers"]');
+      await app.tap(p, '[data-row="goal"]');
       await app.tap(p, '[data-act="ob-pick"][data-k="goal"][data-v="strength"]');
-      await go(p, 'onboard', { step: 'name' });
-      await app.tap(p, '[data-act="ob-build"]');
-      t.has(await app.overlay(p), 'Restart your 28 days?', 'question after an Edit with a new goal');
-      await snap(p, 'restart question after an Edit', { full: false });
+      t.has(await app.overlay(p), 'Restart your 28 days?', 'question after a new goal');
+      await snap(p, 'restart question after a new goal', { full: false });
       p = await t.page({ state: L.member() });
       await p.evaluate(() => { Storage.prototype.setItem = function () { throw new DOMException('The quota has been exceeded.', 'QuotaExceededError'); }; });
       await tab(p, 'today');

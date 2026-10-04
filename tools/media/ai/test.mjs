@@ -10,7 +10,8 @@
 //      not saved; --fetch finishes a clip that was left pending
 //   6. review: frames, the loop seam, index.html and sheet.png (needs ffmpeg)
 //   7. approve and process: an approved take into media/ of a copy of the app (no sound, cropped, a still), the
-//      js/media.js line with ai: true, the warning while the app doesn't label AI clips, Frank's own clip left alone
+//      js/media.js line with ai: true, the warning while the app doesn't label AI clips, Frank's own clip (frank: true)
+//      and a clip line with neither flag left alone
 //   8. workflow: .github/workflows/coach-video.yml parses as YAML (python3 with PyYAML) and keeps its rules
 //   9. the key: in no file and no line of output
 // Run: node tools/media/ai/test.mjs [--keep]   (about a minute; parts 6 and 7 need ffmpeg and say so when it's missing)
@@ -20,6 +21,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { AI, ROOT, checkImageBody, checkVeoBody, exercises, haveFfmpeg, imageCall, move, probe, sha256, shotListProblems, veoCall } from './lib.mjs';
 import { clipPrompt, startPrompt, third, noBreath } from './prompts.mjs';
+import { aiLabel } from './process.mjs';
 import { TEST_KEY, startMock } from './mock-server.mjs';
 
 const KEEP = process.argv.includes('--keep');
@@ -213,7 +215,9 @@ if (!haveFfmpeg()) {
   ok((await run([S('approve.mjs'), 'push-up', 'f', 'take-1', '--by', 'Tester', '--from', path.join(runs, 'mock1')], env)).code === 1, 'a filtered take can\'t be approved');
   fs.mkdirSync(path.join(R, 'tools/media'), { recursive: true }); fs.mkdirSync(path.join(R, 'js'), { recursive: true });
   fs.copyFileSync(path.join(ROOT, 'tools/media/process.sh'), path.join(R, 'tools/media/process.sh'));
-  for (const f of ['exercises.js', 'media.js', 'app.js']) fs.copyFileSync(path.join(ROOT, 'js', f), path.join(R, 'js', f));
+  for (const f of ['exercises.js', 'media.js']) fs.copyFileSync(path.join(ROOT, 'js', f), path.join(R, 'js', f));
+  // an app that tags every clip "Frank" (as js/app.js did before it read ai: true), so the warning shows
+  fs.writeFileSync(path.join(R, 'js', 'app.js'), `  html += '<div class="tags-on">' + (m && m.video ? '<span class="tag">Frank</span>' : '') + '</div>';\n`);
   const pr = await run([S('process.mjs'), '--root', R, '--from', path.join(runs, 'mock1')], env);
   const v = path.join(R, 'media/squat.mp4');
   const info = exists(v) ? probe(v) : {};
@@ -259,9 +263,16 @@ if (!haveFfmpeg()) {
   fs.writeFileSync(path.join(R, 'js/label.js'), "function tag(m) { return m.ai ? 'AI demo' : 'Frank'; }\n");
   const labelled = await run([S('process.mjs'), '--moves', 'push-up', '--root', R, '--from', tmp], env);
   ok(labelled.code === 0 && !/DON'T ADD/.test(labelled.out) && /bump VERSION in sw\.js/.test(labelled.out), 'once the app reads ai: true, no warning, and it says to bump VERSION');
-  fs.writeFileSync(path.join(R, 'js/media.js'), fs.readFileSync(path.join(R, 'js/media.js'), 'utf8').replace('W.WBF.MEDIA = {', "W.WBF.MEDIA = {\n    'push-up': { video: 'media/push-up.mp4', poster: 'media/push-up.jpg' },"));
+  // in place of the push-up's line, if the repo's js/media.js has one (an AI clip)
+  fs.writeFileSync(path.join(R, 'js/media.js'), fs.readFileSync(path.join(R, 'js/media.js'), 'utf8').replace(/^\s*'push-up'\s*:.*\n/m, '')
+    .replace('W.WBF.MEDIA = {', "W.WBF.MEDIA = {\n    'push-up': { video: 'media/push-up.mp4', poster: 'media/push-up.jpg', frank: true },"));
   const franks = await run([S('process.mjs'), '--moves', 'push-up', '--root', R, '--from', tmp], env);
-  ok(franks.code === 1 && /Frank's own clip is in js\/media\.js/.test(franks.out), 'Frank\'s own clip (no ai: true) is never replaced');
+  ok(franks.code === 1 && /Frank's own clip is in js\/media\.js/.test(franks.out), 'Frank\'s own clip (frank: true) is never replaced');
+  // a clip line that doesn't say whose it is: not replaced either
+  fs.writeFileSync(path.join(R, 'js/media.js'), fs.readFileSync(path.join(R, 'js/media.js'), 'utf8').replace(", frank: true },", " },"));
+  const unsaid = await run([S('process.mjs'), '--moves', 'push-up', '--root', R, '--from', tmp], env);
+  ok(unsaid.code === 1 && /neither ai: true nor frank: true/.test(unsaid.out), 'a clip line with neither flag is not replaced: someone says whose it is first');
+  ok(aiLabel(ROOT).reads, 'the app in this repo reads ai: true (js/app.js tags an AI clip AI demo), so its lines go in without a warning');
 }
 
 part('8. the workflow');

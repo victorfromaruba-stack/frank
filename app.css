@@ -193,6 +193,17 @@ body.light .part :focus-visible { outline-color: var(--sky-hi); }
 .turn svg { width: 22px; height: 22px; }
 .media .tags-on { position: absolute; left: 10px; top: 10px; display: flex; gap: 6px; }
 .media .tags-on .tag { background: rgba(255, 255, 255, 0.85); color: var(--ink-d); border-color: transparent; }
+/* an AI-made clip says so wherever it plays (ai: true in js/media.js), and is never tagged Frank */
+.ai-tag { position: absolute; right: 10px; top: 10px; z-index: 2; display: inline-flex; align-items: center; font: 800 11px/1 var(--f-body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink); background: var(--ground); border-radius: 999px; padding: 6px 10px; pointer-events: none; }
+.thumb > .ai-tag { top: auto; right: 4px; bottom: 4px; font-size: 9px; letter-spacing: 0.04em; padding: 3px 5px; }
+.wd-media .ai-tag { top: auto; bottom: 10px; }   /* under the workout's Back and settings buttons */
+/* Frank's video from YouTube in the How-to tab: a panel until the person taps play, then YouTube's player */
+.fig-box.yt, .xs .media .fig-box.yt { aspect-ratio: 16 / 9; display: grid; place-items: center; background: var(--ground-2); }
+.fig-box.yt iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.yt-play { display: inline-flex; flex-direction: column; align-items: center; gap: 10px; min-height: 44px; padding: 8px 16px; background: none; border: 0; color: var(--ink); font: 800 15px/1.2 var(--f-body); }
+.yt-play svg { width: 56px; height: 56px; padding: 15px 13px 15px 17px; border-radius: 50%; background: var(--sky); color: var(--on-sky); }
+.yt-note { position: absolute; left: 0; right: 0; bottom: 10px; text-align: center; font-size: 12px; color: var(--ink-3); pointer-events: none; }
+.yt-out { display: block; text-align: center; font-size: 14px; color: var(--sky); padding: 6px 0; }
 
 /* ---- tab bar ---- */
 .tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; padding-bottom: var(--safe-b); background: rgba(1, 45, 18, 0.94); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-top: 1px solid var(--line); }
@@ -364,6 +375,7 @@ body.notabs .toast { bottom: calc(var(--safe-b) + 24px); }
 .ob-prog { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .ob-prog i { height: 4px; border-radius: 9px; background: var(--paper-3); overflow: hidden; position: relative; }
 .ob-prog i b { position: absolute; inset: 0; width: 0; background: var(--sky-lo); border-radius: 9px; transition: width 0.3s ease; }
+.ob-prog.one { grid-template-columns: 1fr; }
 .ob-skip { font: 700 14px/1 var(--f-body); color: var(--ink-d3); background: none; border: 0; min-height: 44px; padding: 0 6px; }
 .ob-q { margin: 0; font: 900 30px/1.12 var(--f-display); letter-spacing: -0.015em; color: var(--ink-d); text-wrap: balance; }
 .ob-q em { font-style: normal; color: var(--sky-lo); }
@@ -473,6 +485,29 @@ body:not(.light) .warnbox { background: rgba(242, 201, 107, 0.12); color: var(--
 .sum-row span { color: var(--ink-d2); font-size: 15px; }
 .sum-row b { font-weight: 900; text-align: right; }
 .sum-row small { display: block; font-size: 12px; color: var(--green-ink); font-weight: 700; }
+/* the fast start's "Your first week" (js/onboard-flow.js), a light screen: Day 1's first move, then the safety rows, week 1's
+   sessions and the level. The free trial's line sits with the buttons (.ob-cta), above Start Day 1 */
+.reveal-fig { position: relative; flex: none; aspect-ratio: 2 / 1; border-radius: 22px; overflow: hidden; background: var(--studio); }
+.reveal .summary > .sum-row:first-child { border-top: 0; padding-top: 0; }
+.reveal .sum-row + .between { border-top: 1px solid var(--line-d); padding-top: 14px; }
+.reveal-fig .fig-box { position: absolute; inset: 0; aspect-ratio: auto; border-radius: 0; background: transparent; }
+.reveal-fig .cap { position: absolute; left: 12px; bottom: 12px; z-index: 2; max-width: calc(100% - 24px); background: rgba(255, 255, 255, 0.92); color: var(--ink-d); font: 800 13px/1.25 var(--f-body); padding: 7px 10px; border-radius: 10px; }
+.wk1 { display: flex; flex-direction: column; }
+.wk1-day { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line-d); }
+.wk1-day:first-child { border-top: 0; padding-top: 0; }
+.wk1-day .thumb { width: 52px; height: 52px; border-radius: 12px; background: var(--studio); }
+.wk1-day .grow b { display: block; font: 900 17px/1.15 var(--f-display); color: var(--ink-d); }
+.wk1-day .grow span { display: block; font-size: 14px; color: var(--ink-d2); }
+.wk1-day .mins { font-weight: 800; color: var(--ink-d); white-space: nowrap; }
+.reveal-level { margin: 0; font-size: 14px; line-height: 1.4; color: var(--ink-d2); }
+/* a short phone (iPhone SE, or Safari's bars): a lower picture and tighter rows, so the week starts above the buttons */
+@media (max-height: 720px) {
+  .reveal { gap: 12px; }
+  .reveal-fig { aspect-ratio: 5 / 2; }
+  .reveal .summary { padding: 14px; gap: 10px; }
+  .wk1-day { padding: 5px 0; }
+  .wk1-day .thumb { width: 44px; height: 44px; }
+}
 .coach-card { border-radius: 24px; overflow: hidden; background: var(--paper-2); box-shadow: 0 2px 14px rgba(1, 45, 18, 0.08); }
 .coach-card img { width: 100%; aspect-ratio: 1; object-fit: cover; }
 .coach-card .cc { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 6px; }

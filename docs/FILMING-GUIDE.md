@@ -1,10 +1,13 @@
 # Filming Frank's videos and photos
 
-Every exercise in the app is shown by the 3D coach until Frank films his own
-clip. A clip of Frank doing the move replaces the coach in the exercise's
-Video tab, in the workout player and in the lists. The coach stays for the
-Muscle tab and for every move without a clip, so the app works the whole
-time, with 1 video or 80.
+Every exercise's demo, the short video that loops in the Video tab, in the
+workout player and in the lists, is made by AI from this shot list and is tagged
+AI demo in the app (`tools/media/ai/`, the frank-coach-video skill). Frank films
+one video per move where he explains it, the way he would to a client, and puts
+it on YouTube: the app plays it inside the exercise's How-to tab. Until a move
+has his video, How-to plays the demo in slow motion, with the written steps. The
+3D coach stays for the Muscle tab and for any move without a demo yet, so the
+app works the whole time, with 1 of Frank's videos or 80.
 
 Below the moves are the other videos and photos the apps need: Personal, food,
 portraits and brand files. Frank works from the same list as a checklist that
@@ -27,17 +30,16 @@ Victor shares with him; the numbers and file names match.
 - **Kit:** have the chair, table, dumbbells, rings, wedge or pad in the
   picture only for the moves that use them.
 
-## Each move: two clips
+## Each move: one video, explained
 
-1. **The loop (needed):** 3 or 4 slow, clean reps at the pace you'd coach,
-   no talking. Start and finish in the same position so the clip loops
-   smoothly. For holds (plank, wall sit, stretches): 8 to 10 seconds of the
-   hold. Leave 2 seconds before and after, we cut those off.
-2. **The how-to:** 30 to 60 seconds explaining the move the way you would
-   to a client: the set-up, the cues, the usual mistake. Talk to the camera.
-   Sound matters here: stand closer, or use a clip-on microphone. This one
-   appears in the How-to tab; until it's filmed, the tab shows the 3D coach
-   in slow motion, with the written steps.
+1. **The explanation:** 30 to 90 seconds explaining the move the way you would
+   to a client: the set-up, the cues, the usual mistake, and the move itself a
+   few times (the last column of the list says what to show). Talk to the
+   camera. Sound matters: stand closer, or use a clip-on microphone. It plays in
+   the How-to tab.
+2. **No loop to film:** the short video the app plays on repeat is made by AI
+   from the same list, and the app says it's AI wherever it shows. Frank checks
+   its form before it goes in.
 
 - **Camera angle:** as in the list below. **45°** means the phone stands
   between your front and your side, the angle that shows depth and knees at
@@ -45,17 +47,21 @@ Victor shares with him; the numbers and file names match.
   your hands. **Front** faces you.
 - **One side only:** for moves done on each side, film your right side. The
   app mirrors it for the left.
-- **Send the files, not a WhatsApp video:** WhatsApp shrinks them. Use
-  AirDrop, Google Drive or WeTransfer, and name each file after the move
-  (`squat.mp4`, `squat-howto.mp4`).
+- **On YouTube:** one video per move on Frank's channel, public or unlisted
+  (the app plays unlisted videos too), with embedding allowed (YouTube's
+  default). Title it with the move's name as in the list (Squat, Push-up), and
+  send Victor the links, or a playlist with all of them.
+- **The other videos** (Personal, food) are files, not YouTube: send them with
+  AirDrop, Google Drive or WeTransfer, not WhatsApp (it shrinks them), each named
+  as in its list.
 
 ## The plan
 
 | When | What | Count |
 |---|---|---|
-| Sunday 1 | Moves 1 to 20, loop and how-to; the Personal welcome; portraits | 41 videos, 3 photos |
-| Sunday 2 | Moves 21 to 45, loop and how-to | 50 videos |
-| Sunday 3 | Moves 46 to 80, loop and how-to; the assessment tests | 76 videos |
+| Sunday 1 | Moves 1 to 20, explained; the Personal welcome; portraits | 21 videos, 3 photos |
+| Sunday 2 | Moves 21 to 45, explained | 25 videos |
+| Sunday 3 | Moves 46 to 80, explained; the assessment tests | 41 videos |
 | A kitchen session | Cooking videos, meal photos, hand portions | 6 videos, 12 photos |
 | Any time | The check-in and progress-photo guides, coaching photos | 2 videos, 4 photos |
 
@@ -69,7 +75,7 @@ grouped by set-up, so each piece of kit comes out once.
 
 The moves members see most. Filming these covers most of every workout.
 
-| # | Exercise | Name in the app files | Set-up | Camera | Clip |
+| # | Exercise | Name in the app files | Set-up | Camera | Show |
 |---|---|---|---|---|---|
 | 1 | March in place | `march` | Standing | 45° | 8–10 s |
 | 2 | Arm circles | `arm-circles` | Standing | 45° | 8–10 s |
@@ -96,7 +102,7 @@ The moves members see most. Filming these covers most of every workout.
 
 The rest of the generated plans.
 
-| # | Exercise | Name in the app files | Set-up | Camera | Clip |
+| # | Exercise | Name in the app files | Set-up | Camera | Show |
 |---|---|---|---|---|---|
 | 21 | Standing quad stretch | `quad-stretch` | Standing | 45° | right side only · hold 8–10 s |
 | 22 | Calf raise | `calf-raise` | Standing | 45° | 3–4 reps |
@@ -128,7 +134,7 @@ The rest of the generated plans.
 
 Frank's programs, the workout catalogue, swaps and his own sessions for clients.
 
-| # | Exercise | Name in the app files | Set-up | Camera | Clip |
+| # | Exercise | Name in the app files | Set-up | Camera | Show |
 |---|---|---|---|---|---|
 | 46 | Side lunge | `lateral-lunge` | Standing | Front | right side only · 3–4 reps |
 | 47 | Single-leg balance | `balance` | Standing | 45° | right side only · hold 8–10 s |
@@ -231,30 +237,28 @@ Brand files, as Frank has them:
 - **His four graphics at full size:** they replace `img/wellness-1.jpg` to
   `img/wellness-4.jpg` (program covers and the Frank page).
 
-## Putting a clip in the app
+## Putting Frank's video in the app
 
-For Victor, or Claude Code. You need ffmpeg (`brew install ffmpeg` on a Mac).
+For Victor, or Claude Code. Add the YouTube link as `howto` on the move's line in
+`js/media.js` (any YouTube link works: youtu.be, youtube.com/watch, shorts):
+
+```js
+'squat': { video: 'media/squat.mp4', poster: 'media/squat.jpg', ai: true, howto: 'https://youtu.be/VIDEO_ID' },
+```
+
+A move without an AI demo yet gets a line with only the link:
+`'squat': { howto: 'https://youtu.be/VIDEO_ID' },`. Then bump `VERSION` in
+`sw.js`, open the app, and check the move's How-to tab: a panel with Watch Frank
+explain it, and his video inside the app after a tap. Nothing loads from YouTube
+before that tap. Undo: delete the `howto`.
+
+The AI demos go in with `tools/media/ai/process.mjs` (the frank-coach-video skill).
+If Frank ever films a loop of his own, `tools/media/process.sh` turns it into the
+app's files, and the move's line gets `frank: true` in place of `ai: true`:
 
 ```bash
 # the loop: the file, the move's name, then where the clean reps start and end
 tools/media/process.sh ~/Downloads/squat.mp4 squat 0:02 0:11
 # moves filmed from the Side (on the floor or on your hands): keep the whole sideways picture
 tools/media/process.sh ~/Downloads/plank.mp4 plank 0:01 0:12 --wide
-# the how-to, with sound
-tools/media/process.sh ~/Downloads/squat-howto.mp4 squat --howto
 ```
-
-The script cuts, crops and shrinks the clip (about 1 MB for a loop), saves it
-in `media/` with a still picture for the lists, and prints the line to add
-to `js/media.js`, for example:
-
-```js
-'squat': { video: 'media/squat.mp4', poster: 'media/squat.jpg', howto: 'media/squat-howto.mp4' },
-```
-
-`howto` can also be a YouTube link; the How-to tab then shows a button to
-watch it. Then bump `VERSION` in `sw.js`, open the app, and check the move:
-its Video and How-to tabs, a workout that uses it, and the list picture.
-
-Undo: delete the line in `js/media.js` (and the files in `media/`): the
-3D coach comes back for that move.

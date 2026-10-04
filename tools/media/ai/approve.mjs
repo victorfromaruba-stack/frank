@@ -10,8 +10,9 @@
 // loops there. Watch the cut loop before approving it.
 //
 // Approve only after watching the take against the checklist on the review sheet (review.mjs). These clips teach a
-// move in Frank's app, so Frank's yes on the form comes first; --by names who said yes. To take an approval back,
-// delete its entry in approved.json.
+// move in Frank's app: the form is checked against his cues first, and Frank looks at each in the app (Victor's
+// decision, 4 October 2026: the clips go in before Frank sees them). --by names who said yes. To take an approval
+// back, delete its entry in approved.json.
 import fs from 'node:fs';
 import path from 'node:path';
 import { HOME, NO_FFMPEG, OUT, Stop, coachIds, haveFfmpeg, isMain, main, move, parseArgs, probe, readJson, runDirs, say, sha256, show, today, writeJson } from './lib.mjs';

@@ -158,7 +158,7 @@
           '<p class="dose num" style="margin:4px 0 0">' + dose(m) + (m[4] ? ' · <span class="load">' + esc(m[4]) + '</span>' : '') + '</p>' + fnote(m[5]) + '</div></div>';
       }).join('') + '</section>' +
       '<button class="btn block" data-go="client/play/' + arg + '">' + ic('play') + 'Start</button>' +
-      '<p class="foot">Frank\'s own videos replace the 3D coach as he films them.</p>';
+      '<p class="foot">Frank\'s own videos will explain each move.</p>';
   };
 
   // the player: set by set, rest between, Frank's note on screen

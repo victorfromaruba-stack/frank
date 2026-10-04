@@ -14,7 +14,6 @@ module.exports = {
       t.has(await app.text(p), 'Your personal plan', 'welcome');
       t.equal(await app.title(p), 'Wellness by Frank', 'welcome title');
       await app.tap(p, '[data-act="ob-start"]');
-      await app.tap(p, '.part .btn');
       await t.look(p, 'onboarding goal');
       t.has(await app.text(p), "What's your main goal?", 'onboarding');
       // "Look around first" opens the catalogue without a plan
@@ -387,8 +386,9 @@ module.exports = {
       t.equal([a.act, a.id], ['open-workout', card], 'focus after Back [control, workout]: the card that opened the workout');
       t.step('a choice on the onboarding');
       await p.evaluate(() => { WBF.app.tab('me'); });
-      await enter('[data-act="ob-edit"]');
-      await p.evaluate(() => WBF.app.go('onboard', { step: 'health' }));
+      await enter('[data-act="flow-answers"]');
+      await app.waitTitle(p, 'Your answers');
+      await enter('[data-row="health"]');
       await p.waitForSelector('[data-act="ob-health"]');
       await enter('[data-act="ob-health"][data-k="heart"][data-v="0"]');
       a = await at();
@@ -450,7 +450,14 @@ module.exports = {
       await p.fill('#join-in', L.QA_CODE);
       await app.tap(p, 'form[data-form="join"] button[type="submit"]', { wait: 0 });
       await app.waitTitle(p, 'Your plan');
-      await clear(p, 'Welcome. The whole app is open to you.', '.part .btn');
+      // the fast start's first question (the goal) has no main button at the bottom: the toast covers none of its choices
+      await p.waitForFunction(() => document.getElementById('toast').classList.contains('on'), null, { timeout: 5000 });
+      await p.waitForFunction(() => !document.getElementById('toast').getAnimations().length, null, { timeout: 5000 });
+      t.equal(await p.evaluate(() => {
+        const r = document.getElementById('toast').getBoundingClientRect();
+        return [...document.querySelectorAll('#app button, #app a')].filter((b) => { const q = b.getBoundingClientRect(); return q.width && q.bottom > r.top && q.top < r.bottom && q.right > r.left && q.left < r.right; })
+          .map((b) => b.textContent.replace(/\s+/g, ' ').trim().slice(0, 30));
+      }), [], 'Welcome. The whole app is open to you.: controls under the toast on the first question');
       t.step('a swap on a workout');
       p = await t.page({ state: L.member() });
       await app.tap(p, '[data-act="open-day"][data-day="1"]', { nth: 0 });
@@ -495,8 +502,9 @@ module.exports = {
         t.has(await app.text(p), word, 'Me');
         let b = await bar(p, '.dark-bmi');
         t.equal(b.c, COLOUR[word], 'Me: the colour under the marker at ' + b.at + '% (' + word + ')');
-        await app.tap(p, '[data-act="ob-edit"]');
-        await p.evaluate(() => WBF.app.go('onboard', { step: 'weight' }));
+        await app.tap(p, '[data-act="flow-answers"]');
+        await app.tap(p, '[data-row="body"]');
+        await app.tap(p, '.ob-cta [data-act="ob-next"]');
         await p.waitForSelector('#bmi-box .bmi-bar');
         t.has(await p.locator('#bmi-box').innerText(), word, 'the weight step');
         b = await bar(p, '#bmi-box .bmi-bar');
@@ -525,7 +533,7 @@ module.exports = {
       t.equal((await band()).h, '0px', 'the band on a phone without a notch: height');
       await p.evaluate(() => document.documentElement.style.setProperty('--safe-t', '47px'));
       for (const step of ['welcome', 'onboarding']) {
-        if (step === 'onboarding') { await app.tap(p, '[data-act="ob-start"]'); await app.tap(p, '.part .btn'); }
+        if (step === 'onboarding') await app.tap(p, '[data-act="ob-start"]');
         const b = await band();
         t.equal([b.light, b.pos, b.top, b.h], [true, 'fixed', '0px', '47px'], step + ': the band behind the status bar [light screen, position, top, height]');
         const c = (b.bg.match(/[\d.]+/g) || []).map(Number);
@@ -840,20 +848,125 @@ module.exports = {
         "the browser's install prompt [canInstall(), install(), shown, canInstall() after, install() again]");
     });
 
+    await t.flow("modules: the onboarding's order, the answers a save came from, Me's Edit and the Plan's offer; the app's own order without a module", async () => {
+      // Ways in that came with js/onboard-flow.js (the fast start), open to every module: steps() (the questions someone new
+      // answers, in order: the app keeps the goal, year of birth, health and sore spots in it, the year and health before
+      // the body), draft() (the answers on the onboarding), the questions a save came from ('profile'), several steps on
+      // their own (data-step="height,weight"), me.edit (in place of Edit), plan.start (in place of the Plan's offer) and
+      // util's words for a plan and its answers (the summary's safety rows among them).
+      // Here the fast start is left out (an empty file in its place), as when it throws as it starts: the app's own order
+      const errorsOf = (page) => {
+        const errors = [];
+        for (const f of page.listeners('console')) page.off('console', f);
+        page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+        return errors;
+      };
+      const said = (errors) => errors.map((e) => { const m = /Wellness by Frank: module (\w+) failed (\([^)]*\))/.exec(e); return m ? m[1] + ' ' + m[2] : e.slice(0, 80); }).sort();
+      const open = async (o, init) => {
+        const page = await t.page(Object.assign({ go: false }, o));
+        await page.route('**/js/onboard-flow.js', (r) => r.fulfill({ status: 200, contentType: 'text/javascript', body: '/* left out */' }));
+        if (init) await page.addInitScript(init);
+        const errors = errorsOf(page);
+        await page.goto(page.srv.home + 'index.html');
+        await L.settle(page);
+        return [page, errors];
+      };
+      t.step("the app's own order and Edit");
+      const [p] = await open({});
+      await app.tap(p, '[data-act="ob-start"]');
+      t.has(await p.locator('.part').innerText().catch(() => ''), 'Part 1', 'Get my plan without the fast start: the app\'s own order');
+      const [m] = await open({ state: L.member() });
+      await app.tap(m, '.tab[data-tab="me"]');
+      t.equal([await m.locator('[data-act="ob-edit"]').count(), await m.locator('[data-act="flow-answers"]').count()], [1, 0], 'Me without the fast start [Edit, Your answers]');
+      t.step('an order without the safety questions first');
+      const [q, qErrors] = await open({}, () => {
+        const ext = (window.WBF = window.WBF || {}).ext = window.WBF.ext || [];
+        ext.push(function qaUnsafe(app) { app.steps(() => ['goal', 'days', 'height', 'born', 'health', 'sore']); });
+      });
+      await app.tap(q, '[data-act="ob-start"]');
+      t.has(await q.locator('.part').innerText().catch(() => ''), 'Part 1', 'an order with height before the year of birth and the health questions: the app\'s own');
+      t.equal(said(qErrors), ['qaUnsafe (steps)'], 'console errors [the module whose order was refused]');
+      t.step('an order of its own');
+      const [r, rErrors] = await open({ speed: 50 }, () => {
+        const ext = (window.WBF = window.WBF || {}).ext = window.WBF.ext || [];
+        const heard = window.__mods = { profile: [] };
+        ext.push(function qaOrder(app) {
+          app.steps(() => ['goal', 'born', 'health', 'sore', 'name']);
+          app.on('profile', (old, now, changed, steps) => heard.profile.push([!!old, steps || null]));
+          app.html('me.edit', () => '<button class="btn two small" data-act="qa-answers">QA answers</button>');
+          app.html('me.data', () => '<button class="btn two block" data-act="ob-edit-step" data-step="height,weight">QA body</button>');
+          app.html('plan.start', () => '<section class="card"><p class="small" id="qa-offer">QA offer</p></section>');
+          app.action('qa-answers', () => {});
+        });
+      });
+      await app.tap(r, '[data-act="browse"]');
+      await app.tap(r, '.tab[data-tab="plan"]');
+      t.equal([await r.locator('#qa-offer').count(), await r.locator('.plan-card [data-act="ob-start"]').count()], [1, 0], "the Plan with no plan and a module's offer [its piece, the app's card]");
+      await r.evaluate(() => WBF.app.tab('welcome'));
+      await app.tap(r, '[data-act="ob-start"]');
+      await app.tap(r, '[data-act="ob-pick"][data-k="goal"][data-v="fit"]');
+      for (const step of ['born', 'health', 'sore']) {
+        t.has(await r.evaluate(() => (document.querySelector('.ob-q') || {}).innerText || ''), { born: 'born', health: 'Before you', sore: 'sore spots' }[step], 'the module\'s order: ' + step);
+        if (step === 'health') await app.tap(r, '[data-act="ob-health-none"]');
+        if (step === 'sore') await app.tap(r, '[data-act="ob-none"]');
+        await app.tap(r, '.ob-cta [data-act="ob-next"]');
+      }
+      t.equal(await r.locator('.ob-cta [data-act="ob-build"]').count(), 1, 'the last question of the order (the name): Build my plan');
+      await r.fill('#ob-name', 'Qa');
+      t.equal(await r.evaluate(() => { const d = WBF.app.draft(); const was = d.goal; d.goal = 'fat'; return [was, WBF.app.draft().goal, d === WBF.app.draft()]; }), ['fit', 'fit', false],
+        'draft() on the onboarding [the goal, the goal after changing the copy, the same object]');
+      await app.tap(r, '[data-act="ob-build"]');
+      await app.waitText(r, 'Your plan is ready', 15000);
+      await app.tap(r, '[data-act="ob-finish"]');
+      await app.waitTitle(r, 'Membership');
+      t.equal(await r.evaluate(() => [window.__mods.profile, WBF.app.draft()]), [[[false, ['goal', 'born', 'health', 'sore', 'name']]], null],
+        "'profile' after the onboarding [[a profile before, the questions it answered]], draft() off the onboarding");
+      await app.tap(r, '[data-act="pay-close"]');
+      await app.tap(r, '.tab[data-tab="me"]');
+      t.equal([await r.locator('[data-act="qa-answers"]').count(), await r.locator('[data-act="ob-edit"]').count()], [1, 0], "Me with a module's piece in place of Edit [its piece, Edit]");
+      // the app's words for a plan and its answers, and the summary's safety rows, for a module to say them the same way
+      t.equal(await r.evaluate(() => {
+        const u = WBF.app.util;
+        return [u.planName(WBF.app.state().profile), u.kgShow(80) + ' ' + u.wUnit(), u.heightShow(180), u.kitWords({ kit: ['chair'] }), u.focusWords({ focus: ['full'] }),
+          u.soreName('back'), u.safeRows({ injuries: [], health: {} }), (u.safeRows({ injuries: ['knee'], health: { heart: true, pregnant: true } }).match(/<span>[^<]+<\/span>/g) || []).join('')];
+      }), ['28-day fit for life', '80 kg', '180 cm', 'No equipment', 'Full body', 'Lower back', '', '<span>Sore spots</span><span>Health</span><span>Pregnancy</span>'],
+        "util [the plan's name, a weight, a height, no kit, focus, a sore spot, no safety rows, the safety rows]");
+      t.step('steps on their own');
+      await app.tap(r, '[data-act="ob-edit-step"][data-step="sore"]');
+      await app.tap(r, '.ob-cta [data-act="ob-next"]');
+      await app.waitTitle(r, 'Me');
+      await app.tap(r, '[data-act="ob-edit-step"][data-step="height,weight"]');
+      t.has(await r.evaluate(() => document.querySelector('.ob-q').innerText), 'tall', 'two steps on their own: the first');
+      await app.tap(r, '.ob-cta [data-act="ob-next"]');
+      t.has(await r.evaluate(() => document.querySelector('.ob-q').innerText), 'current', 'two steps on their own: the second');
+      await app.tap(r, '.ob-cta [data-act="ob-next"]');
+      await app.waitTitle(r, 'Me');
+      t.equal((await r.evaluate(() => window.__mods.profile)).slice(1), [[true, ['sore']], [true, ['height', 'weight']]], "'profile' after steps on their own [[a profile before, the questions answered]]");
+      t.equal(rErrors, [], 'console errors with a module that gives the onboarding its order');
+      t.step('a second order');
+      // with the fast start in: one module gives the order, a second one (here one that comes late) is refused as it starts
+      const s = await t.page();
+      const sErrors = errorsOf(s);
+      await s.evaluate(() => WBF.ext.push(function qaSecond(app) { app.steps(() => ['goal', 'born', 'health', 'sore']); }));
+      t.equal(said(sErrors), ['qaSecond (start)'], 'console errors [the second module that gives an order]');
+      await app.tap(s, '[data-act="ob-start"]');
+      await app.tap(s, '[data-act="ob-pick"][data-k="goal"][data-v="fit"]');
+      t.has(await s.evaluate(() => (document.querySelector('.ob-q') || {}).innerText || ''), 'born', 'the first module\'s order (the fast start) after a second was refused');
+    });
+
     await t.flow('a link while a box asks: the box answers like its Cancel, then the link opens', async () => {
-      // Edit with a new goal asks "Restart your 28 days?" once days are ticked off. A link that comes then (Frank's message
-      // tapped in another app opens it in this tab) closes the box as the phone's Back and Escape do, like its Cancel:
-      // Keep my progress saves the Edit, and the link opens after it
+      // A new goal (Me, Your answers) asks "Restart your 28 days?" once days are ticked off. A link that comes then (Frank's
+      // message tapped in another app opens it in this tab) closes the box as the phone's Back and Escape do, like its
+      // Cancel: Keep my progress saves the new goal, and the link opens after it
       const rec = { id: 'h1', at: L.isoDay(-2) + 'T07:30:00.000Z', date: L.isoDay(-2), wid: 'full-i', title: 'Full body', level: 'i', day: 1, sec: 900,
         moves: 12, total: 12, feel: 'right', adj: 0, loads: {}, kcal: 90 };
       const st = L.member({ start: L.isoDay(-2) }, { sessions: [rec], done: { 1: 'h1' } });
       const ask = async (page) => {
         await app.tap(page, '.tab[data-tab="me"]');
-        await app.tap(page, '[data-act="ob-edit"]');
+        await app.tap(page, '[data-act="flow-answers"]');
+        await app.tap(page, '[data-row="goal"]');
         await app.tap(page, '[data-act="ob-pick"][data-k="goal"][data-v="strength"]');
-        await page.evaluate(() => WBF.app.go('onboard', { step: 'name' }));
-        await app.tap(page, '[data-act="ob-build"]');
-        t.has(await app.overlay(page), 'Restart your 28 days?', 'the box after Edit with a new goal');
+        t.has(await app.overlay(page), 'Restart your 28 days?', 'the box after a new goal');
       };
       // what was saved: the goal, the plan's start and day 1's tick (Restart would start today, with no ticks)
       const kept = async (page) => { const s = await app.stored(page); return [s.profile.goal, s.profile.start, s.done[1] || null]; };

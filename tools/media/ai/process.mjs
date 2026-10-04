@@ -9,7 +9,8 @@
 // The rules it keeps:
 //   - only approved takes, found by their sha256: another or a changed file is refused;
 //   - one clip per move, as the app plays one: a move approved for both coaches needs --coach;
-//   - never over Frank's own clip: a move in js/media.js without ai: true is his, and stays;
+//   - never over Frank's own clip: a move in js/media.js with frank: true is his, and stays (a clip line with
+//     neither flag isn't replaced either: someone has to say whose it is);
 //   - honest labels: until the app reads ai: true, it warns not to add the lines (today the Video tab tags every clip
 //     "Frank", in js/app.js).
 // It cuts the take's last frame: it is the same picture as the first, which comes right after it in the loop.
@@ -20,13 +21,15 @@ import path from 'node:path';
 import { NO_FFMPEG, OUT, ROOT, Stop, coachIds, haveFfmpeg, isMain, list, main, move, moveIds, parseArgs, probe, read, runDirs, say, sha256, show, warn } from './lib.mjs';
 import { approvals } from './approve.mjs';
 
-// The moves js/media.js lists, and whether each is marked ai: true.
+// The moves js/media.js lists, and whether each is marked ai: true or frank: true (Frank's own), and has a video.
 export function mediaLines(root) {
   const f = path.join(root, 'js', 'media.js');
   const out = {};
   if (!fs.existsSync(f)) return out;
   const body = read(f).split('W.WBF.MEDIA = {')[1] || '';
-  for (const m of body.matchAll(/^\s*'?([a-z0-9-]+)'?\s*:\s*\{([^}]*)\}/gm)) out[m[1]] = { ai: /\bai\s*:\s*true\b/.test(m[2]) };
+  for (const m of body.matchAll(/^\s*'?([a-z0-9-]+)'?\s*:\s*\{([^}]*)\}/gm)) {
+    out[m[1]] = { ai: /\bai\s*:\s*true\b/.test(m[2]), frank: /\bfrank\s*:\s*true\b/.test(m[2]), video: /\bvideo\s*:/.test(m[2]) };
+  }
   return out;
 }
 // Whether the app labels AI clips: some js/ file other than media.js reads the ai flag of a clip (like m.ai). Where the
@@ -84,7 +87,9 @@ export function processApproved(o = {}) {
   const theirs = mediaLines(root);
   const done = [];
   for (const x of picks) {
-    if (theirs[x.move] && !theirs[x.move].ai) { problems.push(`${x.move}: Frank's own clip is in js/media.js. An AI clip never replaces it.`); continue; }
+    const line = theirs[x.move];
+    if (line && line.frank) { problems.push(`${x.move}: Frank's own clip is in js/media.js. An AI clip never replaces it.`); continue; }
+    if (line && line.video && !line.ai) { problems.push(`${x.move}: its clip in js/media.js has neither ai: true nor frank: true. Say whose it is first.`); continue; }
     const f = fileOf(x, o.from);
     if (!f) { problems.push(`${x.move}: approved ${x.take} of run ${x.run} isn't on this machine (or changed). Download that run's artifact and give --from.`); continue; }
     const p = probe(f);

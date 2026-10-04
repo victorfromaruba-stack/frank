@@ -3,7 +3,7 @@ name: frank-app
 description: How the Wellness by Frank workout app is built and how to change it safely. Use it whenever you add or edit an exercise, its animation, video or coaching text, a workout or program, the 28-day plan generator, the 3D coach (models, poses, muscle view), Frank's filmed clips, the onboarding, the membership/paywall, Frank's coach tools or client links, or the app's look; and whenever someone mentions Frank's app, wellnessbyfrank, the 3D coach or demos, "the generated plans", or "the science behind the plans", even without naming a file.
 metadata:
   owner: victor
-  version: "2.2"
+  version: "2.3"
 ---
 # Wellness by Frank: the app
 
@@ -44,12 +44,13 @@ The other project skills, each for one job:
 | `assets/coach-m.glb`, `assets/coach-f.glb` | the two coaches, built by `tools/coach/build_coach.py` from Quaternius' Universal Base Characters (CC0, `assets/CREDITS.txt`) |
 | `assets/hd/` | 2048 px texture copies of the coaches (`build_coach.py --hd`), only for screenshots and marketing renders: the app never loads them |
 | `js/exercises.js` | the 80 exercises: text, doses, kit, swaps, METs, muscles (`MUS`), joint stress (`STRESS`), animation keyframes |
-| `js/media.js` | Frank's own clips, by exercise id. A clip replaces the 3D coach in the Video tab, the player and lists |
+| `js/media.js` | the exercise videos, by exercise id: AI demos (`ai: true`, tagged AI demo) replace the 3D coach in the Video tab, the player and lists; Frank's YouTube explanations (`howto`) play in the How-to tab |
 | `js/programs.js` | Frank's details, `BILLING`, body parts, kit, workouts, the 28-day plan, safety (`avoidFor`, `safe`), the session builder, kcal |
 | `js/science.js` | the science screen: rules and 36 sources. Mirrors `references/science.md` |
 | `js/app.js` | screens and navigation, onboarding, paywall, plan, workouts, exercise sheet, player, Today, Me, Frank, coach tools, access; at its end the module seam (`WBF.ext`, `WBF.app`) |
 | `js/links.js` | a module: links to one move (`#ex.<move>`) or one workout (`#w.<workout>`) for Frank to send. The example to read before writing one (`.claude/skills/frank-module/`) |
 | `js/keep.js` | a module, keep my progress: the backup file and the move link (`#move.<code>`, made and checked here, merged into the phone's data with `WBF.app.replace`), "I already have a plan", the warning in Instagram's browser, the Home Screen sheet after a workout, `navigator.storage.persist()`, and the "Frank's app has moved" banner once `FRANK.home` is set |
+| `js/onboard-flow.js` | a module, the fast start: the eight questions someone new answers before the plan (`FIRST`; the fitness check up front or after Day 1 is `FITNESS_FIRST`, Frank's decision), "Your first week" in place of the summary, "Make it yours" after Day 1 (the finish screen and the Plan), Me's "Your answers" (each answer on its own), and the plan card for Frank's clients with none. It keeps `profile.asked` (when each later question was answered) and `profile.later` (Not now) |
 | `js/sound.js` | beeps, voice coach, vibration, screen wake lock |
 | `app.css` | Frank's look; tokens at the top. Light screens (welcome, onboarding, paywall) use `body.light` |
 | `vendor/` | three.js r170 and its GLTF loader (MIT). Single-file builds load them from jsDelivr |
@@ -82,12 +83,17 @@ The other project skills, each for one job:
    new or changed text is a draft until he approves it. List it in
    `docs/TEXT-FOR-FRANK.md` (`node tools/text-diff.mjs` finds it; see `frank-words`).
 
-## Frank's videos
+## Videos: AI demos and Frank's YouTube
 
-Film and process as in `docs/FILMING-GUIDE.md`, then add the printed line to
-`js/media.js`. The 3D coach stays for the Muscle tab and every move without a
-clip. Videos are H.264 MP4: the test Chromium can't play them, so tests serve
-VP9 copies with the same names. The service worker leaves videos to the browser.
+Each move's demo is an AI clip (the frank-coach-video skill); Frank explains the
+moves on YouTube, and a move's link goes in its `howto` in `js/media.js`
+(`docs/FILMING-GUIDE.md`). The app tags an AI clip AI demo wherever it shows and
+never Frank. How-to plays Frank's YouTube video inside the app after a tap
+(youtube-nocookie.com; nothing loads from YouTube before the tap), else the
+demo in slow motion. The 3D coach stays for the Muscle tab and every move
+without a clip. `tools/test/media.cjs` checks the tags and the How-to tab.
+Videos are H.264 MP4: the test Chromium can't play them, so tests serve VP9
+copies with the same names. The service worker leaves videos to the browser.
 
 ## Changing plans and workouts
 
@@ -101,6 +107,19 @@ VP9 copies with the same names. The service worker leaves videos to the browser.
   body, upper body and core on 2+ days a week, with at most 2 cardio days.
 - Keep the evidence rules in [references/science.md](references/science.md).
   A change that breaks one needs a source and Frank's yes.
+
+## The onboarding
+
+The steps (questions, rulers, the year wheel, the health questions) are drawn in
+`SCREENS.onboard` in `js/app.js`; which ones someone new answers, and in what order, is
+`FIRST` in `js/onboard-flow.js`. The app refuses an order that leaves out the goal, the
+year of birth, the health questions or the sore spots, or asks height, weight or a target
+before the year and the health questions (`order()` in `js/app.js`): what keeps someone
+safe is always asked before the plan is built. Everyone starts at Beginner until the
+fitness check, which gentle mode doesn't get until a doctor clears it (`levelFor()` keeps
+it at Beginner either way). Make it yours comes after the plan's first workout. A plan made
+before the fast start has no `profile.asked` and never gets the Make it yours card. The
+hooks a module uses for it: "The onboarding" in `.claude/skills/frank-module/`.
 
 ## Adding a feature
 
@@ -173,8 +192,9 @@ python3 -m http.server 8765            # to look for yourself: Playwright at 390
 node tools/build.mjs
 ```
 
-- The suites tap through all of this: welcome, the whole onboarding (rulers, year
-  wheel, health questions, build, summary), the price screen before, during and
+- The suites tap through all of this: welcome, the fast start (eight questions, Your
+  first week, Start Day 1, Make it yours, Your answers), the app's own onboarding (rulers,
+  year wheel, health questions, build, summary), the price screen before, during and
   after the trial, Plan (28-day grid, this week), a workout, the exercise sheet
   (Video, Muscle, How-to, the pager), a full session in the player (ready, timed
   move, reps move, rest, switch sides, pause, quit), the finish screen, Workouts
@@ -190,7 +210,8 @@ node tools/build.mjs
   launch with `--use-angle=swiftshader --enable-unsafe-swiftshader`.
 - Block service workers in tests that route requests (`serviceWorkers: 'block'`).
 - Bump `VERSION` in `sw.js` whenever a cached file changes (`.claude/skills/frank-release/`).
-- The app loads nothing from other sites (fonts in `fonts/`, three.js in `vendor/`).
+- The app loads nothing from other sites (fonts in `fonts/`, three.js in `vendor/`), but
+  YouTube's privacy-enhanced player after a tap on Watch Frank explain it.
   Only the single-file builds fetch three.js from jsDelivr; in this sandbox Chromium
   doesn't trust the proxy CA, so route jsDelivr through Node's `fetch` in a test
   harness. Never turn off TLS checks.

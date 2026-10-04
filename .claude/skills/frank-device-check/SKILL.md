@@ -3,7 +3,7 @@ name: frank-device-check
 description: A 15-minute check of Wellness by Frank on a real iPhone and a real Android phone, for everything the headless test browser can't see. Use it after any release that touched storage, sw.js, the installed app, the player, sound or the voice, Frank's clips, calendar files, sharing, the status bar or the light screens; before anyone tells Frank or Victor that something "works on phones"; and whenever someone reports a phone problem with Frank's app ("my plan is gone", "no sound", "the screen turns off", "the clock is invisible", "can't add it to my calendar", "share doesn't work", "it doesn't open at the gym"), even if nobody asks for a device check. You hand the checklist to a person with the phones and read the results they paste back.
 metadata:
   owner: victor
-  version: "1.1"
+  version: "1.2"
 ---
 # Wellness by Frank: the 15-minute phone check
 
@@ -163,6 +163,38 @@ plan that has a workout or two, made in Safari (Android: Chrome).
     the tab, restore a backup, then Undo. Switch to the installed app and tap +10 min on
     Today: back in the tab, the backup's workouts must still be gone.
 
+## 7. The fast start (4 minutes)
+
+From Get my plan to Day 1 (`js/onboard-flow.js`), on a phone with no plan: a private tab,
+or Me > Delete my data in a browser you don't need. Use the iPhone's browser and the
+Android home-screen app.
+
+1. **Get my plan to Day 1, timed.** Tap Get my plan, answer the eight questions, then
+   Start Day 1. How long until the first move plays (minutes and seconds)? Expect under two
+   minutes for someone reading every screen.
+2. **The phone's Back.** On the third question: iPhone, swipe from the left edge in Safari;
+   Android, the back gesture or button. Each Back goes one question back, with no flicker
+   or jump forward. From the first question, Back goes to Welcome.
+3. **Your first week.** Does the coach move (Day 1's first move)? Is the clock readable at
+   the top (a light screen)? Before any scroll, in Safari with its bars showing (on the
+   small iPhone too): is the line about the free trial just above Start Day 1, and are a
+   sore spot's row (pick Knee) and Day 1 above the buttons? Can you reach Start Day 1 and
+   See my plan with your thumb?
+4. **Sound on Day 1.** After Start Day 1, with the silent switch off: does the voice say
+   "Get ready" and do the last three seconds beep? The phone only plays sound after a tap,
+   and Start Day 1 is the first tap of the workout.
+5. **The two coaches on mobile data.** Wi-Fi off. On "Who should demonstrate your moves?",
+   do both coaches' pictures show within a few seconds?
+6. **Make it yours.** After Day 1 in the browser, the Keep your progress sheet comes up;
+   close it, and the finish screen's card is Keep your progress (Show me how). Tap Done:
+   the Plan's first card is Make it yours. Set my level, answer both, and you are back on
+   the Plan. Then Your body: do the height and weight rulers slide smoothly under a thumb,
+   and does Next bring you back? (In the home-screen app, Make it yours is on the finish
+   screen itself.)
+7. **Your answers with the keyboard.** Me > Your answers > Your name: the keyboard opens,
+   Next saves and the keyboard closes. iPhone: is the page back at its normal size, not
+   zoomed in or pushed up?
+
 ## Reading the results
 
 - A "no" where the step says what to expect is a bug. Reproduce what you can in the
@@ -214,6 +246,13 @@ Answers: yes / no / n/a (not in this build) / ? (couldn't tell). A note for ever
 6.10 iPhone SE in Instagram: heading above the buttons          ___      n/a
 6.11 Frank's client in Instagram: the card, the move works      ___      ___
 6.12 Two windows: Undo holds after a tap in the other           n/a      ___
+7.1 Get my plan to Day 1's first move (min:s)                   ___      ___
+7.2 Back: one question back, no flicker; first one to Welcome   ___      ___
+7.3 Your first week: coach moves, clock, trial line unscrolled  ___      ___
+7.4 Start Day 1: the voice and the beeps                        ___      ___
+7.5 Both coaches show on mobile data                            ___      ___
+7.6 Sheet, then Make it yours on the Plan: level, rulers, back  ___      ___
+7.7 Your answers > Your name: keyboard, Next, page not zoomed   ___      ___
 
 Notes:
 -

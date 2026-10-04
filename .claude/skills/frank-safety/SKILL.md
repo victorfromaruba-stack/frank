@@ -3,7 +3,7 @@ name: frank-safety
 description: Who may see what in the Wellness by Frank app. The rules for members who may be under 18, are pregnant or gave birth recently, answered yes to a PAR-Q question, have a medical condition, are 60 or over, or have a sore spot, and the GDPR rule for health data. Use it before you build or change anything that shows food, drink, calories, weight, height, BMI, a target or any number about someone's body; anything that asks for a maximum effort (a fitness test, "as many as you can", a timed hold to failure); anything that picks, swaps or suggests moves (the plan generator, workouts, the exercise sheet); the onboarding health questions or Me's health switches; and anything that puts health answers in a message to Frank, a link, a file or anywhere off the phone. Also use it whenever someone mentions teens, pregnancy, postpartum, PAR-Q, a doctor's OK, older members, injuries, sore spots, diet advice, GDPR or health data in Frank's app, even if they never say "safety".
 metadata:
   owner: victor
-  version: "1.1"
+  version: "1.2"
 ---
 # Wellness by Frank: who gets what
 
@@ -16,19 +16,19 @@ a feature that can't follow them waits for Victor.
 
 "At risk" (`atRisk()` in `js/app.js`) means someone who may be under 18, is pregnant, or
 has a medical condition. It's the switch for everything about food and weight. Moves follow
-`avoidFor()` in `js/programs.js`. Max tests: the app has none today (the onboarding's
-push-up question is a guess: "A guess is fine"), so that part of each row is the rule a
-new feature follows.
+`avoidFor()` in `js/programs.js`. Max tests: the app has none today (the push-up question
+is a guess: "A guess is fine"; the fast start asks it after Day 1, in Make it yours), so
+that part of each row is the rule a new feature follows.
 
 | Who | How the app knows | Never gets | Where in the code | Tested by (`tools/test/safety.cjs` flow) |
 |---|---|---|---|---|
 | **No profile yet** (Look around first) | `S.profile` is empty, so the age is unknown and `possiblyMinor()` says yes | the meal journal, the water card, food and drink lessons | `foodCard()` (its no-profile branch: the referral and Get my plan), `waterCard()` and `lessonCard()` through `atRisk()` | look around first: no food journal; food and drink: no lesson or water goal when at risk |
-| **Under 18, or may be** | `possiblyMinor()` in `js/programs.js`: `age()` counts the year only, so someone born 18 years ago counts, and so does no age at all. Or the food card's Under 18 switch | a weight target; diet and drink text (meal journal, water card, food and drink lessons, the 250-minute fat-loss goal); BMI, its verdict and its advice. Moves are as for adults; the year step asks for a parent's OK | `flags().child`, then `atRisk()` and `noBmi()`; the year step's note `#born-warn` (`bornSet()`) | under 18: onboarding gives no weight target or food advice; born 18 years ago: maybe 17; food card; food and drink: no lesson or water goal when at risk |
-| **Pregnant, or gave birth in the last six months** | `health.pregnant`: the eighth health question, or Me > Pregnancy mode. The food card's "Pregnant or breastfeeding" switch counts for food and weight only | a weight target; diet and drink text; BMI; jumps; lying on the back or front; the balance pad and rings (falls); a max test on the floor or a plank hold (push-up tests: incline or wall only) | `flags().pregnant`, `atRisk()`, `noBmi()`; `avoidFor()` sets `supine`, `prone`, `jump` and `kit: ['pad', 'rings']`, and `safe()` reads `ex.pos`, `ex.jump`, `ex.eq` (`POS`, `JUMP` in `js/exercises.js`); the health step's Pregnancy mode box | pregnant: no weight target or BMI verdict; pregnancy; other options in the exercise sheet; food card |
-| **A PAR-Q yes, until cleared** | any `WBF.PARQ` answer is yes and `health.cleared` isn't on (Me > Cleared by a doctor, shown only after a yes) | jumps; vigorous moves (MET 7 or more); interval cardio days (they become the Mobility flow); a level above Beginner; any max test | `avoidFor()` sets `gentle`, `jump`, `vigorous`; `safe()`; `levelFor()` returns `'b'`; `planDays()` swaps cardio for `mobility`; the health step's warning and Next held by `healthDone()`; the summary's Gentle mode row (`readyHtml()`) | PAR-Q yes: gentle until cleared; health questions: every one answered |
-| **A medical condition** | a yes to heart, chronic, meds or supervised (`flags().from.medical`; "Cleared by a doctor" doesn't end it), or the food card's "A medical condition that affects what I eat" switch | a weight target; diet and drink text; the BMI advice ("Ask your doctor which weight is right for you." in its place; an adult still sees the BMI and its word); "a safe weekly pace". Moves: a PAR-Q yes is the row above, until cleared; the food card's switch changes no moves | `flags().medical`, `atRisk()`; `bmiBox()`; the height step's coach line | PAR-Q chronic yes: no diet advice or weight target; food card: the switches stay; food and drink: no lesson or water goal when at risk |
+| **Under 18, or may be** | `possiblyMinor()` in `js/programs.js`: `age()` counts the year only, so someone born 18 years ago counts, and so does no age at all. Or the food card's Under 18 switch | a weight target; diet and drink text (meal journal, water card, food and drink lessons, the 250-minute fat-loss goal); BMI, its verdict and its advice. Moves are as for adults; the year step asks for a parent's OK | `flags().child`, then `atRisk()` and `noBmi()`; the year step's note `#born-warn` (`bornSet()`) | under 18: onboarding gives no weight target or food advice; born 18 years ago: maybe 17; fast start: no target weight or BMI verdict for anyone at risk; food card; food and drink: no lesson or water goal when at risk |
+| **Pregnant, or gave birth in the last six months** | `health.pregnant`: the eighth health question, or Me > Pregnancy mode. The food card's "Pregnant or breastfeeding" switch counts for food and weight only | a weight target; diet and drink text; BMI; jumps; lying on the back or front; the balance pad and rings (falls); a max test on the floor or a plank hold (push-up tests: incline or wall only) | `flags().pregnant`, `atRisk()`, `noBmi()`; `avoidFor()` sets `supine`, `prone`, `jump` and `kit: ['pad', 'rings']`, and `safe()` reads `ex.pos`, `ex.jump`, `ex.eq` (`POS`, `JUMP` in `js/exercises.js`); the health step's Pregnancy mode box | pregnant: no weight target or BMI verdict; fast start: no target weight or BMI verdict for anyone at risk; pregnancy; other options in the exercise sheet; food card |
+| **A PAR-Q yes, until cleared** | any `WBF.PARQ` answer is yes and `health.cleared` isn't on (Me > Cleared by a doctor, shown only after a yes) | jumps; vigorous moves (MET 7 or more); interval cardio days (they become the Mobility flow); a level above Beginner; any max test; in the fast start, a target weight and the fitness check (Make it yours and Your answers leave them out until a doctor clears it) | `avoidFor()` sets `gentle`, `jump`, `vigorous`; `safe()`; `levelFor()` returns `'b'`; `planDays()` swaps cardio for `mobility`; the health step's warning and Next held by `healthDone()`; the Gentle mode row of the summary and Your first week (`safeRows()`); `allowed()` in `js/onboard-flow.js`, and its order (`firstFor()`) with `FITNESS_FIRST` | PAR-Q yes: gentle until cleared; health questions: every one answered; fast start: no target weight or BMI verdict for anyone at risk, no fitness check while gentle (Make it yours and Your answers; `fast-start.cjs` turns `FITNESS_FIRST` on) |
+| **A medical condition** | a yes to heart, chronic, meds or supervised (`flags().from.medical`; "Cleared by a doctor" doesn't end it), or the food card's "A medical condition that affects what I eat" switch | a weight target; diet and drink text; the BMI advice ("Ask your doctor which weight is right for you." in its place; an adult still sees the BMI and its word); "a safe weekly pace". Moves: a PAR-Q yes is the row above, until cleared; the food card's switch changes no moves | `flags().medical`, `atRisk()`; `bmiBox()`; the height step's coach line | PAR-Q chronic yes: no diet advice or weight target; fast start: no target weight or BMI verdict for anyone at risk; food card: the switches stay; food and drink: no lesson or water goal when at risk |
 | **60 and over** | `age()` is 60 or more (`older()` in `js/app.js`) | jumps; a max test on the floor (push-up tests: incline or wall only). Gets a balance drill in every session but the short ones, and a calorie estimate with 2.7 in place of 3.5 (the Older Adult Compendium) | `avoidFor()` sets `jump` and `older`; `buildWith()` adds `balance` to the warm-up; `kcalOf()` passes `older()` to `kcal()` | 60 and over |
-| **Each sore spot** | `profile.injuries`: shoulder, wrist, knee, ankle, back, other | every move tagged with that joint (`STRESS` in `js/exercises.js`); with Other, every jump (the app can't tell what loads it); a max test that loads the spot (wrist or shoulder: no push-up or plank test; knee: no sit-to-stand) | `avoidFor()` copies the spots to `stress` (Other sets `jump`); `safe()` reads `ex.stress`; `buildSteps()` and `readyHtml()` say what's left out | sore spots; other options in the exercise sheet |
+| **Each sore spot** | `profile.injuries`: shoulder, wrist, knee, ankle, back, other | every move tagged with that joint (`STRESS` in `js/exercises.js`); with Other, every jump (the app can't tell what loads it); a max test that loads the spot (wrist or shoulder: no push-up or plank test; knee: no sit-to-stand) | `avoidFor()` copies the spots to `stress` (Other sets `jump`); `safe()` reads `ex.stress`; `buildSteps()` and `safeRows()` (the summary and Your first week) say what's left out | sore spots; other options in the exercise sheet |
 
 The same rules reach every place a move is chosen:
 
@@ -48,8 +48,10 @@ The same rules reach every place a move is chosen:
 
 What a person can change, and what it changes:
 
-- Me > Edit asks every step again; a health question an older version never saved stays
-  open until it's answered.
+- Me > Your answers (`js/onboard-flow.js`) asks one answer at a time, each step as the
+  onboarding draws it; a health question an older version never saved stays open until
+  it's answered (the Health row says "Not all answered"). Without the module, Me > Edit
+  asks every step again.
 - Me > Health: Cleared by a doctor (after a PAR-Q yes) and Pregnancy mode change the moves
   and, for pregnancy, food and weight too.
 - The food card's three switches change food and weight only. What the profile says
@@ -62,6 +64,32 @@ What a person can change, and what it changes:
   (60 and over, or maybe under 18), and the food card's switches stay on if either side had
   them on. The box before it says "with the health answers and sore spots from both".
   Tested by the `keep my progress: a plan that comes brings its health answers` flow.
+
+## The fast start
+
+Someone new answers eight questions before the plan is built (`FIRST` in
+`js/onboard-flow.js`); the rest comes after Day 1, in Make it yours. What keeps someone
+safe never moves to after Day 1:
+
+- **The order is checked.** `order()` in `js/app.js` refuses an order without the goal, the
+  year of birth, the health questions and the sore spots, or with height, weight or a
+  target before the year and the health questions (what those steps may say depends on
+  them). The console names the module and the app asks its own order.
+- **No target weight** for anyone at risk (the step is skipped both ways, and `profile`
+  never counts it as asked), nor in gentle mode, nor before a weight is known: Make it
+  yours and Your answers leave the row out (`allowed()`), and the weight step keeps its
+  BMI rules (`noBmi()`, `bmiBox()`). Your body's line on the card says "BMI" only when
+  `noBmi()` is false (the safety suite reads it for under 18, born 18 years ago, pregnant
+  and the food card's pregnancy switch).
+- **The level** starts at Beginner. The fitness check (how active, the push-up guess) is
+  Make it yours's first question; while gentle, Make it yours and Your answers leave it
+  out (`allowed()`; `levelFor()` holds Beginner anyway), so no level is saved that would
+  take over the day a doctor clears the yes. `FITNESS_FIRST` asks it straight after the
+  sore spots (Frank's decision), and not after a health yes: the order (`firstFor()`)
+  follows the answers at every step.
+- **Your first week** shows the summary's rows for sore spots, gentle mode and pregnancy
+  (`safeRows()`, the same words) above the week, so they show before any scroll, and no
+  BMI, target or food line; nothing is saved before Start Day 1 or See my plan.
 
 ## Building something that touches these rules
 

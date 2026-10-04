@@ -26,7 +26,7 @@ function png(file) {
 
 module.exports = {
   name: 'static',
-  about: 'syntax, tools/check-plans.cjs, the offline file list and its VERSION bump, every js file loaded and kept offline (modules before app.js), the manifest, no outside loads, no GPL, no secrets',
+  about: 'syntax, tools/check-plans.cjs, the offline file list and its VERSION bump, every js file loaded and kept offline (modules before app.js), the manifest, no outside loads, the exercise videos (ai: true or frank: true on every clip, the files there, howto links the app can play, approved AI takes keep ai: true), no GPL, no secrets',
   async run(t) {
     await t.flow('syntax', async () => {
       const files = [...list('js', /\.js$/), 'sw.js', ...list('personal', /\.js$/), ...list('tools', /\.(mjs|cjs|js)$/), ...list('tools/test', /\.cjs$/),
@@ -148,11 +148,52 @@ module.exports = {
         for (const m of src.matchAll(/<(?:script|link|img|iframe|video|source)\b[^>]*\b(?:src|href)="(https?:)?\/\/[^"]+"/gi)) t.fail(f + ' loads ' + m[0].slice(0, 100));
         for (const m of src.matchAll(/(?:url\(\s*['"]?|@import\s+['"])(https?:)?\/\/[^)'"]+/gi)) t.fail(f + ' loads ' + m[0].slice(0, 100));
       }
+      // the one exception: Frank's videos on YouTube play in YouTube's privacy-enhanced player, which js/app.js builds
+      // only when someone taps play (the media suite checks that nothing loads from YouTube before the tap)
+      let players = 0;
       for (const f of [...list('js', /\.js$/), ...list('personal', /\.js$/), 'sw.js']) {
         const src = stripComments(read(f));
-        for (const m of src.matchAll(/<(?:script|img|iframe|video|source|link)\b[^>'"]*\b(?:src|href)=\\?["'](https?:)?\/\/[^"'\\]+/gi)) t.fail(f + ' builds ' + m[0].slice(0, 100));
+        for (const m of src.matchAll(/<(?:script|img|iframe|video|source|link)\b[^>'"]*\b(?:src|href)=\\?["'](https?:)?\/\/[^"'\\]+/gi)) {
+          if (f === 'js/app.js' && /^<iframe src="https:\/\/www\.youtube-nocookie\.com\/embed\/$/.test(m[0])) { players++; continue; }
+          t.fail(f + ' builds ' + m[0].slice(0, 100));
+        }
         for (const m of src.matchAll(/\b(?:fetch|importScripts|import)\s*\(\s*['"](https?:)?\/\/[^'"]+/g)) t.fail(f + ' fetches ' + m[0].slice(0, 100));
       }
+      t.check(players <= 1, 'js/app.js builds YouTube\'s player in ' + players + ' places, not one (the tap on play)');
+    });
+
+    await t.flow('exercise videos (js/media.js)', async () => {
+      // every clip says whose it is: ai: true (made by AI, tagged AI demo) or frank: true (Frank's own, tagged Frank). The
+      // app shows a line with neither as AI, but the line has to say it. Every file is there, every howto is a YouTube
+      // video the app can play or a file in media/, and an approved AI take that is in media/ keeps its ai: true.
+      const ctx = { document: { addEventListener() {}, hidden: false } };
+      ctx.window = ctx;
+      vm.createContext(ctx);
+      for (const f of ['js/figure.js', 'js/exercises.js', 'js/media.js']) vm.runInContext(read(f), ctx, { filename: f });
+      const EX = ctx.WBF.EX, MEDIA = ctx.WBF.MEDIA || {};
+      // the app's own reading of a YouTube link, from js/app.js
+      const yt = /function ytId\(u\) \{\s*var x = (\/.*\/i?)\.exec/.exec(read('js/app.js'));
+      if (!t.check(yt, 'js/app.js: ytId() not found, so the howto links are not checked')) return;
+      const ytRe = vm.runInNewContext(yt[1]);
+      for (const [id, m] of Object.entries(MEDIA)) {
+        const where = 'js/media.js, ' + id;
+        if (!EX[id]) t.fail(where + ': no move with this id in js/exercises.js');
+        if (m.video) {
+          t.check((m.ai === true) !== (m.frank === true), where + ': a clip needs ai: true (made by AI) or frank: true (Frank\'s own): one of the two');
+          if (!/^media\/[\w.-]+\.mp4$/.test(m.video) || !exists(m.video)) t.fail(where + ': the video ' + m.video + ' is not a file in media/');
+          if (m.poster && (!/^media\/[\w.-]+\.jpg$/.test(m.poster) || !exists(m.poster))) t.fail(where + ': the still ' + m.poster + ' is not a file in media/');
+        } else if (m.ai || m.frank) t.fail(where + ': ai: true or frank: true without a video');
+        if (m.howto != null) {
+          const file = /^media\/[\w.-]+\.(?:mp4|webm|m4v)$/i.test(m.howto);
+          if (!ytRe.test(m.howto) && !(file && exists(m.howto))) t.fail(where + ': howto ' + String(m.howto).slice(0, 60) + ' is neither a YouTube video the app can play nor a file in media/, so the app leaves it out');
+        }
+      }
+      if (exists('tools/media/ai/approved.json')) {
+        for (const a of JSON.parse(read('tools/media/ai/approved.json')).approved || []) {
+          if (exists('media/' + a.move + '.mp4') && !(MEDIA[a.move] && MEDIA[a.move].ai === true)) t.fail('media/' + a.move + '.mp4 is an approved AI take (tools/media/ai/approved.json), but its line in js/media.js has no ai: true');
+        }
+      }
+      t.log(Object.keys(MEDIA).length + ' line(s) in js/media.js');
     });
 
     await t.flow('licences', async () => {
