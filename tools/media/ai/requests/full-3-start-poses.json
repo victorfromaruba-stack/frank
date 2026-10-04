@@ -1,0 +1,8 @@
+{
+  "about": "Full set, batch 3 (the other 35 moves): two start poses per move for the man coach. Victor said go ahead (4 October).",
+  "steps": ["keyframe"],
+  "coaches": ["m"],
+  "moves": ["lateral-lunge", "balance", "butt-kicks", "punches", "skipping", "arm-raise", "sumo-squat", "down-dog", "bird-dog", "shoulder-taps", "prone-y-raise", "superman", "dead-bug", "inchworm", "plank-up-down", "reverse-crunch", "v-up", "bear-hold", "diamond-push-up", "donkey-kick", "knee-push-up", "side-leg-raise", "wide-push-up", "wall-push-up", "decline-push-up", "db-press", "db-rdl", "goblet-squat", "db-row", "db-curl", "db-triceps", "pad-balance", "heel-squat", "ring-row", "suitcase-carry"],
+  "candidates": 2,
+  "budget": 6
+}
