@@ -1,0 +1,11 @@
+{
+  "about": "Full set, batches 2 and 3, the rest: two start poses for each of the 34 moves the first runs didn't reach, and again for six whose start poses came out wrong (now with a start position written out). The man coach; Victor said go ahead (4 October).",
+  "steps": ["keyframe"],
+  "coaches": ["m"],
+  "moves": ["glute-bridge", "single-leg-bridge", "dead-bug", "prone-y-raise", "sumo-squat", "lateral-lunge",
+    "bicycle-crunch", "crunch", "flutter-kicks", "leg-raise", "brace-breathe", "calf-stretch", "wall-slide", "wall-sit", "bulgarian-split-squat", "incline-push-up", "step-up", "chair-dip", "farmer-carry",
+    "plank-up-down", "reverse-crunch", "v-up", "bear-hold", "diamond-push-up", "donkey-kick", "knee-push-up", "side-leg-raise", "wide-push-up", "wall-push-up", "decline-push-up",
+    "db-press", "db-rdl", "goblet-squat", "db-row", "db-curl", "db-triceps", "pad-balance", "heel-squat", "ring-row", "suitcase-carry"],
+  "candidates": 2,
+  "budget": 7
+}
