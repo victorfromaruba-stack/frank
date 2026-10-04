@@ -99,7 +99,17 @@ One-time setup:
 
 A run: copy a file from `requests/examples/` to `requests/`, change it, commit, push. Only files
 directly in `requests/` run; changing one runs it again (and costs again). A run stops after
-90 minutes, so keep a request to about 40 clips. A request file:
+90 minutes, so keep a request to about 40 clips.
+
+**Google's daily limit on clips.** On 4 October 2026 the key's tier allowed about 16 Veo requests
+a day (a filtered clip counts too): the rest got `429 RESOURCE_EXHAUSTED` ("You exceeded your
+current quota"), which costs nothing, and sending them one at a time didn't help. The limit
+resets at midnight Pacific time (07:00 UTC). So send at most about 15 clips a day; pictures have
+their own, much higher limit. The project's limits are on AI Studio's rate-limit page
+(https://aistudio.google.com/rate-limit); a higher tier (Tier 2 after $100 spent and 3 days)
+raises them, or ask Google for more there. Only one run goes at a time: a second push waits, and
+a third replaces the waiting one, so its request never runs. Push the next request once the
+last one has started. A request file:
 
 ```json
 {
