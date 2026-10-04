@@ -17,7 +17,16 @@
   "prompt": "The reference photos show one person, the coach, from the front, the side and 45 degrees. Keep exactly that person: the same face, hair, body, skin tone and clothes.\nMake one photorealistic photo, landscape 16:9, for a fitness app's exercise demonstration: the coach in the start position of the exercise \"Jump squat\".\nStart position: Feet a little wider than the hips.\nNo equipment: only the coach on the studio floor.\nCorrect form, as the trainer teaches it: Land soft and quiet. Knees over toes. Explode up.\nAvoid these mistakes: Landing with straight legs. Knees caving in on landing.\nCamera: a three-quarter view: the camera stands 45 degrees off the person's front, toward their right side, so the front and the right side of the body both show. The person faces toward the right of the frame. The camera is level at hip height, about 5 metres away, with a natural 35 mm lens. The person stands in the lower part of the frame and fills about 60 percent of its height, with a lot of empty space above the head for the jump, and is in the middle of the frame left to right.\nPlace: a clean, bright, minimal photo studio: a plain off-white backdrop that curves smoothly into a light grey floor with a faint green-grey tint, with no corners, edges, windows, furniture or decorations in view. Light: soft, even, diffused light from the front and both sides, true-to-life colours, and a soft natural contact shadow on the floor under the person.\nClothes: a fitted short-sleeved training T-shirt in deep forest green (close to #104A2A), black training shorts to just above the knee, and plain grey training shoes with white soles; no logos, no text, no jewellery.\nIt must look like a real photo of a real person, not a 3D render, a game character or an illustration: natural skin, natural fabric folds, correct anatomy (two arms, two legs, five fingers on each hand, natural joints), and hands and feet in full, flat contact with the floor where they rest on it. No text, no logos, no watermark, no mirror, no other people.",
   "estimatedCost": 0.077,
   "made": "2026-10-04T09:58:18.607Z",
-  "sha256": "74f8c62be180f2990e6202c353607dde7559b611362166896268ee2406ffe55a",
+  "sha256": "3926eb69ddf28883282b2d45508cf7e41893620673aed7bc310e845cfaf60eb1",
   "picked": "2026-10-04",
-  "by": "Claude (Victor's go-ahead)"
+  "by": "Claude (Victor's go-ahead)",
+  "wider": {
+    "scale": 0.8,
+    "width": 1100,
+    "height": 614,
+    "x": 138,
+    "y": 116,
+    "sourceSha256": "74f8c62be180f2990e6202c353607dde7559b611362166896268ee2406ffe55a",
+    "how": "pick.mjs --wider: the photo scaled down on the same frame, the studio extended around it"
+  }
 }

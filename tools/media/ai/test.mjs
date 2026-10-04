@@ -203,6 +203,16 @@ if (!haveFfmpeg()) {
   ok(page.includes('Sit between your heels.') && page.includes('approve.mjs squat f take-1') && /No video: filtered/.test(page) && /SSIM 0\.\d{3}/.test(page),
     'the page: the cues, the approve line, the filtered take, the measured loop seam');
   ok(['start', 'middle', 'end', 'pose'].every((f) => exists(path.join(runs, 'mock1/review/frames/f-squat-take-1-' + f + '.jpg'))), 'frames: start, middle, end and the picked start pose');
+  // pick --wider: the start pose smaller on the same frame, the studio extended around it, and the record says so
+  const cand = path.join(runs, 'mock1/keyframes/f/squat/1.jpg'), kf = path.join(home, 'keyframes/f/squat.jpg');
+  const pk = await run([S('pick.mjs'), 'start', 'squat', 'f', '1', '--wider', '0.8', '--from', path.join(runs, 'mock1')], env);
+  const wj = readJ(path.join(home, 'keyframes/f/squat.json')), wp = probe(kf);
+  ok(pk.code === 0 && wp.width === 1376 && wp.height === 768 && wj.wider && wj.wider.scale === 0.8 && wj.wider.x === 138 && wj.wider.y === 116 &&
+    wj.wider.sourceSha256 === sha256(cand) && wj.sha256 === sha256(kf) && wj.sha256 !== sha256(cand) && !fs.readdirSync(path.join(home, 'keyframes/f')).some((f) => /wider/.test(f)),
+  'pick --wider 0.8: the same 1376 x 768 frame, the photo at 1100 x 614 with three quarters of the room above, the source\'s sha256 kept' + (pk.code ? ' ' + pk.out.slice(-300) : ''));
+  ok((await run([S('pick.mjs'), 'start', 'squat', 'f', '1', '--wider', '1.2', '--from', path.join(runs, 'mock1')], env)).code === 2 && wj.sha256 === sha256(kf), 'pick --wider 1.2: refused, the pick stays as it was');
+  await run([S('pick.mjs'), 'start', 'squat', 'f', '1', '--from', path.join(runs, 'mock1')], env);
+  ok(sha256(kf) === sha256(cand) && !readJ(path.join(home, 'keyframes/f/squat.json')).wider, 'picked again without --wider: the photo as the model made it');
   const head = exists(png) ? fs.readFileSync(png) : Buffer.alloc(24);
   ok(head.toString('latin1', 1, 4) === 'PNG' && head.readUInt32BE(16) === 3 * 384 + 640 && head.readUInt32BE(20) === 48 + 224, 'sheet.png: one row of frames and cues under a title');
 
