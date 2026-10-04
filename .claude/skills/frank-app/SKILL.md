@@ -111,9 +111,10 @@ The steps (questions, rulers, the year wheel, the health questions) are drawn in
 year of birth, the health questions or the sore spots, or asks height, weight or a target
 before the year and the health questions (`order()` in `js/app.js`): what keeps someone
 safe is always asked before the plan is built. Everyone starts at Beginner until the
-fitness check (`levelFor()` keeps gentle mode at Beginner either way). A plan made before
-the fast start has no `profile.asked` and never gets the Make it yours card. The hooks a
-module uses for it: "The onboarding" in `.claude/skills/frank-module/`.
+fitness check, which gentle mode doesn't get until a doctor clears it (`levelFor()` keeps
+it at Beginner either way). Make it yours comes after the plan's first workout. A plan made
+before the fast start has no `profile.asked` and never gets the Make it yours card. The
+hooks a module uses for it: "The onboarding" in `.claude/skills/frank-module/`.
 
 ## Adding a feature
 

@@ -347,8 +347,8 @@ module.exports = {
     await t.flow('fast start: no target weight or BMI verdict for anyone at risk, no fitness check while gentle', async () => {
       // Make it yours (the card after Day 1) and Me's Your answers (js/onboard-flow.js) never offer a target weight to
       // anyone who may be under 18, is pregnant or has a medical condition, nor while a PAR-Q yes keeps the plan gentle;
-      // the weight step shows no BMI to a minor or in pregnancy, and no food advice with a medical condition. The card has
-      // no fitness check while the plan stays gentle (its level is held at Beginner)
+      // the weight step shows no BMI to a minor or in pregnancy, and no food advice with a medical condition. Neither offers
+      // the fitness check while the plan stays gentle (its level is held at Beginner until a doctor clears it)
       const pq = (k) => ({ health: { [k]: true } });
       const who = [
         ['pregnant', fresh({ sex: 'f', health: { pregnant: true } }), 'none'],
@@ -368,6 +368,7 @@ module.exports = {
         await app.tap(p, '[data-act="flow-answers"]');
         await app.waitTitle(p, 'Your answers');
         t.equal(await p.locator('[data-row="target"]').count(), 0, label + ': Your answers: Your target');
+        if (/gentle|chronic/.test(label)) t.equal(await p.locator('[data-row="fitness"]').count(), 0, label + ': Your answers: the fitness check while the plan is gentle');
         if (bmi) {
           await app.tap(p, '[data-row="body"]');
           await next(p);
@@ -386,6 +387,25 @@ module.exports = {
       await app.tap(c, '.tab[data-tab="me"]');
       await app.tap(c, '[data-act="flow-answers"]');
       t.equal(await c.locator('[data-row="target"]').count(), 1, 'control: Your answers for an adult with no health yes: Your target');
+      t.equal(await c.locator('[data-row="fitness"]').count(), 1, 'control: Your answers for an adult with no health yes: the fitness check');
+      t.step("the card's Your body line");
+      // before Your body is answered (right after Day 1), the card says what height and weight are for: "BMI" only for
+      // someone the app shows a BMI (noBmi() false), never to anyone who may be under 18 or is pregnant
+      const nobody = (pOver, over) => fresh(Object.assign({ cm: null, kg: null, asked: {} }, pOver), Object.assign({ weights: [] }, over));
+      const lines = [
+        ['under 18', nobody({ birthYear: Y - 15 }), false],
+        ['born 18 years ago', nobody({ birthYear: Y - 18 }), false],
+        ['pregnant', nobody({ sex: 'f', health: { pregnant: true } }), false],
+        ["the food card's pregnancy switch", nobody({}, { flags: { manual: { pregnant: true } } }), false],
+        ['control: an adult with no health yes', nobody({}), true]
+      ];
+      for (const [label, st, says] of lines) {
+        const p = await t.page({ state: st, threeD: false });
+        const line = await p.locator('[data-card="flow-yours"] [data-row="body"] .meta').textContent().catch(() => '(no Your body row)');
+        t.has(line, 'calorie estimate', label + ": the card's Your body line");
+        if (says) t.has(line, 'BMI', label + ": the card's Your body line"); else t.lacks(line, 'BMI', label + ": the card's Your body line");
+        await p.context().close();
+      }
     });
 
     await t.flow('health questions: every one answered', async () => {

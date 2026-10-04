@@ -59,14 +59,16 @@ supervised activity, or the matching switch on the Today screen's food card.
 | What do you want to focus on?, What do you want most?, How tall are you?, the weight, the target weight, How active are you?, the push-ups and What should Frank call you?, for someone new | Not asked before the plan. After the first workout, Make it yours asks them (Workout player and Plan, below), and Me's Your answers has them all | Asked before the plan |
 | What should Frank call you?, asked on its own (Make it yours or Your answers): the button | Next | Build my plan |
 | A toast after a question asked on its own (Make it yours or Your answers), when the sessions stay the same. When they change, the toast is still Your plan was updated | Saved | New. Before, no toast |
+| The same toast after new focus areas, or a year of birth that makes someone 60 or older: both change the sessions (extra work for the parts picked; from 60 no jumps and balance work in every session) | Your plan was updated | Saved |
 | Your first week: after Building your plan, for someone new, in place of Your plan is ready. The label above the heading is the plan's name, shown in capitals | 28-day fat burner / Your first week | Done, Victor / Your plan is ready |
 | Your first week, under the heading: the first move of Day 1, moving, with a line under it. The move comes from the plan | From Day 1: Squat to a target | New |
-| Your first week, a line next to Frank's F, one per goal. It says what the plan does, never a result | Lose fat: Your week mixes strength and cardio. Walks on the other days count too. / Build strength: Your week trains every muscle twice. Each week asks a little more. / Move better: Your week starts with scapula and hips. Then strength, balance and load. / Stay fit: Your week has a bit of everything. Short sessions count. | New |
-| Your first week, the week (its labels shown in capitals), then a row for each workout with its first move's picture and its real length | Week 1: Foundation / 4 workouts / Day 1, Lower body, 12 min | New. Your plan is ready showed About you (height, weight, age, BMI), Goal, Target weight, Level, Focus and Plan overview |
+| Your first week, a line next to Frank's F, one per goal, under the week. It says what the plan does, never a result | Lose fat: Your week mixes strength and cardio. Walks on the other days count too. / Build strength: Your week trains every muscle twice. Each week asks a little more. / Move better: Your week starts with scapula and hips. Then strength, balance and load. / Stay fit: Your week has a bit of everything. Short sessions count. | New |
+| Your first week, the rows under the picture, above the week, so they show before any scroll: the same as on Your plan is ready, in the same words | Sore spots (Knee, Other / Moves that load them, and jumps, are left out) / Health (Gentle mode / Until your doctor clears you) / Pregnancy (Pregnancy mode) | New here |
+| Your first week, the week (its labels shown in capitals), then a row for each workout with a picture and its real length. The picture is the workout's first move that the days above don't show, so the days don't all look alike | Week 1: Foundation / 4 workouts / Day 1, Lower body, 12 min | New. Your plan is ready showed About you (height, weight, age, BMI), Goal, Target weight, Level, Focus and Plan overview |
 | Your first week, under the week. Not shown in gentle mode | You start at Beginner. The fitness check after Day 1 sets your level. | New |
-| Your first week, the rows under that: the same as on Your plan is ready, in the same words | Sore spots (Knee, Other / Moves that load them, and jumps, are left out) / Health (Gentle mode / Until your doctor clears you) / Pregnancy (Pregnancy mode) | New here |
-| Your first week, a line above the buttons: the first before the free trial, the second during it. Members and Frank's clients get no line | Your 7-day free trial starts with your first workout. / 6 days left of your free trial. | New here: the first is Me's Membership line, the second the price screen's |
+| Your first week, a line with the buttons, just above Start Day 1 (on screen without a scroll): the first before the free trial, the second during it, the third once it has ended. Members and Frank's clients get no line | Your 7-day free trial starts with your first workout. / 6 days left of your free trial. / Your free trial has ended. | New here: the first and the third are Me's Membership lines, the second the price screen's |
 | Your first week, the buttons. Start Day 1 opens Day 1's workout, See my plan opens the Plan. Either one saves the answers | Start Day 1 / See my plan | Get my plan, then the price screen (Get your personal plan) for someone new |
+| Your first week once the free trial has ended (someone who trained from Look around first, then asked for a plan): in place of Start Day 1, the Membership card's button from Me. It saves the answers and opens the price screen over the Plan; closing that shows the Plan | See membership (once payments are on: Become a member) | Start Day 1, which opened the price screen over the questions |
 
 ## Price screen (Membership)
 
@@ -86,7 +88,7 @@ supervised activity, or the matching switch on the Today screen's food card.
 | For a member, in place of a button: the line from Me. Members and clients only see this screen through Frank's Coach tools (See what members see) | You're a member. Thank you. | Start my 7-day free trial, as for someone new |
 | For one of Frank's clients, in place of a button: the line from Me | You train with Frank. His sessions show up on your plan, and the whole app is open to you. | Start my 7-day free trial, as for someone new |
 | For one of Frank's clients, the white button | (no button) | I'm one of Frank's clients |
-| Right after the questions, for someone new | Not shown. Your first week goes straight to Day 1 or the Plan. The price screen still shows from Me's Membership card, and when the free trial has ended | Shown after Get my plan on Your plan is ready |
+| Right after the questions, for someone new | Not shown. Your first week goes straight to Day 1 or the Plan. The price screen still shows from Me's Membership card, and when the free trial has ended (from Your first week's See membership, over the Plan) | Shown after Get my plan on Your plan is ready |
 
 ## Plan
 
@@ -97,7 +99,7 @@ supervised activity, or the matching switch on the Today screen's food card.
 | The first card inside Instagram's (Facebook's, TikTok's) own browser, once there's something to keep in it. The label is shown in capitals | With a plan: Keep your plan / You're in Instagram's browser, and your plan stays in it. Move it to Safari or Chrome. / Button: Move my plan | New |
 | The same card for one of Frank's clients who came by his session link, with no plan of their own | Keep your progress / You're in Instagram's browser, and your sessions from Frank stay in it. Move them to Safari or Chrome. / Button: Move my plan | New |
 | The same card with no plan and no session from Frank (workouts or notes from Look around first) | Keep your progress / You're in Instagram's browser, and your progress stays in it. Move it to Safari or Chrome. / Button: Move my plan | New |
-| The first card after the first workout, while questions from the fast start wait, until they're answered or Not now is tapped | Make it yours (the same card as on the finish screen, under Workout player) | New |
+| The first card after the plan's first workout (not after a session from Frank or a workout from Look around first), while questions from the fast start wait, until they're answered or Not now is tapped | Make it yours (the same card as on the finish screen, under Workout player) | New |
 | For one of Frank's clients with no plan of their own: the card that offers one (its heading shown in capitals) | A plan for the days between Frank's sessions / 8 quick questions. Then your first week is ready. / Button: Get my plan | Your 28-day plan / A few questions about your goal, body and time. Then every session is ready to press play. / Button: Get my plan, with Free for 7 days on the picture (all still shown to everyone else) |
 
 ## Workout player
@@ -114,8 +116,8 @@ supervised activity, or the matching switch on the Today screen's food card.
 | A toast after Copy my plan | Your plan is copied. In the new app, tap I already have a plan. | New |
 | The same sheet on Android: Chrome's own install button when Chrome offers it, else two steps | Install the app (as on Me) / or: 1. Open the browser's menu [⋮]. 2. Tap Install app or Add to Home screen. | New |
 | The close button of this sheet and of the other new sheets, for a screen reader | Close | New here; the app's other sheets say it too |
-| The finish screen of that workout: a card that opens the sheet again. The label is shown in capitals | Keep your progress / Put Frank on your Home Screen. The app there keeps your plan. / Button: Show me how | New |
-| The finish screen, after a workout, while questions from the fast start wait (from Day 1 on): a card. The label is shown in capitals | Make it yours / You started at Beginner. Two questions set your level for the next workout. / Button: Set my level / a link: Not now | New |
+| The finish screen of that workout: a card that opens the sheet again. The label is shown in capitals. It comes before Make it yours (next rows) on that one screen; Make it yours is then the Plan's first card | Keep your progress / Put Frank on your Home Screen. The app there keeps your plan. / Button: Show me how | New |
+| The finish screen, after a workout of the plan, while questions from the fast start wait (from Day 1 on): a card. The label is shown in capitals | Make it yours / You started at Beginner. Two questions set your level for the next workout. / Button: Set my level / a link: Not now | New |
 | The same card: a row for each question left, with what it's for. Each row, and Set my level, opens its question on its own; Next on the last saves the answer and comes back | Your body: Height and weight, for your BMI and calorie estimate / Your target: A weight to aim for, at a safe weekly pace / Focus areas: Extra work for the parts you pick / What you want most: Pick any / Your name: What Frank should call you | New |
 | The same card, Your body's line for someone who may be under 18 or is pregnant (they get no BMI) | Height and weight, for your calorie estimate | New |
 | The same card without Set my level: once the fitness check is answered, or while gentle mode is on | A few more answers make the plan fit you. | New |
@@ -138,6 +140,7 @@ supervised activity, or the matching switch on the Today screen's food card.
 | The Food card, the line under the meal journal | General habits, not a diet. Frank is trained in sports nutrition: for a plan made for you, ask him. | General habits, not a diet. Frank is a sports nutritionist: for a plan made for you, ask him. |
 | Moving minutes this week, Lose fat goal, for someone at risk | … of 150 · The WHO advises 150 to 300 minutes a week; brisk walking counts. | … of 250 · For fat loss, aim for about 250 minutes; brisk walking counts. |
 | The Water card, and Frank's lessons about water and protein, for someone at risk | Not shown | Shown to everyone |
+| Burned in workouts (next to Active today), on a day with a workout that has no calorie estimate (no weight was known then: the fast start asks it after Day 1). A dash in place of the number; the line under it says Add weight while no weight is known, else Burned in workouts, est. | – / Add weight (as on the finish screen) | 0 kcal / Burned in workouts, est. |
 
 ## Me
 
@@ -169,7 +172,7 @@ supervised activity, or the matching switch on the Today screen's food card.
 |---|---|---|
 | The screen's name, its top bar and its heading | Your answers | New |
 | The line under the heading | Tap an answer to change it. A new goal or new days ask before your 28 days start again. | New |
-| The rows, in this order, each with the answer under it. Your target is left out for someone at risk, in gentle mode, or before a weight is known | Goal / Days a week / Minutes a workout / Kit at home / Year of birth / Health / Sore spots / Coach / Your body / Your target / Focus areas / What you want most / Fitness check / Your name | New |
+| The rows, in this order, each with the answer under it. Your target is left out for someone at risk, in gentle mode, or before a weight is known; Fitness check is left out in gentle mode, until Cleared by a doctor | Goal / Days a week / Minutes a workout / Kit at home / Year of birth / Health / Sore spots / Coach / Your body / Your target / Focus areas / What you want most / Fitness check / Your name | New |
 | The answers under the rows, for example | Lose fat / 4 / 30 / Dumbbells, Gym rings (with only a chair or a table: No equipment) / 1990 / Knee, Other (with none: None) / Male, Female, or Not said (after Other / I'd rather not say) / 178 cm · 80 kg (in ft and lb: 5′10″ · 176 lb) / 74 kg / Full body (or Abs, Legs & glutes; with more than two: Abs, Chest +2) / 2 picked (with none: None picked) / Beginner, Intermediate or Advanced / Victor | New |
 | Health's answer | None apply / Gentle mode (a yes to a health question, until a doctor clears it) / Cleared by a doctor / Pregnancy mode (with a yes as well: Pregnancy mode · Gentle mode) / Not all answered (a plan from before every health question needed an answer) | New |
 | An answer not given: the year of birth, your body, your target, your name | Not given | New |
@@ -288,8 +291,9 @@ supervised activity, or the matching switch on the Today screen's food card.
    says the level they set.
 9. **Frank: the push-up question for someone pregnant, 60 or over, or with a sore wrist
    or shoulder.** They are still asked how many push-ups they can do in a row (a guess,
-   not a test). In gentle mode Make it yours doesn't ask it, and the level stays Beginner
-   until a doctor clears it. Say if it should be left out for anyone else.
+   not a test). In gentle mode neither Make it yours nor Your answers asks it (with the
+   test up front, it isn't asked either), and the level stays Beginner until a doctor
+   clears it; then both offer it. Say if it should be left out for anyone else.
 10. **Frank and Victor: no price screen after the questions.** Your first week goes
     straight to Day 1 (or the Plan). The free trial still starts with the first workout,
     and Your first week says so in one line. The price screen shows from Me's
@@ -297,10 +301,18 @@ supervised activity, or the matching switch on the Today screen's food card.
 11. **Victor: what Make it yours and Your answers leave out.** Your target: for anyone at
     risk, in gentle mode (until a doctor clears it) and before a weight is known. The
     design left it out for at-risk people only; gentle mode is added because a health
-    yes waits for a doctor. Year of birth is a row in Your answers (the design didn't
-    list it), so a wrong year can be put right on its own, and the safety rules follow it.
+    yes waits for a doctor. The fitness check: in gentle mode, in both. Year of birth is a
+    row in Your answers (the design didn't list it), so a wrong year can be put right on
+    its own, and the safety rules follow it.
 12. **Frank: the new lines** of Your first week, Make it yours, Your answers and the
     plan card for his clients are drafts until he says yes, like every line here.
+13. **Victor: the first finish screen on a phone.** After the first workout on an iPhone
+    or Android phone, the Home Screen sheet comes up, and once it's closed the finish
+    screen's card is the way back to it (Keep your progress), shown on that screen only.
+    Make it yours waits for the Plan, one tap later, and every finish screen after.
+14. **Victor: Make it yours waits for the plan's own first workout.** Someone who trained
+    one of Frank's sessions, or a workout from Look around first, before asking for a
+    plan gets the card after Day 1 of the plan, not straight away.
 
 ## Older lines to check
 

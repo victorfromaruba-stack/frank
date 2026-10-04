@@ -54,10 +54,12 @@ const answers = async (p) => { await app.tap(p, '.tab[data-tab="me"]'); await ap
 const rowsOn = (p, root) => p.$$eval((root || '#app') + ' [data-row]', (bs) => bs.map((b) => b.getAttribute('data-row')));
 // waits until a save from a row came back to where it was opened
 const backOn = (p, title) => app.waitTitle(p, title, 10000);
-// a workout ended after its first move, from the Plan: the finish screen
-async function shortWorkout(p) {
-  await app.tap(p, '.tab[data-tab="plan"]');
-  await app.tap(p, '[data-act="start-day"]');
+// a workout ended after its first move: the finish screen. From the Plan, or (plan false) the player that is showing
+async function shortWorkout(p, plan = true) {
+  if (plan) {
+    await app.tap(p, '.tab[data-tab="plan"]');
+    await app.tap(p, '[data-act="start-day"]');
+  }
   await app.waitTitle(p, 'Workout');
   await p.waitForFunction(() => document.querySelector('[data-act="pl-done"]') || document.querySelectorAll('.pl-segs i.on').length > 0);
   if (await p.locator('[data-act="pl-done"]').count()) await app.tap(p, '[data-act="pl-done"]');
@@ -66,10 +68,33 @@ async function shortWorkout(p) {
   await app.tap(p, '[data-act="modal-yes"]');
   await app.waitTitle(p, 'Workout complete');
 }
+// Your first week before any scroll: the line about the free trial (its words, and whether it shows above Start Day 1),
+// and for the safety rows and the days whether each ends above the buttons; the days' pictures
+const fold = (p) => p.evaluate(() => {
+  window.scrollTo(0, 0);
+  const cta = document.querySelector('.reveal .ob-cta'), start = cta.querySelector('[data-act="ob-finish"]'), note = cta.querySelector('.ob-note');
+  const top = cta.getBoundingClientRect().top, box = (e) => e.getBoundingClientRect();
+  const above = (sel) => [...document.querySelectorAll(sel)].map((e) => box(e).bottom <= top);
+  return {
+    note: note ? [note.innerText.trim(), box(note).top >= 0 && box(note).bottom <= box(start).top && box(start).bottom <= innerHeight] : null,
+    safety: above('.reveal .sum-row'), days: above('.wk1-day'), level: above('.reveal-level'),
+    pictures: [...document.querySelectorAll('.wk1-day [data-thumb]')].map((e) => e.getAttribute('data-thumb'))
+  };
+});
+// the app with FITNESS_FIRST turned on in js/onboard-flow.js (Frank's decision), on a fresh phone
+async function fitnessFirst(t) {
+  const src = fs.readFileSync(path.join(L.REPO, 'js', 'onboard-flow.js'), 'utf8');
+  t.check(src.includes('var FITNESS_FIRST = false;'), 'js/onboard-flow.js: the FITNESS_FIRST switch this flow turns on');
+  const p = await t.page({ go: false, speed: 50 });
+  await p.route('**/js/onboard-flow.js', (r) => r.fulfill({ status: 200, contentType: 'text/javascript', body: src.replace('var FITNESS_FIRST = false;', 'var FITNESS_FIRST = true;') }));
+  await p.goto(p.srv.home + 'index.html');
+  await L.settle(p);
+  return p;
+}
 
 module.exports = {
   name: 'fast-start',
-  about: 'the fast start (js/onboard-flow.js): eight questions with one progress bar and no Part screens, the plan built, Your first week with its real session lengths, Start Day 1 starting the free trial; Make it yours after Day 1 (the fitness check first, each answer saved on its own, Not now); Me\'s Your answers (every row opens its question, Back comes back, no Back loop); the phone\'s Back through the questions; older plans keep their answers and get no card; Frank\'s client with no plan; a move link keeps what is still to ask; FITNESS_FIRST on (Frank\'s decision) asks the fitness check up front',
+  about: 'the fast start (js/onboard-flow.js): eight questions with one progress bar and no Part screens, the plan built, Your first week with its real session lengths (before any scroll, also at 375x667: the safety rows and the days above the buttons, the free trial line above Start Day 1), Start Day 1 starting the free trial, Today after it with no weight; Make it yours after Day 1 (the fitness check first, each answer saved on its own with its toast, Not now; not after a session from Frank); Me\'s Your answers (every row opens its question, Back comes back, no Back loop); the phone\'s Back through the questions; older plans keep their answers and get no card; Frank\'s client with no plan; a move link keeps what is still to ask; two windows of one browser; FITNESS_FIRST on (Frank\'s decision) asks the fitness check up front, not in gentle mode',
   async run(t) {
     await t.flow('Welcome to Day 1: eight questions, the plan built, its first week', async () => {
       const p = await t.page({ speed: 50 });
@@ -104,6 +129,12 @@ module.exports = {
       t.lacks(txt, /Target weight|BMI|Gentle mode|Pregnancy mode/, 'Your first week for an adult with no health yes');
       t.equal(await p.locator('.reveal-fig [data-fig]').count(), 1, "Your first week: Day 1's first move, moving");
       await t.look(p, 'fast start: your first week');
+      // before any scroll (390x844): the free trial's line with the buttons, above Start Day 1, and the week above them;
+      // a picture for each day that the others don't show
+      const f = await fold(p);
+      t.equal([f.note, f.days, f.level], [['Your 7-day free trial starts with your first workout.', true], [true, true, true], [true]],
+        'Your first week before any scroll [the free trial line above Start Day 1, the days above the buttons, the level line]');
+      t.equal(new Set(f.pictures).size, 3, "Your first week: the days' pictures (" + f.pictures.join(', ') + ')');
       t.step('Start Day 1');
       await app.tap(p, '[data-act="ob-finish"][data-then="day"]');
       await app.waitTitle(p, 'Workout');
@@ -129,6 +160,34 @@ module.exports = {
         'Make it yours after Day 1 (the fitness check first; no target before a weight)');
       t.equal(await p.locator('[data-card="flow-yours"] .btn[data-row="fitness"]').textContent().catch(() => ''), 'Set my level', 'the fitness check: the main button');
       await t.look(p, 'fast start: the finish screen of Day 1');
+      t.step('Today after Day 1, no weight yet');
+      // as on the finish screen: no calorie number without a weight, and not 0 either
+      t.has(await p.locator('.stats').innerText(), /–\s*Add weight/i, 'the finish screen of Day 1 with no weight: the calories');
+      await app.tap(p, '.dock [data-act="tab"][data-tab="plan"]');
+      await app.waitTitle(p, 'Plan');
+      await app.tap(p, '.tab[data-tab="today"]');
+      await app.waitTitle(p, 'Today');
+      const act = await p.locator('.act-card').innerText();
+      t.has(act, /–\s*Add weight/i, 'Today after Day 1 with no weight: the calories');
+      t.lacks(act, /kcal/i, 'Today after Day 1 with no weight: the calories');
+      await t.look(p, 'fast start: Today after Day 1');
+    });
+
+    await t.flow('Your first week on a short phone: the sore spot, Day 1 and the free trial above the buttons', async () => {
+      // 375x667 (an iPhone SE): the picture is lower and the rows tighter, so before any scroll the sore spot's row, Day 1
+      // and the line about the free trial (with the buttons, above Start Day 1) show
+      const p = await t.page({ width: 375, height: 667, speed: 50 });
+      await app.tap(p, '[data-act="ob-start"]');
+      for (const [id, words, answer] of EIGHT) {
+        await expectStep(p, words);
+        if (id !== 'sore') await answer(p);
+        else { await app.tap(p, '[data-act="ob-multi"][data-k="injuries"][data-v="knee"]'); await next(p); }
+      }
+      await p.waitForSelector('[data-act="ob-finish"][data-then="day"]', { timeout: 15000 });
+      const f = await fold(p);
+      t.equal([f.note, f.safety, f.days[0]], [['Your 7-day free trial starts with your first workout.', true], [true], true],
+        'Your first week before any scroll at 375x667 [the free trial line above Start Day 1, the sore spot row, Day 1]');
+      await t.look(p, 'fast start: your first week at 375x667, a sore knee');
     });
 
     await t.flow('Make it yours: each answer saved on its own, back where it was opened', async () => {
@@ -156,16 +215,17 @@ module.exports = {
       await app.waitTitle(p, 'Plan');
       t.check(await p.locator('[data-card="flow-yours"]').count(), 'the Plan after Day 1: no Make it yours card');
       await t.look(p, 'fast start: the Plan with Make it yours');
-      // each row: [id, how to answer it, the fields it may save]
+      // each row: [id, how to answer it, the fields it may save, the toast: the sessions change only with focus areas]
       const steps = [
-        ['body', async () => { await app.slideRuler(p, 'h', 2); await next(p); await expectStep(p, 'current'); await app.slideRuler(p, 'w', -2); t.has(await p.locator('#bmi-box').innerText(), 'Healthy', 'BMI box'); await next(p); }, ['cm', 'kg']],
-        ['target', async () => { t.has(await p.locator('#tg-box').innerText(), 'lose', 'target box'); await next(p); }, ['targetKg']],
-        ['focus', async () => { await app.tap(p, '[data-act="ob-multi"][data-k="focus"][data-v="abs"]'); await next(p); }, ['focus']],
-        ['want', async () => { await app.tap(p, '[data-act="ob-multi"][data-k="want"][data-v="energy"]'); await next(p); }, ['want']],
-        ['name', async () => { await p.fill('#ob-name', 'Noor'); await next(p); }, ['name']]
+        ['body', async () => { await app.slideRuler(p, 'h', 2); await next(p); await expectStep(p, 'current'); await app.slideRuler(p, 'w', -2); t.has(await p.locator('#bmi-box').innerText(), 'Healthy', 'BMI box'); await next(p); }, ['cm', 'kg'], 'Saved'],
+        ['target', async () => { t.has(await p.locator('#tg-box').innerText(), 'lose', 'target box'); await next(p); }, ['targetKg'], 'Saved'],
+        ['focus', async () => { await app.tap(p, '[data-act="ob-multi"][data-k="focus"][data-v="abs"]'); await next(p); }, ['focus'], 'Your plan was updated'],
+        ['want', async () => { await app.tap(p, '[data-act="ob-multi"][data-k="want"][data-v="energy"]'); await next(p); }, ['want'], 'Saved'],
+        ['name', async () => { await p.fill('#ob-name', 'Noor'); await next(p); }, ['name'], 'Saved']
       ];
-      for (const [id, answer, fields] of steps) {
+      for (const [id, answer, fields, toast] of steps) {
         s0 = (await app.stored(p)).profile; st0 = await app.stored(p);
+        const n = (await app.toasts(p)).length;
         await app.tap(p, '[data-card="flow-yours"] [data-row="' + id + '"]');
         await expectStep(p, ROWS[id][0]);
         await answer();
@@ -174,6 +234,7 @@ module.exports = {
         t.equal(changed(s0, st.profile), fields, id + ': what it saved');
         t.equal([st.profile.asked[id], st.profile.start, st.done, st.profile.round], [L.TODAY, s0.start, st0.done, s0.round], id + ' [asked, plan start, ticks, round]');
         t.equal(await p.locator('[data-card="flow-yours"] [data-row="' + id + '"]').count(), 0, id + ': its row on the card after');
+        t.equal((await app.toasts(p)).slice(n), [toast], id + ': the toast');
       }
       st = await app.stored(p);
       t.equal([st.profile.cm, st.profile.kg, st.profile.targetKg, st.profile.focus, st.profile.want, st.profile.name], [167, 64, 59.5, ['abs'], ['energy'], 'Noor'],
@@ -301,7 +362,10 @@ module.exports = {
       t.equal(await p.locator('#app .player').count(), 1, 'Start Day 1 for a client: the player, not the price screen');
       t.equal(((await app.stored(p)).access || {}).trialStart || null, null, 'a client after Start Day 1: a free trial');
       t.step('See my plan');
-      const q = await t.page({ state: L.state({ access: { client: true } }) });
+      // trained Frank's session before asking for a plan: Make it yours waits for a workout of the plan
+      const frankRec = { id: 'c1x', at: L.isoDay(-2) + 'T07:30:00.000Z', date: L.isoDay(-2), wid: 'coach:cl', title: 'Glutes and core', level: 'f', day: null, sec: 600,
+        moves: 6, total: 6, feel: null, adj: 0, loads: {}, kcal: null, coach: 'cl' };
+      const q = await t.page({ state: L.state({ access: { client: true }, inbox: [L.spec({ i: 'cl', t: 'Glutes and core' })], sessions: [frankRec], inboxDone: { cl: 'c1x' } }) });
       await app.tap(q, '[data-act="browse"]');
       await app.tap(q, '.tab[data-tab="plan"]');
       await app.tap(q, '.plan-card [data-act="ob-start"]');
@@ -309,7 +373,9 @@ module.exports = {
       await app.tap(q, '[data-act="ob-finish"][data-then="plan"]');
       await app.waitTitle(q, 'Plan');
       t.has(await app.text(q), 'Start day 1', 'See my plan: the Plan');
-      t.equal(await q.locator('[data-card="flow-yours"]').count(), 0, 'See my plan, before a workout: the card');
+      t.equal(await q.locator('[data-card="flow-yours"]').count(), 0, "See my plan, after Frank's session but before a workout of the plan: the card");
+      await shortWorkout(q);
+      t.has(await q.locator('[data-card="flow-yours"]').innerText().catch(() => ''), 'Make it yours', 'the finish screen of the plan\'s first workout');
       // control: a member with no plan gets the app's own card
       const c = await t.page({ state: L.state({ access: { paid: true } }) });
       await app.tap(c, '[data-act="browse"]');
@@ -333,16 +399,37 @@ module.exports = {
         'Your answers on the new phone [Your body, Focus areas]');
     });
 
+    await t.flow('two windows: the fast start finished in one while the other was on the questions', async () => {
+      // two windows of one browser share the saved data. B makes a plan and starts Day 1 while A is half way through the
+      // questions; A's answers, saved after that, are still a new plan from the fast start: Make it yours asks the rest,
+      // and the plan keeps B's start
+      const a = await t.page({ speed: 50 });
+      const b = await a.context().newPage();
+      t.watch(b);
+      await b.goto(a.srv.home + 'index.html');
+      await L.settle(b);
+      await app.tap(a, '[data-act="ob-start"]');
+      for (const [, words, answer] of EIGHT.slice(0, 4)) { await expectStep(a, words); await answer(a); }
+      await app.tap(b, '[data-act="ob-start"]');
+      for (const [, words, answer] of EIGHT) { await expectStep(b, words); await answer(b); }
+      await app.tap(b, '[data-act="ob-finish"][data-then="day"]');
+      await shortWorkout(b, false);
+      t.equal((await app.stored(b)).profile.asked, {}, 'saved by the window that finished first: asked');
+      await a.bringToFront();
+      for (const [, words, answer] of EIGHT.slice(4)) { await expectStep(a, words); await answer(a); }
+      await app.tap(a, '[data-act="ob-finish"][data-then="plan"]');
+      await app.waitTitle(a, 'Plan');
+      const pr = (await app.stored(a)).profile;
+      t.equal([pr.asked, pr.start], [{}, L.TODAY], 'saved by the window that finished second [asked, plan start]');
+      t.equal(await a.evaluate(() => WBF.flow.pending()), ['body', 'focus', 'want', 'fitness', 'name'], 'what Make it yours asks after that');
+      t.equal(await a.locator('[data-card="flow-yours"]').count(), 1, 'the Plan of the window that finished second, Day 1 begun in the other: Make it yours');
+    });
+
     await t.flow('FITNESS_FIRST on: the fitness check before the plan, if Frank wants it', async () => {
       // Frank's decision (docs/TEXT-FOR-FRANK.md), one switch in js/onboard-flow.js: how active and the push-ups straight
       // after the sore spots. The plan then starts at the level they set, Your first week says it, and Make it yours
-      // doesn't ask them again
-      const src = fs.readFileSync(path.join(L.REPO, 'js', 'onboard-flow.js'), 'utf8');
-      t.check(src.includes('var FITNESS_FIRST = false;'), 'js/onboard-flow.js: the FITNESS_FIRST switch this flow turns on');
-      const p = await t.page({ go: false, speed: 50 });
-      await p.route('**/js/onboard-flow.js', (r) => r.fulfill({ status: 200, contentType: 'text/javascript', body: src.replace('var FITNESS_FIRST = false;', 'var FITNESS_FIRST = true;') }));
-      await p.goto(p.srv.home + 'index.html');
-      await L.settle(p);
+      // doesn't ask them again. A health yes (gentle mode) skips them: no fitness check until a doctor clears it
+      const p = await fitnessFirst(t);
       const ten = EIGHT.slice(0, 4).concat([
         ['active', 'active', (q) => next(q)],
         ['pushups', 'push-ups', async (q) => { await app.tap(q, '[data-act="ob-push"][data-v="2"]'); await next(q); }]
@@ -366,6 +453,22 @@ module.exports = {
       t.equal(await p.$$eval('[data-card="flow-yours"] [data-row]', (bs) => bs.map((b) => b.getAttribute('data-row'))), ['body', 'focus', 'want', 'name'],
         'Make it yours after Day 1, the fitness check asked already');
       t.has(await p.locator('[data-card="flow-yours"]').innerText(), 'A few more answers make the plan fit you.', 'Make it yours with the fitness check asked');
+      t.step('a health yes: no fitness check');
+      const g = await fitnessFirst(t);
+      await app.tap(g, '[data-act="ob-start"]');
+      for (const [id, words, answer] of EIGHT) {
+        await expectStep(g, words);              // after the sore spots: the days, not How active are you?
+        if (id !== 'health') await answer(g);
+        else { await app.tap(g, '[data-act="ob-health-none"]'); await app.tap(g, '[data-act="ob-health"][data-k="heart"][data-v="1"]'); await next(g); }
+      }
+      await g.waitForSelector('[data-act="ob-finish"][data-then="plan"]', { timeout: 15000 });
+      const week = await app.text(g);
+      t.has(week, 'Gentle mode', 'Your first week with a health yes');
+      t.lacks(week, 'You start at', 'Your first week with a health yes');
+      await app.tap(g, '[data-act="ob-finish"][data-then="plan"]');
+      await app.waitTitle(g, 'Plan');
+      const gp = (await app.stored(g)).profile;
+      t.equal([gp.push, gp.level, gp.health.heart], [null, 'b', true], 'saved with a health yes [push-ups, level, the yes]');
     });
   }
 };

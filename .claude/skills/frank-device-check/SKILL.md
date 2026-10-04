@@ -176,16 +176,21 @@ Android home-screen app.
    Android, the back gesture or button. Each Back goes one question back, with no flicker
    or jump forward. From the first question, Back goes to Welcome.
 3. **Your first week.** Does the coach move (Day 1's first move)? Is the clock readable at
-   the top (a light screen)? Can you reach Start Day 1 and See my plan with your thumb, on
-   the small iPhone too (after a scroll)?
+   the top (a light screen)? Before any scroll, in Safari with its bars showing (on the
+   small iPhone too): is the line about the free trial just above Start Day 1, and are a
+   sore spot's row (pick Knee) and Day 1 above the buttons? Can you reach Start Day 1 and
+   See my plan with your thumb?
 4. **Sound on Day 1.** After Start Day 1, with the silent switch off: does the voice say
    "Get ready" and do the last three seconds beep? The phone only plays sound after a tap,
    and Start Day 1 is the first tap of the workout.
 5. **The two coaches on mobile data.** Wi-Fi off. On "Who should demonstrate your moves?",
    do both coaches' pictures show within a few seconds?
-6. **Make it yours.** After Day 1, on the finish screen: Set my level, answer both, and you
-   are back on the finish screen. Then Your body: do the height and weight rulers slide
-   smoothly under a thumb, and does Next bring you back?
+6. **Make it yours.** After Day 1 in the browser, the Keep your progress sheet comes up;
+   close it, and the finish screen's card is Keep your progress (Show me how). Tap Done:
+   the Plan's first card is Make it yours. Set my level, answer both, and you are back on
+   the Plan. Then Your body: do the height and weight rulers slide smoothly under a thumb,
+   and does Next bring you back? (In the home-screen app, Make it yours is on the finish
+   screen itself.)
 7. **Your answers with the keyboard.** Me > Your answers > Your name: the keyboard opens,
    Next saves and the keyboard closes. iPhone: is the page back at its normal size, not
    zoomed in or pushed up?
@@ -243,10 +248,10 @@ Answers: yes / no / n/a (not in this build) / ? (couldn't tell). A note for ever
 6.12 Two windows: Undo holds after a tap in the other           n/a      ___
 7.1 Get my plan to Day 1's first move (min:s)                   ___      ___
 7.2 Back: one question back, no flicker; first one to Welcome   ___      ___
-7.3 Your first week: coach moves, clock readable, both buttons  ___      ___
+7.3 Your first week: coach moves, clock, trial line unscrolled  ___      ___
 7.4 Start Day 1: the voice and the beeps                        ___      ___
 7.5 Both coaches show on mobile data                            ___      ___
-7.6 Make it yours: Set my level and rulers, back to the finish  ___      ___
+7.6 Sheet, then Make it yours on the Plan: level, rulers, back  ___      ___
 7.7 Your answers > Your name: keyboard, Next, page not zoomed   ___      ___
 
 Notes:

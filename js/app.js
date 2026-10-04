@@ -1878,7 +1878,9 @@
         strip += '<div>' + 'MTWTFSS'.charAt(i) + '<i class="' + (on ? 'on' : '') + (di === today ? ' today' : '') + '">' + d.getDate() + '</i></div>';
       }
       var minToday = Math.round(todays.reduce(function (a, r) { return a + r.sec; }, 0) / 60 + ((S.walks || {})[today] || 0));
-      var kcToday = todays.reduce(function (a, r) { return a + (r.kcal || 0); }, 0);
+      // a workout of the day with no estimate (no weight was known then): '–', and "Add weight" while none is known, as on
+      // the finish screen. Not 0: it burned something
+      var kcToday = todays.reduce(function (a, r) { return a + (r.kcal || 0); }, 0), kcNone = todays.some(function (r) { return !r.kcal; });
       var goalMin = (S.profile && S.profile.minutes) || 20;
       var nd = nextDay(), card = '';
       if (nd) {
@@ -1888,7 +1890,7 @@
       return '<div class="screen"><div class="stack tight"><p class="label">' + esc(fmtLong.format(new Date())) + '</p><h1 class="h1">Today</h1></div>' + slot('today.top', p) +
         '<div class="week-strip" aria-label="This week">' + strip + '</div>' +
         '<div class="act-card"><div class="act"><b>' + minToday + '<small>/ ' + goalMin + ' min</small></b><span>Active today</span><div class="bar"><i style="width:' + Math.min(100, minToday / goalMin * 100) + '%"></i></div></div>' +
-        '<div class="act"><b>' + kcToday + '<small>kcal</small></b><span>Burned in workouts, est.</span></div></div>' +
+        '<div class="act"><b>' + (kcNone ? '–' : kcToday + '<small>kcal</small>') + '</b><span>' + (kcNone && !lastWeight() ? 'Add weight' : 'Burned in workouts, est.') + '</span></div></div>' +
         (card || '<button class="btn block" data-act="tab" data-tab="workouts">Start a workout</button>') +
         movingCard() + waterCard() + foodCard() + lessonCard() + '</div>';
     }
@@ -2299,7 +2301,7 @@
   // The draft becomes the profile; then(updated) runs once it is saved (updated: the sessions change).
   // A new goal or new training days make a new plan: with days ticked off, the person chooses between a fresh
   // 28 days and keeping their progress (the new plan then carries on from the old one's next session, in the same
-  // week). Level, minutes, kit, sore spots and health only change the sessions to come.
+  // week). Level, minutes, kit, sore spots, health, focus areas and the year of birth only change the sessions to come.
   function finishProfile(then) {
     readObInputs();
     var old = S.profile, d = draft;
@@ -2312,9 +2314,12 @@
     if (!d.focus || !d.focus.length) d.focus = ['full'];
     if (atRisk(d)) d.targetKg = null;                 // no weight target for anyone at risk
     var set = function (a) { return (a || []).slice().sort().join(); };
+    var parts = function (p) { return set((p.focus || []).filter(function (f) { return f !== 'full'; })); };   // focus areas: none is Full body
     var renew = !old || old.goal !== d.goal || +old.days !== d.days;
-    var updated = renew || String(old.level) !== String(d.level) || +old.minutes !== d.minutes || set(old.kit) !== set(d.kit) ||
-      set(old.injuries) !== set(d.injuries) || healthSig(old.health) !== healthSig(d.health);
+    // what shapes the sessions: the level the plan uses (a health yes holds it at Beginner), minutes, kit, sore spots, the
+    // health answers, focus areas (extra work for them) and an age of 60 or more (no jumps, balance work)
+    var updated = renew || WBF.plan.levelFor(old) !== WBF.plan.levelFor(d) || +old.minutes !== d.minutes || set(old.kit) !== set(d.kit) ||
+      set(old.injuries) !== set(d.injuries) || healthSig(old.health) !== healthSig(d.health) || parts(old) !== parts(d) || older(old) !== older(d);
     delete d.edit; delete d.soreDone; delete d.only;
     var was = old ? nextDay() : null;                 // the old plan's next session (null: all done)
     function commit(fresh) {
@@ -2322,6 +2327,9 @@
       // progress kept: the ticks are by day, and new training days train on other days of the week. Every day the new
       // plan trains before the old next session counts as done, so the count and the next session go on from there
       else if (old) WBF.plan.days(d).forEach(function (x) { if (x.train && (!was || x.day < was.day) && !S.done[x.day]) S.done[x.day] = 'kept'; });
+      // answers begun before this phone had a plan (another window saved one meanwhile, and its ticks are kept): that
+      // plan's start and round
+      if (!d.start) { d.start = (old && old.start) || iso(); d.round = (old && old.round) || 1; }
       // the weight is logged for today when the ruler moved from the last one (or none is logged yet), but never
       // over a weight the person logged by hand today: the ones the plan logs say from: 'plan'
       var w0 = lastWeight(), t = iso();
@@ -2454,18 +2462,16 @@
       obGo('build');
     },
     // the end of the onboarding: the answers saved, then the price screen for someone new (the app's own summary), or
-    // with data-then the plan ("plan") or its first workout ("day", which starts the free trial)
+    // with data-then the plan ("plan") or its first workout ("day", which starts the free trial). Once the free trial has
+    // ended, "day" shows the price screen as the app's own way does: over the Plan, so closing it leaves the onboarding
     'ob-finish': function (el) {
       var then = el && el.getAttribute ? el.getAttribute('data-then') : null;
       finishProfile(function () {
-        var nd = then === 'day' ? nextDay() : null;
+        var st = status(), nd = then === 'day' && st !== 'ended' ? nextDay() : null;
         if (nd) { begin(session(nd.workoutId, nd)); return; }
-        if (then === 'day' || then === 'plan') { tab('plan'); return; }
-        var st = status();
+        if (then === 'plan' || (then === 'day' && st !== 'ended')) { tab('plan'); return; }
         if (st === 'client' || st === 'member' || st === 'trial') { tab('plan'); return; }
-        stack = [{ name: 'plan', params: {} }, { name: 'pay', params: { fromOb: true } }];
-        pushState();
-        render(true);
+        setStack([{ name: 'plan', params: {} }, { name: 'pay', params: { fromOb: true } }]);
       });
     },
     units: function (el) {

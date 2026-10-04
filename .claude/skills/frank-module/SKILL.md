@@ -174,7 +174,7 @@ checks that "Your personal plan" stays above the buttons with its card).
 | `hash` | `link` | a link opened in a tab that has the app already. Same rule. A sheet or a box that was open has closed (not during a workout), a box like its Cancel; when the box's answer leaves its screen ("Restart your 28 days?" after Edit), the link comes after that |
 | `screen` | `name, root` | after a screen is drawn (`root` is `#app`). The player's own redraws don't count |
 | `finish` | `rec, s` | a workout was saved (one move or more), before the finish screen draws. `rec` is its record in the history, `s` the session |
-| `profile` | `old, new, changed, steps` | the profile changed: the onboarding or Edit saved it, a health switch on Me (Pregnancy mode, Cleared by a doctor) or "Start the next 28 days". `old` is the profile before (`null` for a first plan), `new` the saved one. `changed`: the sessions change. `steps`: when the onboarding saved it, the ids of the steps the answers came from (steps opened on their own, the order someone new was asked, or for Edit all of the app's; never `target` for anyone at risk), else `undefined`. A field you add to `new` here is saved: call `app.save()`. The food card's switches change `atRisk()` but not the profile: they don't send it |
+| `profile` | `old, new, changed, steps` | the profile changed: the onboarding or Edit saved it, a health switch on Me (Pregnancy mode, Cleared by a doctor) or "Start the next 28 days". `old` is the profile before (`null` for a first plan), `new` the saved one. `changed`: the sessions change (from the onboarding: a new goal or days, the level the plan uses, minutes, kit, sore spots, health answers, focus areas, or a year of birth across 60; a level a health yes holds at Beginner doesn't count). `steps`: when the onboarding saved it, the ids of the steps the answers came from (steps opened on their own, the order someone new was asked, or for Edit all of the app's; never `target` for anyone at risk), else `undefined`. A field you add to `new` here is saved: call `app.save()`. The food card's switches change `atRisk()` but not the profile: they don't send it |
 | `saved` | `ok` | after every save; `ok` is `false` when the phone refused (storage full or blocked) |
 
 An event set off inside a handler of the same event (a save in a `saved` handler, a screen
@@ -189,7 +189,9 @@ a module it asks them all, in three parts with a Part screen before each. A modu
 it with these:
 
 - **`steps(fn)`, the order for someone new.** Ids from the list, no Part screens, one bar
-  over them all; after the last, `build` and `ready`. An order must ask `goal`, `born`,
+  over them all; after the last, `build` and `ready`. `fn` is asked again at every step with
+  the answers so far, so the order can follow them (`js/onboard-flow.js` leaves out the
+  fitness check after a health yes). An order must ask `goal`, `born`,
   `health` and `sore`, and `born` and `health` before `height`, `weight` or `target` (what
   those may say depends on them). One that doesn't is refused: the console names the module
   and the app asks its own order. `target` is skipped for anyone at risk, both ways. Edit,
@@ -203,8 +205,10 @@ it with these:
   "Saved". A new goal or new days with days ticked off ask "Restart your 28 days?" first,
   as Edit does. `profile` gets these steps.
 - **`data-act="ob-finish"`** on `ready` saves the answers. With `data-then="day"` it then
-  opens the first workout (`begin`, which starts the free trial), with `data-then="plan"`
-  the Plan; without, the app's own way (the price screen for someone new).
+  opens the first workout (`begin`, which starts the free trial; once the trial has ended,
+  the price screen over the Plan instead), with `data-then="plan"` the Plan; without, the
+  app's own way (the price screen over the Plan for someone new, or after the trial).
+  Closing the price screen shows the Plan, never the onboarding again.
 - **`override('onboard', …)`** draws a step your way: read the answers with `app.draft()`,
   and call the old `title`, `html` and `mount` for every step you leave alone (its rulers
   and the year wheel come alive in `mount`).

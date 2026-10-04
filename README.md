@@ -26,11 +26,11 @@ Two kinds of users:
   with one bar over them: the goal, what keeps them safe (year of birth, the PAR-Q+
   health questions and pregnancy, each answered on purpose, sore spots), days a
   week, minutes, kit at home and who demonstrates (the male or female coach). The
-  plan is built, and **Your first week** shows week 1's sessions with their real
-  lengths, Day 1's first move, a line for the goal, the safety rows and when the
-  free trial starts. **Start Day 1** opens the first workout. Everyone starts at
-  Beginner.
-- **Make it yours**: after the first workout, a card on the finish screen and the
+  plan is built, and **Your first week** shows Day 1's first move, the safety rows,
+  week 1's sessions with their real lengths, a line for the goal and, next to the
+  buttons, when the free trial starts (or that it has ended). **Start Day 1** opens
+  the first workout. Everyone starts at Beginner.
+- **Make it yours**: after the plan's first workout, a card on the finish screen and the
   Plan asks the rest, one question at a time: the fitness check (how active, a
   push-up guess) that sets the level from the next workout, height and weight on
   sliding rulers with BMI, a target weight with a realistic date range, focus

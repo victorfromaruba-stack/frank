@@ -3,9 +3,25 @@
 const L = require('./lib.cjs');
 const { app } = L;
 
+const next = (p) => app.tap(p, '.ob-cta [data-act="ob-next"]');
+async function step(p, words) {
+  await p.waitForFunction((w) => { const q = document.querySelector('.ob-q'); return q && q.innerText.toLowerCase().includes(w.toLowerCase()); }, words, { timeout: 15000 });
+}
+// the fast start's eight questions (js/onboard-flow.js), answered: then Your first week
+async function fastStart(p) {
+  await app.tap(p, '[data-act="ob-start"]');
+  await step(p, 'main goal'); await app.tap(p, '[data-act="ob-pick"][data-k="goal"][data-v="fat"]');
+  await step(p, 'born'); await next(p);
+  await step(p, 'Before you'); await app.tap(p, '[data-act="ob-health-none"]'); await next(p);
+  await step(p, 'sore spots'); await app.tap(p, '[data-act="ob-none"]'); await next(p);
+  for (const w of ['days a week', 'How long', 'at home']) { await step(p, w); await next(p); }
+  await step(p, 'demonstrate'); await app.tap(p, '[data-act="ob-pick"][data-k="sex"][data-v="m"]');
+  await p.waitForSelector('.reveal .ob-cta [data-act="ob-finish"]', { timeout: 15000 });
+}
+
 module.exports = {
   name: 'paywall',
-  about: 'trial starts with the first workout, days left, the price screen: the trial offered only before it starts, only prices Frank approved (€15 a month), "Tell me when it opens" while payments are off, the checkout once they are on; members, and the price screen for a member or a client (their line, no way to join); Frank\'s sessions stay open',
+  about: 'trial starts with the first workout, days left, the price screen: the trial offered only before it starts, only prices Frank approved (€15 a month), "Tell me when it opens" while payments are off, the checkout once they are on; after the trial, the fast start ends on the price screen over the Plan; members, and the price screen for a member or a client (their line, no way to join); Frank\'s sessions stay open',
   async run(t) {
     await t.flow('new: the first workout starts the trial', async () => {
       const p = await t.page({ state: L.state({ profile: L.profile() }) });
@@ -103,6 +119,37 @@ module.exports = {
       await app.waitTitle(p, 'Membership');
       await app.tap(p, '.pay [data-act="join"]');
       await app.waitTitle(p, "Frank's clients");
+    });
+
+    await t.flow('ended, no plan yet: the fast start ends on the price screen over the Plan', async () => {
+      // trained from Look around first until the free trial ended, then asked for a plan. Your first week says the trial has
+      // ended; its button saves the plan and opens the price screen, and closing that shows the Plan, not the questions
+      const p = await t.page({ state: L.state({ access: { trialStart: L.isoDay(-10) } }), speed: 50 });
+      await fastStart(p);
+      const cta = await p.locator('.reveal .ob-cta').innerText();
+      t.has(cta, 'Your free trial has ended.', 'Your first week after the free trial');
+      t.has(cta, 'See membership', 'Your first week after the free trial, while payments are off');
+      t.lacks(cta, /Start Day 1|trial starts/i, 'Your first week after the free trial');
+      await t.look(p, 'your first week after the free trial');
+      await app.tap(p, '.reveal .ob-cta [data-act="ob-finish"]:not([data-then])');
+      await app.waitTitle(p, 'Membership');
+      t.has(await app.text(p), 'Keep training', 'the price screen after Your first week');
+      t.equal(((await app.stored(p)).profile || {}).goal || null, 'fat', 'the plan saved before the price screen: its goal');
+      await app.tap(p, '[data-act="pay-close"]');
+      await app.waitTitle(p, 'Plan');
+      t.has(await app.text(p), 'Start day 1', 'the price screen closed: the Plan');
+      t.step('Start Day 1, drawn before the free trial ended');
+      // the screen came up on the trial's last day, and the trial ended before the tap (the same as data-then="day" after
+      // it ended): the price screen over the Plan, as above
+      const q = await t.page({ state: L.state({ access: { trialStart: L.isoDay(-6) } }), speed: 50 });
+      await fastStart(q);
+      t.has(await q.locator('.reveal .ob-cta').innerText(), '1 day left of your free trial.', "Your first week on the trial's last day");
+      await q.evaluate((d) => { WBF.app.state().access.trialStart = d; }, L.isoDay(-10));
+      await app.tap(q, '[data-act="ob-finish"][data-then="day"]');
+      await app.waitTitle(q, 'Membership');
+      await app.tap(q, '[data-act="pay-close"]');
+      await app.waitTitle(q, 'Plan');
+      t.equal(await q.locator('.reveal').count(), 0, 'Start Day 1 after the trial ended, the price screen closed: Your first week');
     });
 
     await t.flow('payments on: the checkout', async () => {

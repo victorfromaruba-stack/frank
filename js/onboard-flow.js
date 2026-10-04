@@ -54,18 +54,25 @@
 
     // ---- who is asked what ----------------------------------------------------------------------------------------------
     // No target weight for anyone at risk (may be under 18, pregnant, a medical condition) or in gentle mode (a PAR-Q yes
-    // until a doctor clears it), nor before a weight is known. No fitness check on the card while the plan is gentle: its
-    // level stays Beginner until then (.claude/skills/frank-safety). Asked each time: Me's switches change it
-    function allowed(r, p, card) {
+    // until a doctor clears it), nor before a weight is known. No fitness check while the plan is gentle, on the card or in
+    // Your answers: the level stays Beginner until a doctor clears it (.claude/skills/frank-safety). Asked each time: Me's
+    // switches change it
+    function allowed(r, p) {
       if (r.id === 'target') return !app.atRisk(p) && !WBF.plan.avoidFor(p).gentle && !!weightOf(p);
-      if (r.id === 'fitness' && card) return !WBF.plan.avoidFor(p).gentle;
+      if (r.id === 'fitness') return !WBF.plan.avoidFor(p).gentle;
       return true;
     }
     // the questions "Make it yours" still asks. None for a plan from before the fast start (no profile.asked: every answer
     // was given then), and none once the card was put away (profile.later)
     function pending(p) {
       if (!p || !isObj(p.asked) || p.later) return [];
-      return ROWS.filter(function (r) { return r.later && !p.asked[r.id] && allowed(r, p, true); });
+      return ROWS.filter(function (r) { return r.later && !p.asked[r.id] && allowed(r, p); });
+    }
+    // a workout of this plan done: a day ticked off, or a plan day trained since the plan started. Make it yours comes after
+    // Day 1, not after a session from Frank or a workout from Look around first before the plan was made
+    function trained(S, p) {
+      return Object.keys(S.done || {}).length > 0 ||
+        (S.sessions || []).some(function (r) { return r && r.day && (!p.start || String(r.date) >= p.start); });
     }
 
     // ---- answers as Me's "Your answers" shows them: the app's words for them (util), in the units picked -----------------
@@ -108,13 +115,20 @@
     }
 
     // ---- the order, and what a save answered ----------------------------------------------------------------------------
-    app.steps(function () { return FIRST; });
-    // A new plan gets profile.asked: what the onboarding didn't ask, Make it yours asks after Day 1. Every later save from
-    // the onboarding's steps (Make it yours, Your answers) dates the questions it answered. A plan from before the fast start
-    // has no asked and gets none: its answers were all given
+    // The questions for these answers: FIRST, and no fitness check while a health yes keeps the plan gentle (with
+    // FITNESS_FIRST on: .claude/skills/frank-safety). The app asks again at every step, with the answers so far, so the
+    // order follows the health answers
+    function firstFor(d) {
+      return WBF.plan.avoidFor(d).gentle ? FIRST.filter(function (s) { return s !== 'active' && s !== 'pushups'; }) : FIRST;
+    }
+    app.steps(firstFor);
+    // A new plan gets profile.asked: what the onboarding didn't ask, Make it yours asks after Day 1. A save from the questions
+    // someone new is asked is a new plan also when the phone has one already: another window of the browser saved it while
+    // these were answered. Every later save from the onboarding's steps (Make it yours, Your answers) dates the questions it
+    // answered. A plan from before the fast start has no asked and gets none: its answers were all given
     app.on('profile', function (old, p, changed, steps) {
       if (!p || !Array.isArray(steps)) return;
-      var fresh = !old && !isObj(p.asked), now = u.iso(), more = false;
+      var fresh = !isObj(p.asked) && (!old || steps.join() === firstFor(p).join()), now = u.iso(), more = false;
       if (fresh) p.asked = {};
       if (!isObj(p.asked)) return;
       ROWS.forEach(function (r) {
@@ -124,22 +138,32 @@
     });
 
     // ---- "Your first week": after the build, in place of the app's summary ------------------------------------------------
-    function firstMove(s) { var m = s.steps.filter(function (st) { return st.block === 'main'; })[0] || s.steps[0]; return m.ex; }
+    function mainOf(s) { return s.steps.filter(function (st) { return st.block === 'main'; }).map(function (st) { return st.ex; }); }
+    function firstMove(s) { return mainOf(s)[0] || s.steps[0].ex; }
+    // a session's picture: its first main move that no day above shows, so the days don't all look alike (many workouts
+    // start with the same move)
+    function picture(s, shown) {
+      var m = mainOf(s).filter(function (ex) { return !shown[ex]; })[0] || firstMove(s);
+      shown[m] = 1;
+      return m;
+    }
     function coachLine(text) { return '<div class="coachline"><span class="av">F</span><p>' + esc(text) + '</p></div>'; }
     // the answers of someone new on the ready step: Edit and steps on their own keep the app's summary
     function newcomer(p) {
       var d = p && p.step === 'ready' ? app.draft() : null;
       return d && !d.edit && !d.only && WBF.GOALS[d.goal] ? d : null;
     }
+    // Day 1's first move, what keeps them safe (the summary's rows, in its words), the week and the level, then Frank's line.
+    // The line about the free trial sits with the buttons, so it's on screen when Start Day 1 is tapped
     function reveal(d) {
       var week = WBF.plan.days(d).filter(function (x) { return x.train && x.week === 1; });
       var ses = week.map(function (x) { return { day: x, s: app.session(x.workoutId, x, null, d) }; });
-      var first = firstMove(ses[0].s), av = WBF.plan.avoidFor(d), st = app.status();
-      var level = WBF.LEVELS[WBF.plan.levelFor(d)];
+      var first = firstMove(ses[0].s), av = WBF.plan.avoidFor(d), st = app.status(), shown = {};
+      var level = WBF.LEVELS[WBF.plan.levelFor(d)], ended = st === 'ended';
       var trial = st === 'new' ? 'Your ' + WBF.BILLING.trialDays + '-day free trial starts with your first workout.' :
-        st === 'trial' ? u.plural(app.daysLeft(), 'day') + ' left of your free trial.' : '';
+        st === 'trial' ? u.plural(app.daysLeft(), 'day') + ' left of your free trial.' : ended ? 'Your free trial has ended.' : '';
       var days = ses.map(function (o) {
-        return '<div class="wk1-day" data-day="' + o.day.day + '">' + u.thumbHtml(firstMove(o.s)) + '<span class="grow"><b>Day ' + o.day.day + '</b><span>' + esc(o.s.title) + '</span></span>' +
+        return '<div class="wk1-day" data-day="' + o.day.day + '">' + u.thumbHtml(picture(o.s, shown)) + '<span class="grow"><b>Day ' + o.day.day + '</b><span>' + esc(o.s.title) + '</span></span>' +
           '<span class="mins">' + u.mins(o.s.estSec) + '</span></div>';
       }).join('');
       return '<div class="ob reveal"><div class="ob-top"><button class="icon-btn" data-act="ob-back" aria-label="Back">' + u.ic('back') + '</button>' +
@@ -147,13 +171,15 @@
         '<div class="stack tight"><p class="label" style="color:var(--sky-ink)">' + esc(u.planName(d)) + '</p>' +
         '<h1 class="ob-q">Your first <em>week</em></h1></div>' +
         '<div class="reveal-fig is3d">' + u.figHtml(first, { deco: true, note: false }) + '<span class="cap">From Day 1: ' + esc(WBF.EX[first].name) + '</span></div>' +
-        coachLine(GOAL_LINE[d.goal] || GOAL_LINE.fit) +
-        '<div class="summary"><div class="between"><p class="label" style="color:var(--ink-d2)">Week 1: ' + esc(WBF.STAGES[0].name) + '</p>' +
+        '<div class="summary">' + u.safeRows(d) +
+        '<div class="between"><p class="label" style="color:var(--ink-d2)">Week 1: ' + esc(WBF.STAGES[0].name) + '</p>' +
         '<p class="label" style="color:var(--ink-d2)">' + u.plural(ses.length, 'workout') + '</p></div><div class="wk1">' + days + '</div>' +
-        (av.gentle ? '' : '<p class="reveal-level">You start at ' + esc(level) + '.' + (FITNESS_FIRST ? '' : ' The fitness check after Day 1 sets your level.') + '</p>') +
-        u.safeRows(d) + '</div>' +      // the safety rows of the app's summary, in its words
-        (trial ? '<p class="ob-note">' + esc(trial) + '</p>' : '') +
-        '<div class="ob-cta"><button class="btn dark block" data-act="ob-finish" data-then="day">Start Day 1</button>' +
+        (av.gentle ? '' : '<p class="reveal-level">You start at ' + esc(level) + '.' + (FITNESS_FIRST ? '' : ' The fitness check after Day 1 sets your level.') + '</p>') + '</div>' +
+        coachLine(GOAL_LINE[d.goal] || GOAL_LINE.fit) +
+        '<div class="ob-cta">' + (trial ? '<p class="ob-note">' + esc(trial) + '</p>' : '') +
+        // once the free trial has ended, Day 1 needs a membership: the answers saved, then the price screen over the Plan
+        (ended ? '<button class="btn dark block" data-act="ob-finish">' + (WBF.BILLING.paymentLink ? 'Become a member' : 'See membership') + '</button>'
+          : '<button class="btn dark block" data-act="ob-finish" data-then="day">Start Day 1</button>') +
         '<button class="btn white block" data-act="ob-finish" data-then="plan">See my plan</button></div></div>';
     }
     // Start Day 1 and See my plan save the answers (ob-finish): until then nothing is saved, as on the app's summary
@@ -163,11 +189,11 @@
       mount: function (p) { if (!newcomer(p) && own.mount) own.mount(p); }
     });
 
-    // ---- "Make it yours": after the first workout, on the finish screen and the Plan ----------------------------------------
+    // ---- "Make it yours": after the plan's first workout, on the finish screen and the Plan ---------------------------------
     // The fitness check first: everyone starts at Beginner, and the next session follows the answer
     function yours(where) {
       var S = app.state(), p = S.profile, list = pending(p);
-      if (!list.length || !(S.sessions || []).length) return null;
+      if (!list.length || !trained(S, p)) return null;
       var fit = list.filter(function (r) { return r.id === 'fitness'; })[0], rest = list.filter(function (r) { return r.id !== 'fitness'; });
       return { id: 'flow-yours', priority: where === 'done' ? 30 : 40, html: '<section class="card"><p class="label">Make it yours</p>' +
         (fit ? '<p class="small">You started at Beginner. Two questions set your level for the next workout.</p>' +
@@ -196,7 +222,7 @@
         var p = app.state().profile;
         return '<div class="screen bare">' + u.backBar('Your answers') + '<div class="stack tight"><h1 class="h1">Your answers</h1>' +
           '<p class="lead">Tap an answer to change it. A new goal or new days ask before your 28 days start again.</p></div>' +
-          (p ? '<section class="card"><div class="list">' + ROWS.filter(function (r) { return allowed(r, p, false); }).map(function (r) { return row(r, p, false); }).join('') + '</div></section>' : '') + '</div>';
+          (p ? '<section class="card"><div class="list">' + ROWS.filter(function (r) { return allowed(r, p); }).map(function (r) { return row(r, p, false); }).join('') + '</div></section>' : '') + '</div>';
       }
     });
 

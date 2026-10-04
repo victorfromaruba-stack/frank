@@ -764,11 +764,13 @@
       if (any) out += '<p class="small">Anyone with your backup file or move link can see your answers. Keep them to yourself.</p>';
       return out;
     });
-    // the finish screen of the workout after which the Home Screen sheet came up: the way back to it
+    // the finish screen of the workout after which the Home Screen sheet came up: the way back to it. It shows on that one
+    // screen only, so it comes before cards that come back on later ones (Make it yours, js/onboard-flow.js, which the Plan
+    // shows too)
     var shownFor = null;
     app.card('done.next', function (rec) {
       if (!rec || rec.id !== shownFor || installed()) return null;
-      return { id: 'keep-home', priority: 20, html: '<section class="card"><p class="label">Keep your progress</p><p class="small">Put Frank on your Home Screen. The app there keeps your plan.</p>' +
+      return { id: 'keep-home', priority: 35, html: '<section class="card"><p class="label">Keep your progress</p><p class="small">Put Frank on your Home Screen. The app there keeps your plan.</p>' +
         '<button class="btn two block" data-act="keep-install">Show me how</button></section>' };
     });
 

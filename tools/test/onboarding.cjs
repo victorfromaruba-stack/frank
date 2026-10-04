@@ -178,6 +178,15 @@ async function walk(t, o) {
   p.qa.sched = sched ? [+sched[1], +sched[2], +(sched[3] || sched[2])] : null;
   t.equal(((await app.stored(p)) || {}).profile || null, null, 'a profile saved before Your first week is left');
   await t.look(p, 'your first week');
+  // before any scroll: what keeps them safe above the buttons, and the free trial's line with them, above Start Day 1
+  const fold = await p.evaluate(() => {
+    window.scrollTo(0, 0);
+    const cta = document.querySelector('.reveal .ob-cta'), top = cta.getBoundingClientRect().top;
+    const note = cta.querySelector('.ob-note'), start = cta.querySelector('[data-then="day"]');
+    return { safety: [...document.querySelectorAll('.reveal .sum-row')].map((e) => e.getBoundingClientRect().bottom <= top),
+      note: !!note && note.getBoundingClientRect().bottom <= start.getBoundingClientRect().top && start.getBoundingClientRect().bottom <= innerHeight };
+  });
+  t.equal(fold, { safety: o.weekRows.map(() => true), note: true }, 'Your first week before any scroll [the safety rows above the buttons, the free trial line above Start Day 1]');
   return p;
 }
 // once saved: week 1 as the plan builds it then, before the fitness check changes the level
@@ -299,6 +308,7 @@ async function checkSaved(t, p, o) {
   t.equal(hk.filter((k) => pr.health[k] === true), o.healthYes, 'saved health answers (yes)');
   t.equal(hk.filter((k) => typeof pr.health[k] !== 'boolean'), [], 'health questions saved without an answer');
   t.equal(pr.health.confirmed, L.TODAY, 'date the health answers were confirmed');
+  t.equal(!!pr.health.cleared, !!o.cleared, 'saved: cleared by a doctor');
   t.equal(pr.days, o.days, 'saved days');
   t.equal(pr.minutes, o.minutes, 'saved minutes');
   t.equal(pr.kit.slice().sort(), o.kit.slice().sort(), 'saved kit');
@@ -323,7 +333,7 @@ async function checkSaved(t, p, o) {
   t.equal(plan.train, o.days * 4, 'training days in 28 days');
   t.equal(plan.level, o.planLevel, 'plan level');
   t.equal(plan.unsafe, [], 'moves the answers rule out, still in the plan');
-  if (o.healthYes.length) t.equal(plan.cardio, 0, 'cardio days in gentle mode');
+  if (o.healthYes.length && !o.cleared) t.equal(plan.cardio, 0, 'cardio days in gentle mode');
   // real lengths: Your first week shows the sessions the plan built (before the fitness check), and the build step names
   // week 1's shortest and longest
   t.equal(p.qa.shown, p.qa.real, "Your first week's sessions [day, minutes] against the sessions the plan built");
@@ -343,7 +353,7 @@ const METRIC = {
   days: 4, minutes: 30, minutesLine: true, kitTaps: ['db'], kit: ['chair', 'table', 'db'], name: 'Sam',
   buildSays: ['Choosing moves to lose fat', 'Scheduling 4 days a week'],
   weekSays: ['28-day fat burner', 'Week 1: Foundation', '4 workouts', 'You start at Beginner. The fitness check after Day 1 sets your level.', 'Your 7-day free trial starts with your first workout.'],
-  weekLacks: ['Target weight', 'BMI', 'Gentle mode'],
+  weekLacks: ['Target weight', 'BMI', 'Gentle mode'], weekRows: [],
   asked: ['body', 'target', 'focus', 'want', 'fitness', 'name']
 };
 const IMPERIAL = {
@@ -353,12 +363,14 @@ const IMPERIAL = {
   targetSays: null,                                                 // a PAR-Q yes: no target weight (js/onboard-flow.js)
   rulerSays: { h: '5 feet 7 inches', w: '147 pounds' },
   healthYes: ['joint'], sore: ['knee', 'other'], soreSays: 'Moves that load your knee are left out or swapped, and jumps are left out. For the other spot',
+  // gentle mode: no fitness check until Cleared by a doctor (Me), then the level from the push-up test
+  cleared: true,
   activeRight: 1, activeSays: "I'm on my feet and moving a lot",
-  push: 3, testLevel: 'Advanced', planLevel: 'b',
+  push: 3, testLevel: 'Advanced', planLevel: 'a',
   days: 2, minutes: 10, minutesLine: false, kitTaps: ['table'], kit: ['chair'], name: '',
   buildSays: ['Choosing moves to build strength', 'Leaving out moves that load your knee', 'Leaving out jumps for your other sore spot', 'Scheduling 2 days a week'],
   weekSays: ['28-day strength builder', 'Week 1: Foundation', '2 workouts', 'Gentle mode', 'Until your doctor clears you', 'Knee, Other', 'Moves that load them, and jumps, are left out'],
-  weekLacks: ['Target weight', 'BMI', 'The fitness check after Day 1'],
+  weekLacks: ['Target weight', 'BMI', 'The fitness check after Day 1'], weekRows: ['Sore spots', 'Health'],
   asked: ['body', 'focus', 'want', 'fitness', 'name']
 };
 
@@ -419,9 +431,18 @@ module.exports = {
       t.step('your answers');
       await toAnswers(p);
       t.equal(await p.locator('[data-row="target"]').count(), 0, 'Your answers with a PAR-Q yes: Your target');
+      t.equal(await p.locator('[data-row="fitness"]').count(), 0, 'Your answers in gentle mode: the fitness check');
       const from = (id) => app.tap(p, '#app [data-row="' + id + '"]');
       await body(t, p, o, from, 'Your answers');
+      // the fitness check comes once a doctor has cleared the yes (Me, Cleared by a doctor)
+      t.step('cleared by a doctor');
+      await app.tap(p, '[data-act="back"]');
+      await app.waitTitle(p, 'Me');
+      await app.tap(p, '[data-act="health"][data-k="cleared"]');
+      await toAnswers(p);
+      t.equal(await p.locator('[data-row="fitness"]').count(), 1, 'Your answers once cleared by a doctor: the fitness check');
       await fitness(t, p, o, from, 'Your answers');
+      t.has(await app.toast(p), 'Your plan was updated', 'toast after the fitness check, cleared by a doctor');
       await rest(t, p, o, from, 'Your answers');
       await checkSaved(t, p, o);
     });
@@ -562,6 +583,25 @@ module.exports = {
       await app.tap(p, '[data-act="back"]');
       await app.tap(p, '.tab[data-tab="plan"]');
       t.equal(await p.locator('.wk-days button.dd').count(), 20, 'training days on the 28-day grid after new days');
+    });
+
+    await t.flow('Me: a year of birth of 60 or more changes the plan, and says so', async () => {
+      // from 60 the plan leaves out jumps and adds balance work (avoidFor in js/programs.js): the sessions change, so the
+      // toast says the plan was updated (and the modules hear it), and the plan keeps its start and its ticks
+      const st = ticked({}, { goal: 'fat', level: 'i', birthYear: 1990 });
+      const p = await t.page({ state: st });
+      const jumps = () => p.evaluate(() => WBF.app.planDays().filter((d) => d.train).reduce((n, d) => n + WBF.app.session(d.workoutId, d).steps.filter((s) => WBF.EX[s.ex].jump).length, 0));
+      t.check(await jumps() > 0, 'control: a fat-loss plan for someone born in 1990 should have jumps');
+      await toAnswers(p);
+      await app.tap(p, '#app [data-row="born"]');
+      await expectStep(t, p, 'born');
+      await app.tap(p, '#wheel button[data-year="1960"]');
+      await p.waitForFunction(() => { const b = document.querySelector('#wheel button.on'); return b && b.getAttribute('data-year') === '1960'; }, null, { timeout: 5000 });
+      await next(p);
+      await app.waitTitle(p, 'Your answers');
+      const s = await app.stored(p);
+      t.equal([s.profile.birthYear, await jumps(), await app.toast(p)], [1960, 0, 'Your plan was updated'], 'after 1960 [year of birth, jumps in the plan, toast]');
+      t.equal([s.profile.start, s.done], [st.profile.start, st.done], 'after 1960 [plan start, ticks]');
     });
 
     await t.flow('Me: every answer again with no changes keeps the weights and the ticks', async () => {

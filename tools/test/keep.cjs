@@ -360,6 +360,19 @@ module.exports = {
       await app.tap(p, '.dock [data-act="tab"][data-tab="plan"]');
       await shortWorkout(p);
       t.equal(await sheetText(p), '', 'after a second workout: the sheet again');
+      t.step('a plan from the fast start, with Make it yours to answer');
+      // both want that finish screen's one card: the way back to the sheet shows there only, Make it yours (js/onboard-flow.js)
+      // on every finish screen and on the Plan until it's answered. So the way back shows, and the Plan has Make it yours
+      const fp = await t.page({ ua: L.UA.iphone, state: L.state({ profile: L.profile({ level: 'b', push: null, asked: {} }), access: { trialStart: L.TODAY } }), speed: 50 });
+      await shortWorkout(fp);
+      t.has(await sheetText(fp, 'Keep your progress'), 'Add to Home Screen', 'a plan from the fast start: the sheet after the first workout');
+      await app.tap(fp, '#overlay [data-act="close"]');
+      t.equal(await fp.$$eval('[data-slot="done.next"][data-card]', (cs) => cs.map((c) => c.getAttribute('data-card'))), ['keep-home'],
+        'a plan from the fast start: the finish screen\'s card, the sheet closed');
+      await app.tap(fp, '.dock [data-act="tab"][data-tab="plan"]');
+      await app.waitTitle(fp, 'Plan');
+      t.equal(await fp.locator('[data-card="flow-yours"]').count(), 1, 'a plan from the fast start: Make it yours on the Plan after that workout');
+      await fp.context().close().catch(() => null);
       t.step('Android');
       const and = await t.page({ ua: L.UA.android, state: L.member(), speed: 50 });
       // Chrome offers its own install prompt

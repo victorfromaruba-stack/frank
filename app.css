@@ -474,8 +474,11 @@ body:not(.light) .warnbox { background: rgba(242, 201, 107, 0.12); color: var(--
 .sum-row span { color: var(--ink-d2); font-size: 15px; }
 .sum-row b { font-weight: 900; text-align: right; }
 .sum-row small { display: block; font-size: 12px; color: var(--green-ink); font-weight: 700; }
-/* the fast start's "Your first week" (js/onboard-flow.js), a light screen: Day 1's first move, then week 1's sessions */
-.reveal-fig { position: relative; flex: none; aspect-ratio: 16 / 10; border-radius: 22px; overflow: hidden; background: var(--studio); }
+/* the fast start's "Your first week" (js/onboard-flow.js), a light screen: Day 1's first move, then the safety rows, week 1's
+   sessions and the level. The free trial's line sits with the buttons (.ob-cta), above Start Day 1 */
+.reveal-fig { position: relative; flex: none; aspect-ratio: 2 / 1; border-radius: 22px; overflow: hidden; background: var(--studio); }
+.reveal .summary > .sum-row:first-child { border-top: 0; padding-top: 0; }
+.reveal .sum-row + .between { border-top: 1px solid var(--line-d); padding-top: 14px; }
 .reveal-fig .fig-box { position: absolute; inset: 0; aspect-ratio: auto; border-radius: 0; background: transparent; }
 .reveal-fig .cap { position: absolute; left: 12px; bottom: 12px; z-index: 2; max-width: calc(100% - 24px); background: rgba(255, 255, 255, 0.92); color: var(--ink-d); font: 800 13px/1.25 var(--f-body); padding: 7px 10px; border-radius: 10px; }
 .wk1 { display: flex; flex-direction: column; }
@@ -486,6 +489,14 @@ body:not(.light) .warnbox { background: rgba(242, 201, 107, 0.12); color: var(--
 .wk1-day .grow span { display: block; font-size: 14px; color: var(--ink-d2); }
 .wk1-day .mins { font-weight: 800; color: var(--ink-d); white-space: nowrap; }
 .reveal-level { margin: 0; font-size: 14px; line-height: 1.4; color: var(--ink-d2); }
+/* a short phone (iPhone SE, or Safari's bars): a lower picture and tighter rows, so the week starts above the buttons */
+@media (max-height: 720px) {
+  .reveal { gap: 12px; }
+  .reveal-fig { aspect-ratio: 5 / 2; }
+  .reveal .summary { padding: 14px; gap: 10px; }
+  .wk1-day { padding: 5px 0; }
+  .wk1-day .thumb { width: 44px; height: 44px; }
+}
 .coach-card { border-radius: 24px; overflow: hidden; background: var(--paper-2); box-shadow: 0 2px 14px rgba(1, 45, 18, 0.08); }
 .coach-card img { width: 100%; aspect-ratio: 1; object-fit: cover; }
 .coach-card .cc { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 6px; }
