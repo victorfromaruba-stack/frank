@@ -42,15 +42,27 @@ read -r w h rot < <(ffprobe -v error -select_streams v:0 -show_entries stream=wi
 case "${rot#-}" in 90|270) t=$w; w=$h; h=$t ;; esac
 
 if [ "$w" -ge "$h" ]; then
-  # sideways: 4:3 around the middle, or the whole frame with --wide; 720 high
-  if [ $wide -eq 1 ]; then crop="crop=iw:ih"; else crop="crop='min(iw,ih*4/3)':ih"; fi
+  # sideways: 4:3 around the middle, or the whole frame (16:9 at most) with --wide; 720 high
+  if [ $wide -eq 1 ]; then crop="crop='min(iw,ih*16/9)':ih"; else crop="crop='min(iw,ih*4/3)':ih"; fi
   scale="scale=-2:720"
 else
   # upright: 4:5, 900 high
   crop="crop=iw:'min(ih,iw*5/4)'"
   scale="scale=-2:900"
 fi
-vf="$crop,$scale,fps=30,format=yuv420p"
+# Black rows along the top and bottom (the AI takes have about 4 of 720 each, a dark line in the app): cut off first,
+# when they are a thin strip (2% of the height at most, so a dark wall at the edge of a phone clip stays)
+bars=""
+cd=$(ffmpeg -hide_banner -nostats -i "$clip" -vf "cropdetect=limit=24:round=2:reset=0" -frames:v 48 -an -f null - 2>&1 \
+  | grep -o 'crop=[0-9]*:[0-9]*:[0-9]*:[0-9]*' | tail -1 || true)
+if [ -n "$cd" ]; then
+  IFS=: read -r _ ch _ cy <<< "${cd#crop=}"
+  cb=$((h - ch - cy))
+  if [ $((cy + cb)) -gt 0 ] && [ "$cy" -ge 0 ] && [ "$cb" -ge 0 ] && [ "$cy" -le $((h / 50)) ] && [ "$cb" -le $((h / 50)) ]; then
+    bars="crop=iw:$ch:0:$cy,"
+  fi
+fi
+vf="$bars$crop,$scale,fps=30,format=yuv420p"
 
 trim=()
 [ -n "$start" ] && trim+=(-ss "$start")
