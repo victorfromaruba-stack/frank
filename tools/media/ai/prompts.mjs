@@ -120,6 +120,11 @@ export const KIND = {
 // with the audio for your prompt", not charged) when the prompt asked for soft breathing. The app plays the clips
 // without sound, so the clip prompt leaves breathing out altogether: no sound of it, and no step or cue about it.
 export const noBreath = (lines) => lines.filter((x) => !/\bbreath/i.test(x));
+// What a move's clip must show that its steps leave open, written after a take got it wrong. Pilot 3: the woman's
+// squat went a quarter of the way down with her hands on her knees.
+export const MOTION = {
+  squat: 'Each rep goes down until the thighs are at least parallel to the floor, heels down and chest up, the arms reaching forward for balance, then drives all the way back up to standing. The hands never rest on the knees.'
+};
 export function clipPrompt(coachId, m) {
   const c = coachBook().coaches[coachId];
   const steps = noBreath(noSwitch(m.steps)), cues = noBreath(m.cues);
@@ -128,10 +133,12 @@ export function clipPrompt(coachId, m) {
     `Camera: ${CAMERA[m.camera]}. The camera is on a tripod and never moves: no pan, no zoom, no cuts. The whole body stays in the frame.`,
     steps.length ? `The movement: ${third(steps.join(' '))}` : '',
     KIND[m.kind],
+    MOTION[m.id] || '',
+    'The coach\'s face stays calm and relaxed, mouth closed.',
     m.oneSide ? 'Only the right side works, as in the first frame.' : '',
     cues.length ? `Form throughout: ${cues.map(third).join(' ')}` : '',
     'Natural, realistic human motion and anatomy: natural joint angles, hands and feet keep their shape, feet stay planted where the move needs them, steady balance.',
     'The first and the last frame show the same start position, so the clip loops smoothly.',
-    'Sound: only a quiet, steady studio room tone. No voices, no music.'
+    'Sound: only a quiet, steady studio room tone; the coach makes no sound. No voices, no music.'
   ].filter(Boolean).join(' ');
 }
