@@ -14,5 +14,8 @@
     'squat': { video: 'media/squat.mp4', poster: 'media/squat.jpg', ai: true },
     'push-up': { video: 'media/push-up.mp4', poster: 'media/push-up.jpg', ai: true },
     'plank': { video: 'media/plank.mp4', poster: 'media/plank.jpg', ai: true },
+    'arm-circles': { video: 'media/arm-circles.mp4', poster: 'media/arm-circles.jpg', ai: true },
+    'box-squat': { video: 'media/box-squat.mp4', poster: 'media/box-squat.jpg', ai: true },
+    'cat-cow': { video: 'media/cat-cow.mp4', poster: 'media/cat-cow.jpg', ai: true },
   };
 })(window);

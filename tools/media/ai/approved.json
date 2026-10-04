@@ -34,6 +34,40 @@
       "date": "2026-10-04",
       "note": "Victor's go-ahead on 4 Oct 2026 (the man coach for the app); form checked by Claude against Frank's cues; Frank sees it",
       "model": "veo-3.1-fast-generate-preview"
+    },
+    {
+      "move": "arm-circles",
+      "coach": "m",
+      "take": "take-1",
+      "run": "gh-37165819727-1-full-1-clips",
+      "sha256": "ee797c7eeae00d93f11fd0020ea653524d64e8faee353b59b8e78257b09b987c",
+      "approvedBy": "Victor",
+      "date": "2026-10-04",
+      "note": "Victor's go-ahead (4 Oct 2026, the man coach, all moves); form checked by Claude against Frank's cues; Frank sees it",
+      "model": "veo-3.1-fast-generate-preview"
+    },
+    {
+      "move": "box-squat",
+      "coach": "m",
+      "take": "take-1",
+      "run": "gh-37165819727-1-full-1-clips",
+      "sha256": "3af83b3f17d9aba0f4a552dae3fd2fbe43b3614839a4cd8e7364beb07567f658",
+      "approvedBy": "Victor",
+      "date": "2026-10-04",
+      "note": "Victor's go-ahead (4 Oct 2026, the man coach, all moves); form checked by Claude against Frank's cues; Frank sees it",
+      "model": "veo-3.1-fast-generate-preview"
+    },
+    {
+      "move": "cat-cow",
+      "coach": "m",
+      "take": "take-1",
+      "run": "gh-37165819727-1-full-1-clips",
+      "sha256": "47cbe20d946e5107ffb3d52aa650d5b2174a1abc9df4361c14a9e7a9566c52eb",
+      "approvedBy": "Victor",
+      "date": "2026-10-04",
+      "note": "Victor's go-ahead (4 Oct 2026, the man coach, all moves); form checked by Claude against Frank's cues; Frank sees it; the loop closes at 7.625 s",
+      "model": "veo-3.1-fast-generate-preview",
+      "end": 7.625
     }
   ]
 }
