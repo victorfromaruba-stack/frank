@@ -1,0 +1,10 @@
+{
+  "about": "Full set, clips, day 2: the 14 clips of batch 1 that Google's daily limit refused on 3 October (429, not charged), after the limit reset at midnight Pacific. The man coach; Victor said go ahead (4 October).",
+  "steps": ["clip", "review"],
+  "coaches": ["m"],
+  "moves": ["childs-pose", "forward-fold", "hip-hinge", "jump-squat", "jumping-jacks", "knee-to-chest", "leg-swings", "march", "mountain-climber", "single-leg-rdl", "split-squat", "cobra", "hip-flexor-stretch", "table-row"],
+  "takes": 1,
+  "resolution": "720p",
+  "parallel": 2,
+  "budget": 12
+}
