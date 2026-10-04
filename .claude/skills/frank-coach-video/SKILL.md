@@ -162,8 +162,10 @@ Same scripts, with the key in the shell. A request file works here too:
 - A move that jumps needs room above the head, or the jump leaves the frame (day 2's jump squat).
   The image model draws a standing person top to bottom whatever the framing words say, so pick
   the start pose with `--wider` (0.85; 0.8 for a jump squat): the photo goes smaller on the same
-  frame and the plain studio is extended around it. Look at the result before committing it: it
-  suits the plain backdrop, not a picture with things near its edges.
+  frame and the plain studio is extended around it. Look at the result before committing it. It
+  only suits a photo whose edges are plain backdrop: when the person reaches an edge (the jumping
+  jacks' raised hands at the top), their colour smears into the extension in streaks and the soft
+  edge fades the fingertips, so leave that pick as it is.
 - A start pose the image model won't draw (its answer has no picture) is left out with a warning,
   and the other start poses go on. Ask for that move again in a later request.
 
