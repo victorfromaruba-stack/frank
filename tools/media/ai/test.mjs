@@ -10,7 +10,8 @@
 //      not saved; --fetch finishes a clip that was left pending
 //   6. review: frames, the loop seam, index.html and sheet.png (needs ffmpeg)
 //   7. approve and process: an approved take into media/ of a copy of the app (no sound, cropped, a still), the
-//      js/media.js line with ai: true, the warning while the app doesn't label AI clips, Frank's own clip left alone
+//      js/media.js line with ai: true, the warning while the app doesn't label AI clips, Frank's own clip (frank: true)
+//      and a clip line with neither flag left alone
 //   8. workflow: .github/workflows/coach-video.yml parses as YAML (python3 with PyYAML) and keeps its rules
 //   9. the key: in no file and no line of output
 // Run: node tools/media/ai/test.mjs [--keep]   (about a minute; parts 6 and 7 need ffmpeg and say so when it's missing)
@@ -264,9 +265,13 @@ if (!haveFfmpeg()) {
   ok(labelled.code === 0 && !/DON'T ADD/.test(labelled.out) && /bump VERSION in sw\.js/.test(labelled.out), 'once the app reads ai: true, no warning, and it says to bump VERSION');
   // in place of the push-up's line, if the repo's js/media.js has one (an AI clip)
   fs.writeFileSync(path.join(R, 'js/media.js'), fs.readFileSync(path.join(R, 'js/media.js'), 'utf8').replace(/^\s*'push-up'\s*:.*\n/m, '')
-    .replace('W.WBF.MEDIA = {', "W.WBF.MEDIA = {\n    'push-up': { video: 'media/push-up.mp4', poster: 'media/push-up.jpg' },"));
+    .replace('W.WBF.MEDIA = {', "W.WBF.MEDIA = {\n    'push-up': { video: 'media/push-up.mp4', poster: 'media/push-up.jpg', frank: true },"));
   const franks = await run([S('process.mjs'), '--moves', 'push-up', '--root', R, '--from', tmp], env);
-  ok(franks.code === 1 && /Frank's own clip is in js\/media\.js/.test(franks.out), 'Frank\'s own clip (no ai: true) is never replaced');
+  ok(franks.code === 1 && /Frank's own clip is in js\/media\.js/.test(franks.out), 'Frank\'s own clip (frank: true) is never replaced');
+  // a clip line that doesn't say whose it is: not replaced either
+  fs.writeFileSync(path.join(R, 'js/media.js'), fs.readFileSync(path.join(R, 'js/media.js'), 'utf8').replace(", frank: true },", " },"));
+  const unsaid = await run([S('process.mjs'), '--moves', 'push-up', '--root', R, '--from', tmp], env);
+  ok(unsaid.code === 1 && /neither ai: true nor frank: true/.test(unsaid.out), 'a clip line with neither flag is not replaced: someone says whose it is first');
   ok(aiLabel(ROOT).reads, 'the app in this repo reads ai: true (js/app.js tags an AI clip AI demo), so its lines go in without a warning');
 }
 

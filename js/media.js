@@ -4,10 +4,12 @@
    each approved one in media/ and prints its line, for example:
      'squat': { video: 'media/squat.mp4', poster: 'media/squat.jpg', ai: true, howto: 'https://youtu.be/VIDEO_ID' },
    ai: true: the app tags the video "AI demo" wherever it shows, never "Frank".
+   frank: true in its place: a loop Frank filmed himself (tools/media/process.sh), tagged "Frank".
+   Every video needs one of the two (the static suite checks it); a line with neither shows as AI.
    howto: Frank explaining the move, a YouTube link (docs/FILMING-GUIDE.md): the How-to tab plays it
    inside the app after a tap. It can also be a file in media/. A move with only Frank's video:
      'squat': { howto: 'https://youtu.be/VIDEO_ID' },
-   A loop Frank films himself goes through tools/media/process.sh and has no ai: true. */
+   Offline, or when a video or still doesn't load, the move shows the 3D coach. */
 (function (W) {
   'use strict';
   W.WBF.MEDIA = {

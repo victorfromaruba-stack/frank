@@ -269,6 +269,8 @@ moves, on YouTube, and play inside the app (How-to).
 | Under the panel, a link to the same video in YouTube's app or site | Open in YouTube | new |
 | A tap on the button without internet | Frank's video needs the internet. | new |
 | Frank's video once it plays, its name for a screen reader | Frank explains (the move's name), for example Frank explains Squat | new |
+| Frank's sessions on the Plan: the badge moves off the picture, above the session's name (on an AI demo it could read as the video's credit) | From Frank (unchanged) | The same badge on the picture |
+| Personal (the prototype for Frank's own clients), under a session's moves | Frank's own videos will explain each move. | Frank's own videos replace the 3D coach as he films them. |
 
 ## Decisions for Frank and Victor
 
@@ -336,8 +338,21 @@ moves, on YouTube, and play inside the app (How-to).
     loads from YouTube until someone taps play, and then YouTube's privacy-enhanced player
     (youtube-nocookie.com) is used. Without Frank's video, How-to plays the AI demo in slow
     motion; the Muscle tab keeps the 3D muscles.
-16. **Frank: the AI demos' form.** He watches each AI demo before it goes in the app: these
-    videos teach his moves.
+16. **Victor: the AI demos go in before Frank sees them.** Victor decided on 4 October to
+    add the clips as they're made, once their form is checked against Frank's cues (by
+    Claude, or a person). Frank looks at each one in the app; one he doesn't like comes out
+    (its line in `js/media.js` and its approval) or is made again. These videos teach his
+    moves, so his look still matters.
+17. **Victor and Frank: who demonstrates.** The AI demos show one coach, the man (Victor's
+    choice, 4 October: a second coach would double the cost). The question "Who should
+    demonstrate the moves?" in the questions and Coach figure in Me still choose the 3D
+    coach, which shows where a move has no demo yet and offline. Once every move has its
+    demo, that question and setting could go, which would make the start one question
+    shorter.
+18. **Victor: offline, the 3D coach.** The demo videos aren't kept on the phone (a video
+    is too big for the app's offline store), so offline the moves show the 3D coach, as
+    before. The same when a video doesn't load. The single-file builds show the 3D coach
+    too.
 
 ## Older lines to check
 

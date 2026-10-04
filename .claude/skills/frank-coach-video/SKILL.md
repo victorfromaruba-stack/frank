@@ -187,7 +187,9 @@ close the first frame is to the picked start pose. Watching decides.
 Reject a take when any of these is true:
 
 - **The form doesn't match every cue exactly**, at the start, in the middle and at the end. These
-  clips teach a move in Frank's name: Frank's yes on the form comes before an approval.
+  clips teach a move in Frank's name. Victor decided on 4 October 2026 that a clip goes in once
+  its form is checked against Frank's cues (by Claude or a person); Frank looks at each in the
+  app, and one he doesn't like comes out (its line and its approval) or is made again.
 - **Warped hands or feet:** fingers or toes that melt, merge, slide or change shape.
 - **Extra or missing limbs**, even for one frame.
 - **A wrong rep path:** a joint bending the wrong way, the wrong depth or line, reps that differ.
@@ -219,16 +221,23 @@ and the last frame cut, since the loop's first frame follows it. It prints the l
 
 It never writes `js/media.js` itself, and it refuses three things: a take nobody approved (or
 that changed since), a move approved for both coaches without `--coach` (the app plays one clip
-per move), and a move whose `js/media.js` line has no `ai: true`, which is Frank's own clip.
+per move), and a move whose `js/media.js` line has `frank: true` (Frank's own clip) or a clip
+line with neither `ai: true` nor `frank: true` (someone has to say whose it is).
 
 ### How the app shows an AI clip
 
 A move whose `js/media.js` line has `ai: true` gets an "AI demo" tag on its video wherever it
-plays (the exercise sheet, the workout player, Next, the plan cards, the welcome screen), an "AI"
-tag on its still in the lists, and "Made by AI, not filmed." under it in the exercise sheet. It
-never gets the "Frank" tag. The How-to tab plays Frank's YouTube video when the move's `howto` has
-one (a panel first: nothing loads from YouTube until a tap), else the AI demo in slow motion,
-still tagged. The Muscle tab keeps the 3D muscles. `tools/test/media.cjs` checks all of it.
+plays (the exercise sheet, the workout player, Next, the plan cards, the welcome screen, a
+workout), an "AI" tag on its still in the lists, and "Made by AI, not filmed." under it in the
+exercise sheet. It never gets the "Frank" tag: only a line with `frank: true` does, and a clip
+line with neither flag shows as AI (the static suite asks for one of the two on every clip).
+The How-to tab plays Frank's YouTube video when the move's `howto` has one (a panel first:
+nothing loads from YouTube until a tap), else the AI demo in slow motion, still tagged; a
+`howto` that is neither a YouTube video nor a file in `media/` is left out. The Muscle tab keeps
+the 3D muscles. Offline, or when a video or still doesn't load, the move shows the 3D coach
+without the tag and the note (videos aren't kept offline); with reduced motion the decorative
+clips (the welcome screen, the plan cards) stand still; the single-file builds show the coach.
+`tools/test/media.cjs` checks all of it.
 
 Adding the lines `process.mjs` prints: put them in `js/media.js`, keeping a move's `howto` if it
 has one, bump `VERSION` in `sw.js` (`js/media.js` is cached), run the suites, look at the moves
@@ -252,8 +261,8 @@ in the app, and ship (frank-release). New words for the label go through frank-w
 2. Bump `VERSION` in `sw.js` and ship it (frank-release). The How-to tab now shows his panel.
 
 If Frank ever films a loop of his own: `tools/media/process.sh <clip> <id> <start> <end>` (with
-`--wide` for floor moves) overwrites `media/<id>.mp4` and `media/<id>.jpg`; take `ai: true` off
-the move's line, delete the move's entries in `approved.json` (from then on `process.mjs`
+`--wide` for floor moves) overwrites `media/<id>.mp4` and `media/<id>.jpg`; put `frank: true`
+in place of `ai: true` on the move's line, delete the move's entries in `approved.json` (from then on `process.mjs`
 refuses to put an AI clip there), bump `VERSION` and ship.
 
 ## Testing without a key
@@ -344,4 +353,4 @@ shows twice. On slow, controlled moves it's hard to see.
 - Label an AI clip "Frank", or show one anywhere without its tag.
 - Replace Frank's own clip with an AI one.
 - Give a model a real person's photo or name.
-- Approve a take whose form Frank hasn't seen.
+- Approve a take whose form nobody checked against Frank's cues.

@@ -390,13 +390,22 @@
   }
   function thumbHtml(id, cls) { return '<div class="thumb' + (cls ? ' ' + cls : '') + '" data-thumb="' + esc(id) + '"></div>'; }
   function media(id) { return (WBF.MEDIA || {})[id] || null; }
-  // a clip made by AI (ai: true in js/media.js) says so wherever it shows, and is never tagged as Frank's
+  // A clip is Frank's own only when its line in js/media.js says frank: true. Any other clip is an AI demo (ai: true) and
+  // says so wherever it shows, so a line that forgets its flag never passes an AI clip off as Frank's.
+  function aiClip(m) { return !!(m && m.video && (m.ai || !m.frank)); }
+  function franksClip(m) { return !!(m && m.video && !aiClip(m)); }
   function aiTag(thumb) { return '<span class="ai-tag"' + (thumb ? ' aria-hidden="true">AI' : '>AI demo') + '</span>'; }
   // Frank's own explanation on YouTube (howto in js/media.js) plays inside the How-to tab. Nothing loads from YouTube
   // until the person taps play; then YouTube's privacy-enhanced player (youtube-nocookie.com).
   function ytId(u) {
-    var x = /^https:\/\/(?:www\.|m\.)?(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?(?:[^#]*&)?v=|embed\/|shorts\/|live\/))([\w-]{11})(?![\w-])/.exec(u || '');
+    var x = /^https:\/\/(?:www\.|m\.)?(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?(?:[^#]*&)?v=|embed\/|shorts\/|live\/))([\w-]{11})(?![\w-])/i.exec(u || '');
     return x ? x[1] : null;
+  }
+  // Frank's explanation: a YouTube video, or his own file in media/. A link the app can't read is left out (the
+  // static suite flags it): no player that can't play it, nothing loaded from another site.
+  function howtoOf(m) {
+    var u = m && m.howto, yt = ytId(u);
+    return yt ? { yt: yt } : /^media\/[\w.-]+\.(?:mp4|webm|m4v)$/i.test(u || '') ? { file: u } : null;
   }
   function ytBox(vid) {
     return '<div class="fig-box yt" data-yt="' + vid + '"><button class="yt-play" data-act="yt-play">' + ic('play') + '<span>Watch Frank explain it</span></button>' +
@@ -411,7 +420,13 @@
     var ex = EX[el.getAttribute('data-thumb')];
     if (!ex || !el.isConnected) return;
     var m = media(ex.id);
-    if (m && m.poster) { el.classList.add('is3d'); el.innerHTML = '<img src="' + esc(m.poster) + '" alt="">' + (m.ai ? aiTag(true) : ''); return; }
+    // offline, or a still that doesn't load (the phone never had it, the one-file builds): the coach, as before
+    if (m && m.poster && navigator.onLine !== false && !el._noPoster) {
+      el.classList.add('is3d');
+      el.innerHTML = '<img src="' + esc(m.poster) + '" alt="">' + (aiClip(m) ? aiTag(true) : '');
+      el.firstChild.addEventListener('error', function () { el._noPoster = true; el.classList.remove('is3d'); el.innerHTML = ''; drawThumb(el); });
+      return;
+    }
     if (use3d()) new WBF.fig3d.Figure(ex.anim, {}).mount(el).still(thumbKey(ex));
     else new F.Figure(ex.anim, { aspect: 1, minW: 60, minH: 60, pad: 6, bare: true }).mount(el).still(thumbKey(ex));
   }
@@ -419,35 +434,8 @@
     $$('[data-thumb]', root).forEach(function (el) {
       if (thumbWatch) thumbWatch.observe(el); else drawThumb(el);
     });
-    $$('[data-fig]', root).forEach(function (el) {
-      var ex = EX[el.getAttribute('data-fig')];
-      if (!ex) return;
-      var f, flip = el.hasAttribute('data-flip'), mode = el.getAttribute('data-mode') || 'demo';
-      var m = media(ex.id), still = el.getAttribute('data-still');
-      if (m && m.video && mode === 'demo' && el.getAttribute('data-video') !== '0') {
-        el.classList.add('is3d');
-        el.innerHTML = '<video src="' + esc(m.video) + '"' + (m.poster ? ' poster="' + esc(m.poster) + '"' : '') + ' autoplay muted loop playsinline' + (flip ? ' style="transform:scaleX(-1)"' : '') + '></video>' + (m.ai ? aiTag() : '');
-        el._fig = { video: el.firstChild, pause: function () { this.video.pause(); }, play: function () { this.video.play(); }, still: function () {} };
-        if (+el.getAttribute('data-speed')) el.firstChild.defaultPlaybackRate = el.firstChild.playbackRate = +el.getAttribute('data-speed');
-        return;
-      }
-      if (use3d()) {
-        f = new WBF.fig3d.Figure(ex.anim, { note: el.getAttribute('data-note') !== '0', flip: flip, drag: el.hasAttribute('data-drag'), mode: mode,
-                                            speed: +(el.getAttribute('data-speed') || 1), orbit: reduce ? 0 : +(el.getAttribute('data-orbit') || 0), noteTop: +(el.getAttribute('data-note-top') || 0) }).mount(el);
-      } else {
-        var box = el.getBoundingClientRect();
-        var aspect = box.width && box.height ? box.width / box.height : 4 / 3;
-        f = new F.Figure(ex.anim, { aspect: aspect, note: el.getAttribute('data-note') !== '0', minW: 90, minH: 66, flip: flip }).mount(el);
-      }
-      el._fig = f;
-      if (still != null) f.still(+still);
-      else if ((reduce && el.hasAttribute('data-deco')) || (W.WBF_SHOT && W.WBF_SHOT.still)) f.still(thumbKey(ex));
-      else f.play();
-    });
-    $$('[data-turn]', root).forEach(function (b) {
-      // only over a 3D figure: not over a video, nor Frank's YouTube panel
-      b.hidden = !use3d() || !b.parentNode.querySelector('[data-fig]') || !!b.parentNode.querySelector('video');
-    });
+    $$('[data-fig]', root).forEach(mountFig);
+    turnButtons(root);
     // a map drawn before the coach was in is hidden: it shows once the coach draws it (upgrade3d)
     $$('img[data-map]', root).forEach(function (im) {
       var src = mapSrc(JSON.parse(im.getAttribute('data-map')), im.getAttribute('data-view'), +im.getAttribute('width') * 2, +im.getAttribute('height') * 2);
@@ -457,6 +445,49 @@
       var src = use3d() && WBF.fig3d.portrait ? WBF.fig3d.portrait(im.getAttribute('data-portrait'), +im.getAttribute('width') * 2, +im.getAttribute('height') * 2) : null;
       if (src) { im.src = src; im.hidden = false; } else im.hidden = true;
     });
+  }
+  // the Turn button only over a 3D figure: not over a video, nor Frank's YouTube panel
+  function turnButtons(root) {
+    $$('[data-turn]', root).forEach(function (b) {
+      b.hidden = !use3d() || !b.parentNode.querySelector('[data-fig]') || !!b.parentNode.querySelector('video');
+    });
+  }
+  function mountFig(el) {
+    var ex = EX[el.getAttribute('data-fig')];
+    if (!ex) return;
+    var f, flip = el.hasAttribute('data-flip'), mode = el.getAttribute('data-mode') || 'demo';
+    var m = media(ex.id), still = el.getAttribute('data-still');
+    // the clip; offline, or when it doesn't load (the phone never had it, the one-file builds): the coach, as before
+    if (m && m.video && mode === 'demo' && el.getAttribute('data-video') !== '0' && navigator.onLine !== false && !el._noVideo) {
+      // a decorative clip stands still on its first frame with reduced motion, as the coach does, and in screenshots
+      var calm = (reduce && el.hasAttribute('data-deco')) || (W.WBF_SHOT && W.WBF_SHOT.still);
+      el.classList.add('is3d');
+      el.innerHTML = '<video src="' + esc(m.video) + '"' + (m.poster ? ' poster="' + esc(m.poster) + '"' : '') + (calm ? ' preload="metadata"' : ' autoplay') + ' muted loop playsinline' + (flip ? ' style="transform:scaleX(-1)"' : '') + '></video>' + (aiClip(m) ? aiTag() : '');
+      var v = el.firstChild;
+      v.addEventListener('error', function () {
+        if (el.firstChild !== v || !el.isConnected) return;
+        el._noVideo = true; el.classList.remove('is3d'); el.innerHTML = '';
+        var sheet = el.closest('.xs'), note = sheet && sheet.querySelector('.ai-note');
+        if (note) note.remove();
+        mountFig(el);
+        if (el.parentNode) turnButtons(el.parentNode);
+      });
+      el._fig = { video: v, pause: function () { this.video.pause(); }, play: function () { if (!calm) this.video.play(); }, still: function () {} };
+      if (+el.getAttribute('data-speed')) v.defaultPlaybackRate = v.playbackRate = +el.getAttribute('data-speed');
+      return;
+    }
+    if (use3d()) {
+      f = new WBF.fig3d.Figure(ex.anim, { note: el.getAttribute('data-note') !== '0', flip: flip, drag: el.hasAttribute('data-drag'), mode: mode,
+                                          speed: +(el.getAttribute('data-speed') || 1), orbit: reduce ? 0 : +(el.getAttribute('data-orbit') || 0), noteTop: +(el.getAttribute('data-note-top') || 0) }).mount(el);
+    } else {
+      var box = el.getBoundingClientRect();
+      var aspect = box.width && box.height ? box.width / box.height : 4 / 3;
+      f = new F.Figure(ex.anim, { aspect: aspect, note: el.getAttribute('data-note') !== '0', minW: 90, minH: 66, flip: flip }).mount(el);
+    }
+    el._fig = f;
+    if (still != null) f.still(+still);
+    else if ((reduce && el.hasAttribute('data-deco')) || (W.WBF_SHOT && W.WBF_SHOT.still)) f.still(thumbKey(ex));
+    else f.play();
   }
   // the front/back muscle maps, drawn by the 3D coach
   function mapSrc(mus, view, w, h) { return use3d() && WBF.fig3d.mapImage ? WBF.fig3d.mapImage(mus, view, w, h) : null; }
@@ -714,18 +745,20 @@
     // other moves for the same job: only the ones this person may do, with the kit they have
     var av = WBF.plan.avoidFor(S.profile), have = (S.profile && S.profile.kit) || WBF.DEFAULT_KIT;
     var alts = (ex.alts || []).filter(function (a) { return EX[a] && WBF.plan.safe(EX[a], av) && WBF.plan.canDo(EX[a], have); });
-    var m = media(id), tabFig, yt = m && ytId(m.howto), frankHow = m && m.howto && (yt || !/youtu/.test(m.howto));
-    var aiShown = m && m.video && m.ai && XS.tab !== 'muscle' && !(XS.tab === 'howto' && frankHow);
+    var m = media(id), tabFig, how = howtoOf(m), yt = how && how.yt, frankHow = !!how;
+    // the clip shows in the Video tab, and in How-to when Frank has no video of his own there; offline, the coach
+    var clipShown = m && m.video && navigator.onLine !== false && XS.tab !== 'muscle' && !(XS.tab === 'howto' && frankHow);
+    var aiShown = clipShown && aiClip(m);
     if (XS.tab === 'muscle') tabFig = figHtml(id, { mode: 'muscle', drag: true, note: false, video: false, orbit: 20 });
-    else if (XS.tab === 'howto') tabFig = yt ? ytBox(yt) : frankHow ? '<div class="fig-box is3d"><video src="' + esc(m.howto) + '"' + (m.poster ? ' poster="' + esc(m.poster) + '"' : '') + ' controls playsinline></video></div>'
-      : figHtml(id, { drag: true, speed: 0.55, noteTop: 30, note: !(m && m.video) });
+    else if (XS.tab === 'howto') tabFig = yt ? ytBox(yt) : frankHow ? '<div class="fig-box is3d"><video src="' + esc(how.file) + '"' + (m.poster ? ' poster="' + esc(m.poster) + '"' : '') + ' controls playsinline></video></div>'
+      : figHtml(id, { drag: true, speed: 0.55, noteTop: 30, note: !clipShown });
     else tabFig = figHtml(id, { drag: true, note: false });
     var mus = ex.mus || { p: [], s: [] };
     var n = XS.list.length;
     var html = '<div class="xs">' +
       '<div class="between"><h2 class="h2">' + esc(ex.name) + '</h2><button class="icon-btn" data-act="close" aria-label="Close">' + ic('close') + '</button></div>' +
       '<div class="media" id="xs-media">' + tabFig +
-      '<div class="tags-on">' + (m && m.video && !m.ai && XS.tab === 'video' ? '<span class="tag">Frank</span>' : '') + (XS.tab === 'howto' && !frankHow ? '<span class="tag">Slow motion</span>' : '') + '</div>' +
+      '<div class="tags-on">' + (clipShown && franksClip(m) && XS.tab === 'video' ? '<span class="tag">Frank</span>' : '') + (XS.tab === 'howto' && !frankHow ? '<span class="tag">Slow motion</span>' : '') + '</div>' +
       '<button class="icon-btn glass turn" data-act="turn" data-turn="1" aria-label="Turn the figure" hidden>' + ic('turn') + '</button></div>' +
       '<div class="tabs3" role="group" aria-label="View">' + [['video', 'Video'], ['muscle', 'Muscle'], ['howto', 'How-to']].map(function (t) {
         return '<button data-act="xs-tab" data-v="' + t[0] + '" aria-pressed="' + (XS.tab === t[0]) + '">' + t[1] + '</button>';
@@ -1426,7 +1459,9 @@
     var pending = S.inbox.filter(function (x) { return !S.inboxDone[x.i]; });
     var sp = pending[0] || S.inbox[0], s = WBF.plan.custom(sp);
     var done = !!S.inboxDone[sp.i];
-    return '<div class="plan-card"><div class="pc-media is3d">' + figHtml(firstMove(s), { deco: true, note: false }) + '<span class="pc-badge">From Frank' + (done ? ' · done' : '') + '</span></div><div class="pc-body">' +
+    // "From Frank" goes with the session, not on the picture: on a clip made by AI it could read as the clip's credit
+    return '<div class="plan-card"><div class="pc-media is3d">' + figHtml(firstMove(s), { deco: true, note: false }) + '</div><div class="pc-body">' +
+      '<span class="pc-badge" style="position:static;align-self:flex-start">From Frank' + (done ? ' · done' : '') + '</span>' +
       '<h2 class="pc-title" style="font-size:24px">' + esc(s.title) + '</h2><p class="meta">' + esc(fmtShort.format(fromIso(sp.d))) + ' · ' + metaLine(s) + '</p>' +
       (sp.n ? '<p class="note s">' + esc(sp.n) + '</p>' : '') +
       '<div class="rowx"><button class="btn grow" data-act="start-coach" data-id="' + sp.i + '">' + ic('play') + (done ? 'Do it again' : 'Start') + '</button>' +
@@ -2626,6 +2661,7 @@
       var ex = XS && XS.list[XS.i] && EX[XS.list[XS.i].ex];
       box.innerHTML = '<iframe src="https://www.youtube-nocookie.com/embed/' + box.getAttribute('data-yt') + '?autoplay=1&playsinline=1&rel=0" title="' + esc('Frank explains ' + (ex ? ex.name : 'the move')) + '"' +
         ' allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>';
+      box.firstChild.focus();
     },
     'pl-how': function () {
       var wasPaused = PL.paused; PL.paused = true; SND.hush();

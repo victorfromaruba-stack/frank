@@ -210,7 +210,8 @@ node tools/build.mjs
   launch with `--use-angle=swiftshader --enable-unsafe-swiftshader`.
 - Block service workers in tests that route requests (`serviceWorkers: 'block'`).
 - Bump `VERSION` in `sw.js` whenever a cached file changes (`.claude/skills/frank-release/`).
-- The app loads nothing from other sites (fonts in `fonts/`, three.js in `vendor/`).
+- The app loads nothing from other sites (fonts in `fonts/`, three.js in `vendor/`), but
+  YouTube's privacy-enhanced player after a tap on Watch Frank explain it.
   Only the single-file builds fetch three.js from jsDelivr; in this sandbox Chromium
   doesn't trust the proxy CA, so route jsDelivr through Node's `fetch` in a test
   harness. Never turn off TLS checks.

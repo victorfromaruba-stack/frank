@@ -254,7 +254,7 @@ before that tap. Undo: delete the `howto`.
 
 The AI demos go in with `tools/media/ai/process.mjs` (the frank-coach-video skill).
 If Frank ever films a loop of his own, `tools/media/process.sh` turns it into the
-app's files, and the move's line loses `ai: true`:
+app's files, and the move's line gets `frank: true` in place of `ai: true`:
 
 ```bash
 # the loop: the file, the move's name, then where the clean reps start and end

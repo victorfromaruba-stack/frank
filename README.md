@@ -50,8 +50,8 @@ Two kinds of users:
   Shoulders & back, Cardio, Stretch) at three levels, filters by level and
   length, search, Frank's three programs (Essentials, Change the method,
   Gravity) and the library of 80 exercises.
-- **Every exercise** has a Video tab (a moving 3D coach, or Frank's own clip
-  once he films it), a Muscle tab (an anatomy view that turns slowly, the
+- **Every exercise** has a Video tab (a demo video made by AI and tagged AI demo,
+  or the moving 3D coach where a move has none yet, and offline), a Muscle tab (an anatomy view that turns slowly, the
   muscles the move works in red), and a How-to tab (slow motion, or Frank
   explaining it), plus steps, cues, common mistakes, "why it works" and other
   options. Drag the coach to turn it.
@@ -132,8 +132,9 @@ coach stays for the Muscle tab and for moves without a clip yet.
 1. **His logo:** the original file of the logo on his Instagram profile. The big W
    app icon in `img/` stands in for it until then.
 2. **His videos and photos:** the list in `docs/FILMING-GUIDE.md`: one explanation
-   per move for YouTube, plus the Personal, food and brand ones. And a yes on the form
-   of each AI demo before it goes in the app.
+   per move for YouTube, plus the Personal, food and brand ones. And a look at each AI
+   demo in the app: Victor decided (4 October) they go in once their form is checked
+   against Frank's cues; one Frank doesn't like comes out or is made again.
 3. **The yearly price, the trial and a payment provider** (now placeholders: 7 days
    free, and €119.99 a year, which the price screen hides until he says yes):
    `docs/ACCOUNTS-AND-PAYMENTS.md`.
@@ -154,8 +155,9 @@ after it (see `.claude/skills/frank-qa`). Shipping, rolling back and the move
 to Frank's own domain are in `.claude/skills/frank-release`.
 
 Any static host works. Serve the folder as it is; the phone install and
-offline mode need HTTPS. The app loads nothing from other sites: its fonts
-are in `fonts/` and three.js is in `vendor/`.
+offline mode need HTTPS. The app loads nothing from other sites but one: a tap on
+Watch Frank explain it loads YouTube's privacy-enhanced player. Its fonts are in
+`fonts/` and three.js is in `vendor/`.
 
 Before members pay:
 - **Frank's own domain first.** The app keeps each person's data per web

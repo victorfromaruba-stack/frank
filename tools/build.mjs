@@ -19,8 +19,12 @@ const files = [...html.replace(/<!--[\s\S]*?-->/g, '').matchAll(/<script\b[^>]*?
 const bad = files.filter((f) => !/^js\/[\w.-]+\.js$/.test(f));
 if (bad.length) throw new Error('index.html loads ' + bad.join(', ') + ': the build packs only js/*.js files');
 if (!files.includes('js/app.js')) throw new Error('index.html does not load js/app.js');
+// The moves' clips and stills stay files in media/: a single page can't carry them. The builds show the 3D coach in
+// their place, as the app does offline; Frank's YouTube videos (howto) still play.
+const NO_CLIPS = '(function (M) { Object.keys(M || {}).forEach(function (k) { var m = M[k]; delete m.video; delete m.poster; delete m.ai; delete m.frank;' +
+  ' if (m.howto && !/^https:/i.test(m.howto)) delete m.howto; }); })(window.WBF && window.WBF.MEDIA);';
 // one script: a ';' between files, so one that ends without it can't run into the next one's opening '('
-const scripts = files.map(read).join('\n;\n');
+const scripts = files.map((f) => (f === 'js/media.js' ? read(f) + '\n;\n' + NO_CLIPS : read(f))).join('\n;\n');
 if (/<\/script/i.test(scripts)) throw new Error('a script contains </script>');
 const css = read('app.css');
 const body = html.slice(html.indexOf('<body>') + '<body>'.length, html.indexOf('<script')).trim();
@@ -45,9 +49,8 @@ window.WBF_GLTF = GLTFLoader;
 window.WBF_ROOM = RoomEnvironment;
 window.dispatchEvent(new Event('wbf-three'));
 </script>`;
-// Frank's videos stay files: a single page can't carry them
-const media = read('js/media.js').split('W.WBF.MEDIA = {')[1].match(/^\s*'[a-z0-9-]+':\s*\{/gm) || [];
-if (media.length) console.log(`note: js/media.js lists ${media.length} video(s); host the media/ folder next to the single file`);
+const media = read('js/media.js').split('W.WBF.MEDIA = {')[1].match(/^\s*'[a-z0-9-]+':\s*\{[^}]*\bvideo:/gm) || [];
+if (media.length) console.log(`note: the single files show the 3D coach in place of the ${media.length} clip(s) in js/media.js (media/ stays with the app's folder)`);
 
 const standalone = `<!doctype html>
 <html lang="en">
