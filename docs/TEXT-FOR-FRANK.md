@@ -254,6 +254,22 @@ supervised activity, or the matching switch on the Today screen's food card.
 |---|---|---|
 | The names of the two pictures of the app that Chrome on Android shows when someone installs it (`manifest.webmanifest`) | Your 28-day plan, built for you / A workout with the moving coach | New |
 
+## AI demos and Frank's videos
+
+The demo videos of the moves are made by AI and say so; Frank's own videos explain the
+moves, on YouTube, and play inside the app (How-to).
+
+| Where | New text | Old text |
+|---|---|---|
+| A tag on every demo video made by AI: the exercise sheet, the workout, Next, the plan cards, the welcome screen | AI demo | new |
+| A tag on the small picture of a move in the lists, when its demo is made by AI (not read aloud) | AI | new |
+| The exercise sheet, under a demo made by AI (Video, and How-to in slow motion) | Made by AI, not filmed. | new |
+| The exercise sheet, How-to, when Frank has a video for the move: the button on the panel | Watch Frank explain it | The same words on a button that left the app for YouTube |
+| The same panel, under the button | Plays from YouTube | new |
+| Under the panel, a link to the same video in YouTube's app or site | Open in YouTube | new |
+| A tap on the button without internet | Frank's video needs the internet. | new |
+| Frank's video once it plays, its name for a screen reader | Frank explains (the move's name), for example Frank explains Squat | new |
+
 ## Decisions for Frank and Victor
 
 1. **Frank: the lines for keeping progress.** The Instagram warning on Welcome, the
@@ -313,6 +329,15 @@ supervised activity, or the matching switch on the Today screen's food card.
 14. **Victor: Make it yours waits for the plan's own first workout.** Someone who trained
     one of Frank's sessions, or a workout from Look around first, before asking for a
     plan gets the card after Day 1 of the plan, not straight away.
+15. **Victor: AI makes the demos, Frank explains on YouTube.** Every move's demo video is
+    made by AI (`tools/media/ai/`) and tagged AI demo wherever it shows, never Frank.
+    Frank films one video per move where he explains it, puts it on YouTube, and its link
+    goes in `howto` in `js/media.js`: the How-to tab then plays it inside the app. Nothing
+    loads from YouTube until someone taps play, and then YouTube's privacy-enhanced player
+    (youtube-nocookie.com) is used. Without Frank's video, How-to plays the AI demo in slow
+    motion; the Muscle tab keeps the 3D muscles.
+16. **Frank: the AI demos' form.** He watches each AI demo before it goes in the app: these
+    videos teach his moves.
 
 ## Older lines to check
 

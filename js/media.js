@@ -1,9 +1,13 @@
-/* Wellness by Frank: Frank's own exercise videos.
-   When a clip is listed here, the app shows it in place of the 3D coach (Video tab, player).
-   How to add one: film it (docs/FILMING-GUIDE.md), run tools/media/process.sh on it, put the
-   files in media/ and add a line below, for example:
-     'squat': { video: 'media/squat.mp4', poster: 'media/squat.jpg', howto: 'media/squat-howto.mp4' },
-   howto (optional) is a longer explained version for the How-to tab; it can also be a YouTube link. */
+/* Wellness by Frank: the exercise videos.
+   A move listed here shows its video in place of the 3D coach (the Video tab, the player, the lists).
+   The demos are made by AI (tools/media/ai/, the frank-coach-video skill): process.mjs there puts
+   each approved one in media/ and prints its line, for example:
+     'squat': { video: 'media/squat.mp4', poster: 'media/squat.jpg', ai: true, howto: 'https://youtu.be/VIDEO_ID' },
+   ai: true: the app tags the video "AI demo" wherever it shows, never "Frank".
+   howto: Frank explaining the move, a YouTube link (docs/FILMING-GUIDE.md): the How-to tab plays it
+   inside the app after a tap. It can also be a file in media/. A move with only Frank's video:
+     'squat': { howto: 'https://youtu.be/VIDEO_ID' },
+   A loop Frank films himself goes through tools/media/process.sh and has no ai: true. */
 (function (W) {
   'use strict';
   W.WBF.MEDIA = {

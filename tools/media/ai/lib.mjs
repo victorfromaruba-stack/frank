@@ -75,7 +75,7 @@ export function count(v, name, dflt, max) {
 // What a run uses unless told otherwise (an option on the command line, or a field in a request file).
 export const DEFAULTS = {
   imageModel: 'gemini-3.1-flash-image', imageSize: '1K', imageApi: 'interactions',
-  videoModel: 'veo-3.1-fast-generate-preview', resolution: '720p', seconds: 8, veoImageForm: 'inlineData',
+  videoModel: 'veo-3.1-fast-generate-preview', resolution: '720p', seconds: 8, veoImageForm: 'bytesBase64Encoded',
   looks: 2, candidates: 2, takes: 1, parallel: 3
 };
 // The budget in USD for one run. 5 unless raised on purpose (--budget, or "budget" in a request file).
@@ -458,9 +458,10 @@ export function imageFromAnswer(j) {
 
 export const VEO_MODELS = Object.keys(PRICES.video);
 export const VEO_IMAGE_FORMS = ['inlineData', 'bytesBase64Encoded'];
-// image form: the REST docs write {"inlineData": {"mimeType", "data"}}; Google's JS SDK (2.27) sends
-// {"bytesBase64Encoded", "mimeType"}. Both are Google's own; --veo-image-form switches if one is refused.
-export function veoCall({ model, prompt, image, lastFrame, refs = [], aspectRatio = '16:9', resolution = '720p', durationSeconds = 8, form = 'inlineData' }) {
+// image form: Google's JS SDK (2.27) sends {"bytesBase64Encoded", "mimeType"}, and that's the default. The REST docs
+// write {"inlineData": {"mimeType", "data"}}, but on 3 October 2026 the API answered it with a 400 ("`inlineData`
+// isn't supported by this model") for veo-3.1-fast-generate-preview. --veo-image-form inlineData still sends it.
+export function veoCall({ model, prompt, image, lastFrame, refs = [], aspectRatio = '16:9', resolution = '720p', durationSeconds = 8, form = 'bytesBase64Encoded' }) {
   if (!VEO_IMAGE_FORMS.includes(form)) throw new Stop(`--veo-image-form is ${VEO_IMAGE_FORMS.join(' or ')}`, 2);
   const pic = (im) => (form === 'inlineData' ? { inlineData: { mimeType: im.mime, data: im.b64 } } : { bytesBase64Encoded: im.b64, mimeType: im.mime });
   const inst = { prompt };

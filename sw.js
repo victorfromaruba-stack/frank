@@ -1,7 +1,7 @@
 /* Wellness by Frank: offline cache for the app's own files. Bump VERSION when you change any file.
    Frank's videos (media/) are left to the browser's normal cache: phones ask for videos in pieces,
    which a cache can't answer. */
-const VERSION = 'wbf-13';
+const VERSION = 'wbf-14';
 // kept when the worker installs: what the app needs to open and train offline. Frank's photos too: Workouts and
 // Frank show them, also on a phone that never opened those tabs online
 const SHELL = [

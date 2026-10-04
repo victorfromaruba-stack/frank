@@ -112,21 +112,33 @@ export function startPrompt(coachId, m) {
 // Step 3, the clip: what happens between the first and the last frame, which are the same start position.
 export const KIND = {
   reps: 'The coach does 3 to 4 slow, controlled reps at a coaching pace, each rep complete and smooth. After the last rep the coach returns exactly to the start position and stays still, matching the first frame.',
-  hold: 'The coach holds this position steady for the whole clip, breathing slowly and calmly. Only small breathing movements: the hands and feet stay exactly where they are.',
+  hold: 'The coach holds this position steady and still for the whole clip, calm and in control. Only small, natural movements of the chest and back: the hands and feet stay exactly where they are.',
   rhythm: 'The coach keeps a steady, even rhythm at a coaching pace for the whole clip and is back in the start position at the very end, matching the first frame.',
   walk: 'The coach walks slowly with short, even steps: a few steps, a turn, and back to the starting spot, ending in the start position and facing the same way as in the first frame.'
 };
+// Veo makes sound with every clip, and on 3 October 2026 its audio filter refused 4 of the pilot's 6 clips ("an issue
+// with the audio for your prompt", not charged) when the prompt asked for soft breathing. The app plays the clips
+// without sound, so the clip prompt leaves breathing out altogether: no sound of it, and no step or cue about it.
+export const noBreath = (lines) => lines.filter((x) => !/\bbreath/i.test(x));
+// What a move's clip must show that its steps leave open, written after a take got it wrong. Pilot 3: the woman's
+// squat went a quarter of the way down with her hands on her knees.
+export const MOTION = {
+  squat: 'Each rep goes down until the thighs are at least parallel to the floor, heels down and chest up, the arms reaching forward for balance, then drives all the way back up to standing. The hands never rest on the knees.'
+};
 export function clipPrompt(coachId, m) {
   const c = coachBook().coaches[coachId];
+  const steps = noBreath(noSwitch(m.steps)), cues = noBreath(m.cues);
   return [
     `A realistic demonstration video for a fitness app. The coach in the first frame, a ${c.label} in ${c.wears}, performs the exercise "${m.name}" in a bright, minimal photo studio.`,
     `Camera: ${CAMERA[m.camera]}. The camera is on a tripod and never moves: no pan, no zoom, no cuts. The whole body stays in the frame.`,
-    `The movement: ${third(noSwitch(m.steps).join(' '))}`,
+    steps.length ? `The movement: ${third(steps.join(' '))}` : '',
     KIND[m.kind],
+    MOTION[m.id] || '',
+    'The coach\'s face stays calm and relaxed, mouth closed.',
     m.oneSide ? 'Only the right side works, as in the first frame.' : '',
-    `Form throughout: ${m.cues.map(third).join(' ')}`,
+    cues.length ? `Form throughout: ${cues.map(third).join(' ')}` : '',
     'Natural, realistic human motion and anatomy: natural joint angles, hands and feet keep their shape, feet stay planted where the move needs them, steady balance.',
     'The first and the last frame show the same start position, so the clip loops smoothly.',
-    'Sound: quiet studio room tone and soft breathing, no music, no speech.'
+    'Sound: only a quiet, steady studio room tone; the coach makes no sound. No voices, no music.'
   ].filter(Boolean).join(' ');
 }

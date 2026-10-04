@@ -590,7 +590,8 @@ class Test {
   // service worker; then other sites are watched, not blocked), server (one from serve(), e.g. with Pages' caching),
   // site (a published copy such as L.SITE instead of the local server: fetched through Node, see viaNode),
   // href (open this URL), threeD (false: don't wait for the coach), go (false: don't open the page yet),
-  // ua (the browser's user agent: an iPhone's Safari, Instagram's own browser; L.UA has some).
+  // ua (the browser's user agent: an iPhone's Safari, Instagram's own browser; L.UA has some), allow (a RegExp of
+  // other sites this page may load, such as YouTube's player after a tap on play; still blocked unless routed).
   async page(o = {}) {
     const env = this.env;
     const srv = o.site ? { url: o.site, home: o.site } : (o.server || await env.server(o.prefix || ''));
@@ -602,7 +603,7 @@ class Test {
     const outside = new Set();
     ctx.on('request', (r) => {
       const u = r.url();
-      if (!u.startsWith(local) && !/^(data|blob|about):/.test(u)) outside.add(u.slice(0, 120));
+      if (!u.startsWith(local) && !/^(data|blob|about):/.test(u) && !(o.allow && o.allow.test(u))) outside.add(u.slice(0, 120));
     });
     if (o.site) await ctx.route('**/*', viaNode(o.site));
     else if (!o.sw) await ctx.route(/^https?:\/\/(?!127\.0\.0\.1[:/])/, (r) => r.abort());

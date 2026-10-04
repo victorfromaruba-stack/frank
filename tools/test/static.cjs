@@ -148,11 +148,18 @@ module.exports = {
         for (const m of src.matchAll(/<(?:script|link|img|iframe|video|source)\b[^>]*\b(?:src|href)="(https?:)?\/\/[^"]+"/gi)) t.fail(f + ' loads ' + m[0].slice(0, 100));
         for (const m of src.matchAll(/(?:url\(\s*['"]?|@import\s+['"])(https?:)?\/\/[^)'"]+/gi)) t.fail(f + ' loads ' + m[0].slice(0, 100));
       }
+      // the one exception: Frank's videos on YouTube play in YouTube's privacy-enhanced player, which js/app.js builds
+      // only when someone taps play (the media suite checks that nothing loads from YouTube before the tap)
+      let players = 0;
       for (const f of [...list('js', /\.js$/), ...list('personal', /\.js$/), 'sw.js']) {
         const src = stripComments(read(f));
-        for (const m of src.matchAll(/<(?:script|img|iframe|video|source|link)\b[^>'"]*\b(?:src|href)=\\?["'](https?:)?\/\/[^"'\\]+/gi)) t.fail(f + ' builds ' + m[0].slice(0, 100));
+        for (const m of src.matchAll(/<(?:script|img|iframe|video|source|link)\b[^>'"]*\b(?:src|href)=\\?["'](https?:)?\/\/[^"'\\]+/gi)) {
+          if (f === 'js/app.js' && /^<iframe src="https:\/\/www\.youtube-nocookie\.com\/embed\/$/.test(m[0])) { players++; continue; }
+          t.fail(f + ' builds ' + m[0].slice(0, 100));
+        }
         for (const m of src.matchAll(/\b(?:fetch|importScripts|import)\s*\(\s*['"](https?:)?\/\/[^'"]+/g)) t.fail(f + ' fetches ' + m[0].slice(0, 100));
       }
+      t.check(players <= 1, 'js/app.js builds YouTube\'s player in ' + players + ' places, not one (the tap on play)');
     });
 
     await t.flow('licences', async () => {

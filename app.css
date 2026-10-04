@@ -193,6 +193,16 @@ body.light .part :focus-visible { outline-color: var(--sky-hi); }
 .turn svg { width: 22px; height: 22px; }
 .media .tags-on { position: absolute; left: 10px; top: 10px; display: flex; gap: 6px; }
 .media .tags-on .tag { background: rgba(255, 255, 255, 0.85); color: var(--ink-d); border-color: transparent; }
+/* an AI-made clip says so wherever it plays (ai: true in js/media.js), and is never tagged Frank */
+.ai-tag { position: absolute; right: 10px; top: 10px; z-index: 2; display: inline-flex; align-items: center; font: 800 11px/1 var(--f-body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink); background: var(--ground); border-radius: 999px; padding: 6px 10px; pointer-events: none; }
+.thumb > .ai-tag { top: auto; right: 4px; bottom: 4px; font-size: 9px; letter-spacing: 0.04em; padding: 3px 5px; }
+/* Frank's video from YouTube in the How-to tab: a panel until the person taps play, then YouTube's player */
+.fig-box.yt, .xs .media .fig-box.yt { aspect-ratio: 16 / 9; display: grid; place-items: center; background: var(--ground-2); }
+.fig-box.yt iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.yt-play { display: inline-flex; flex-direction: column; align-items: center; gap: 10px; min-height: 44px; padding: 8px 16px; background: none; border: 0; color: var(--ink); font: 800 15px/1.2 var(--f-body); }
+.yt-play svg { width: 56px; height: 56px; padding: 15px 13px 15px 17px; border-radius: 50%; background: var(--sky); color: var(--on-sky); }
+.yt-note { position: absolute; left: 0; right: 0; bottom: 10px; text-align: center; font-size: 12px; color: var(--ink-3); pointer-events: none; }
+.yt-out { display: block; text-align: center; font-size: 14px; color: var(--sky); padding: 6px 0; }
 
 /* ---- tab bar ---- */
 .tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; padding-bottom: var(--safe-b); background: rgba(1, 45, 18, 0.94); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-top: 1px solid var(--line); }

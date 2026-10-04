@@ -44,7 +44,7 @@ The other project skills, each for one job:
 | `assets/coach-m.glb`, `assets/coach-f.glb` | the two coaches, built by `tools/coach/build_coach.py` from Quaternius' Universal Base Characters (CC0, `assets/CREDITS.txt`) |
 | `assets/hd/` | 2048 px texture copies of the coaches (`build_coach.py --hd`), only for screenshots and marketing renders: the app never loads them |
 | `js/exercises.js` | the 80 exercises: text, doses, kit, swaps, METs, muscles (`MUS`), joint stress (`STRESS`), animation keyframes |
-| `js/media.js` | Frank's own clips, by exercise id. A clip replaces the 3D coach in the Video tab, the player and lists |
+| `js/media.js` | the exercise videos, by exercise id: AI demos (`ai: true`, tagged AI demo) replace the 3D coach in the Video tab, the player and lists; Frank's YouTube explanations (`howto`) play in the How-to tab |
 | `js/programs.js` | Frank's details, `BILLING`, body parts, kit, workouts, the 28-day plan, safety (`avoidFor`, `safe`), the session builder, kcal |
 | `js/science.js` | the science screen: rules and 36 sources. Mirrors `references/science.md` |
 | `js/app.js` | screens and navigation, onboarding, paywall, plan, workouts, exercise sheet, player, Today, Me, Frank, coach tools, access; at its end the module seam (`WBF.ext`, `WBF.app`) |
@@ -83,12 +83,17 @@ The other project skills, each for one job:
    new or changed text is a draft until he approves it. List it in
    `docs/TEXT-FOR-FRANK.md` (`node tools/text-diff.mjs` finds it; see `frank-words`).
 
-## Frank's videos
+## Videos: AI demos and Frank's YouTube
 
-Film and process as in `docs/FILMING-GUIDE.md`, then add the printed line to
-`js/media.js`. The 3D coach stays for the Muscle tab and every move without a
-clip. Videos are H.264 MP4: the test Chromium can't play them, so tests serve
-VP9 copies with the same names. The service worker leaves videos to the browser.
+Each move's demo is an AI clip (the frank-coach-video skill); Frank explains the
+moves on YouTube, and a move's link goes in its `howto` in `js/media.js`
+(`docs/FILMING-GUIDE.md`). The app tags an AI clip AI demo wherever it shows and
+never Frank. How-to plays Frank's YouTube video inside the app after a tap
+(youtube-nocookie.com; nothing loads from YouTube before the tap), else the
+demo in slow motion. The 3D coach stays for the Muscle tab and every move
+without a clip. `tools/test/media.cjs` checks the tags and the How-to tab.
+Videos are H.264 MP4: the test Chromium can't play them, so tests serve VP9
+copies with the same names. The service worker leaves videos to the browser.
 
 ## Changing plans and workouts
 

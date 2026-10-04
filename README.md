@@ -111,8 +111,9 @@ pose engine, dressed them in Frank's green and drew the Muscle tab's anatomy
 look from the models' own muscle detail (`--hd` makes the sharper set in
 `assets/hd/` that screenshots use).
 
-When Frank films a move, his clip replaces the coach for that move:
-`docs/FILMING-GUIDE.md` has the shot list and how to add a clip.
+The demo videos replace the coach move by move: realistic clips made by AI
+(`tools/media/ai/`, the frank-coach-video skill), tagged AI demo in the app. The
+coach stays for the Muscle tab and for moves without a clip yet.
 
 ## Decided
 
@@ -122,12 +123,17 @@ When Frank films a move, his clip replaces the coach for that move:
   the exercise texts (`js/exercises.js`), the daily lessons and the method lines
   (`js/programs.js`, `js/app.js`). New or changed text goes to him before it ships:
   `docs/TEXT-FOR-FRANK.md` holds the lines waiting for his yes.
+- **The videos (4 October 2026):** AI makes every move's demo, tagged AI demo in the
+  app. Frank films one video per move where he explains it, on YouTube; the How-to
+  tab plays it inside the app (`howto` in `js/media.js`, `docs/FILMING-GUIDE.md`).
 
 ## Frank needs to check or supply
 
 1. **His logo:** the original file of the logo on his Instagram profile. The big W
    app icon in `img/` stands in for it until then.
-2. **His videos and photos:** the list in `docs/FILMING-GUIDE.md`.
+2. **His videos and photos:** the list in `docs/FILMING-GUIDE.md`: one explanation
+   per move for YouTube, plus the Personal, food and brand ones. And a yes on the form
+   of each AI demo before it goes in the app.
 3. **The yearly price, the trial and a payment provider** (now placeholders: 7 days
    free, and €119.99 a year, which the price screen hides until he says yes):
    `docs/ACCOUNTS-AND-PAYMENTS.md`.
@@ -183,7 +189,7 @@ phones pick up the update. The `static` suite fails until you do.
 | `assets/coach-m.glb`, `assets/coach-f.glb`, `assets/CREDITS.txt` | the two coaches and their licence |
 | `vendor/` | three.js r170 and its model loader (MIT) |
 | `js/exercises.js` | the 80 exercises: text, doses, kit, swaps, muscles, animations |
-| `js/media.js` | Frank's own clips, when he films them |
+| `js/media.js` | the exercise videos: AI demos (tagged AI demo) and Frank's YouTube explanations (How-to) |
 | `js/programs.js` | Frank's details, prices, workouts, the 28-day plan, safety rules, session builder |
 | `js/science.js` | the science screen and its sources |
 | `js/app.js` | screens, onboarding, the player, access (trial, member, client), coach tools, Today, Me, and the seam modules plug into (`WBF.ext`) |

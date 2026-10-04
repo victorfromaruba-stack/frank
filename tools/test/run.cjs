@@ -17,7 +17,7 @@ const path = require('path');
 const L = require('./lib.cjs');
 
 // in the order they run: quick ones first
-const ORDER = ['static', 'smoke', 'onboarding', 'fast-start', 'player', 'paywall', 'client', 'keep', 'safety', 'hosted', 'screens', 'live'];
+const ORDER = ['static', 'smoke', 'onboarding', 'fast-start', 'player', 'media', 'paywall', 'client', 'keep', 'safety', 'hosted', 'screens', 'live'];
 const LOCAL = ORDER.filter((n) => n !== 'live');
 const GROUPS = { all: ORDER, local: LOCAL, quick: ['static', 'smoke'] };
 

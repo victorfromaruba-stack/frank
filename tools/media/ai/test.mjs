@@ -19,7 +19,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { AI, ROOT, checkImageBody, checkVeoBody, exercises, haveFfmpeg, imageCall, move, probe, sha256, shotListProblems, veoCall } from './lib.mjs';
-import { clipPrompt, startPrompt, third } from './prompts.mjs';
+import { clipPrompt, startPrompt, third, noBreath } from './prompts.mjs';
+import { aiLabel } from './process.mjs';
 import { TEST_KEY, startMock } from './mock-server.mjs';
 
 const KEEP = process.argv.includes('--keep');
@@ -64,11 +65,11 @@ for (const id of ids) {
   for (const c of ['f', 'm']) {
     const sp = startPrompt(c, m), cp = clipPrompt(c, m);
     if (cp.length > 3800 || sp.length > 6000) long.push(id);
-    if (!m.cues.every((q) => cp.includes(third(q)))) missingCue.push(id);
+    if (!noBreath(m.cues).every((q) => cp.includes(third(q))) || /\bbreath/i.test(cp.replace('"' + m.name + '"', ''))) missingCue.push(id);
   }
 }
 ok(!long.length, 'every clip prompt fits Veo\'s 1,024 tokens ' + long.join(' '));
-ok(!missingCue.length, 'every clip prompt carries all the move\'s cues ' + missingCue.join(' '));
+ok(!missingCue.length, 'every clip prompt carries all the move\'s cues but the ones about breathing, and no word of breathing but a move\'s name (Veo\'s audio filter) ' + missingCue.join(' '));
 ok(/returns exactly to the start position/.test(clipPrompt('f', move('squat'))) && /holds this position steady/.test(clipPrompt('f', move('plank'))), 'reps return to the start; holds hold steady');
 ok(move('plank').wide && move('push-up').wide && move('table-row').wide && move('side-plank').wide && !move('squat').wide && !move('wall-sit').wide && !move('deep-squat-hold').wide,
   'process.sh --wide for moves on the floor or on the hands, not for standing ones');
@@ -113,9 +114,9 @@ part('3. dry run of the pilot');
     'start poses name the picked photos they send (stand-ins in a dry run before the pick)');
   ok(clips.every((c) => {
     const i = c.body.instances[0], p = c.body.parameters;
-    return c.body.instances.length === 1 && typeof i.prompt === 'string' && i.image.inlineData.mimeType && JSON.stringify(i.image) === JSON.stringify(i.lastFrame) &&
+    return c.body.instances.length === 1 && typeof i.prompt === 'string' && /^image\/(jpeg|png)$/.test(i.image.mimeType) && /^<base64 of /.test(i.image.bytesBase64Encoded) && !i.image.inlineData && JSON.stringify(i.image) === JSON.stringify(i.lastFrame) &&
       JSON.stringify(p) === '{"aspectRatio":"16:9","resolution":"720p","durationSeconds":8,"personGeneration":"allow_adult"}' && !i.referenceImages;
-  }), 'clips: image = lastFrame (the same start pose), 16:9, 720p, 8 s, allow_adult');
+  }), 'clips: image = lastFrame (the same start pose, as bytesBase64Encoded), 16:9, 720p, 8 s, allow_adult');
   const big = calls.filter((f) => /[A-Za-z0-9+/]{400,}/.test(fs.readFileSync(f, 'utf8')));
   ok(!big.length, 'the written bodies carry notes, not base64, so they stay readable');
   fs.writeFileSync(path.join(tmp, 'pilot-dry-run.txt'), r.out);
@@ -207,7 +208,9 @@ if (!haveFfmpeg()) {
   ok((await run([S('approve.mjs'), 'push-up', 'f', 'take-1', '--by', 'Tester', '--from', path.join(runs, 'mock1')], env)).code === 1, 'a filtered take can\'t be approved');
   fs.mkdirSync(path.join(R, 'tools/media'), { recursive: true }); fs.mkdirSync(path.join(R, 'js'), { recursive: true });
   fs.copyFileSync(path.join(ROOT, 'tools/media/process.sh'), path.join(R, 'tools/media/process.sh'));
-  for (const f of ['exercises.js', 'media.js', 'app.js']) fs.copyFileSync(path.join(ROOT, 'js', f), path.join(R, 'js', f));
+  for (const f of ['exercises.js', 'media.js']) fs.copyFileSync(path.join(ROOT, 'js', f), path.join(R, 'js', f));
+  // an app that tags every clip "Frank" (as js/app.js did before it read ai: true), so the warning shows
+  fs.writeFileSync(path.join(R, 'js', 'app.js'), `  html += '<div class="tags-on">' + (m && m.video ? '<span class="tag">Frank</span>' : '') + '</div>';\n`);
   const pr = await run([S('process.mjs'), '--root', R, '--from', path.join(runs, 'mock1')], env);
   const v = path.join(R, 'media/squat.mp4');
   const info = exists(v) ? probe(v) : {};
@@ -224,6 +227,18 @@ if (!haveFfmpeg()) {
   await run([S('approve.mjs'), 'push-up', 'm', 'take-1', '--by', 'Tester', '--from', fake], env);
   const pw = await run([S('process.mjs'), '--moves', 'push-up', '--root', R, '--from', path.join(tmp, 'runs')], env);
   ok(pw.code === 0 && exists(path.join(R, 'media/push-up.mp4')) && probe(path.join(R, 'media/push-up.mp4')).width === 1280, 'a move on the floor keeps the whole 16:9 frame (process.sh --wide)');
+  // --end: a take whose last moments jump loops at an earlier frame that matches its first
+  const pl = path.join(fake, 'takes/f/plank'), len = probe(path.join(t, 'take-1.mp4')).duration;
+  fs.mkdirSync(pl, { recursive: true });
+  fs.copyFileSync(path.join(t, 'take-1.mp4'), path.join(pl, 'take-1.mp4'));
+  fs.writeFileSync(path.join(pl, 'take-1.json'), '{"status":"done"}');
+  ok((await run([S('approve.mjs'), 'plank', 'f', 'take-1', '--by', 'Tester', '--from', fake, '--end', String(len + 1)], env)).code === 2, 'approve --end past the take\'s end is refused');
+  const cut = +(len / 2).toFixed(3);
+  const ae = await run([S('approve.mjs'), 'plank', 'f', 'take-1', '--by', 'Tester', '--from', fake, '--end', String(cut)], env);
+  const pe = await run([S('process.mjs'), '--moves', 'plank', '--root', R, '--from', fake], env);
+  const pd = exists(path.join(R, 'media/plank.mp4')) ? probe(path.join(R, 'media/plank.mp4')).duration : 0;
+  ok(ae.code === 0 && readJ(path.join(home, 'approved.json')).approved.some((x) => x.move === 'plank' && x.end === cut) && pe.code === 0 && Math.abs(pd - cut) < 0.1,
+    `approve --end ${cut}: approved.json keeps it, and process cuts the clip just before that frame (${pd.toFixed(2)} s of ${len.toFixed(2)})`);
   // one clip per move: both coaches approved for one move needs --coach
   fs.copyFileSync(path.join(t, 'take-1.mp4'), path.join(fake, 'squat-m.mp4'));
   fs.mkdirSync(path.join(fake, 'takes/m/squat'), { recursive: true });
@@ -244,6 +259,7 @@ if (!haveFfmpeg()) {
   fs.writeFileSync(path.join(R, 'js/media.js'), fs.readFileSync(path.join(R, 'js/media.js'), 'utf8').replace('W.WBF.MEDIA = {', "W.WBF.MEDIA = {\n    'push-up': { video: 'media/push-up.mp4', poster: 'media/push-up.jpg' },"));
   const franks = await run([S('process.mjs'), '--moves', 'push-up', '--root', R, '--from', tmp], env);
   ok(franks.code === 1 && /Frank's own clip is in js\/media\.js/.test(franks.out), 'Frank\'s own clip (no ai: true) is never replaced');
+  ok(aiLabel(ROOT).reads, 'the app in this repo reads ai: true (js/app.js tags an AI clip AI demo), so its lines go in without a warning');
 }
 
 part('8. the workflow');

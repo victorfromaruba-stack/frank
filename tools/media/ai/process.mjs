@@ -88,14 +88,17 @@ export function processApproved(o = {}) {
     const f = fileOf(x, o.from);
     if (!f) { problems.push(`${x.move}: approved ${x.take} of run ${x.run} isn't on this machine (or changed). Download that run's artifact and give --from.`); continue; }
     const p = probe(f);
-    const end = Math.max(0.5, p.duration - (p.fps ? 1 / p.fps : 0.04)).toFixed(3);   // drop the last frame
+    // drop the last frame (the start pose again: the loop's first frame follows it), or cut just before the frame an
+    // approval's end names (approve.mjs --end), where the loop closes
+    const frame = p.fps ? 1 / p.fps : 0.04;
+    const end = (x.end ? Math.min(Number(x.end), p.duration) - frame / 2 : Math.max(0.5, p.duration - frame)).toFixed(3);
     const m = move(x.move);
     const r = spawnSync('bash', [script, f, x.move, '0', end, ...(m.wide ? ['--wide'] : [])], { cwd: root, encoding: 'utf8' });
     if (r.status !== 0) { problems.push(`${x.move}: process.sh failed: ${String(r.stderr || r.stdout).trim().split('\n').slice(-3).join(' | ')}`); continue; }
     const video = path.join(root, 'media', x.move + '.mp4'), poster = path.join(root, 'media', x.move + '.jpg');
     const q = probe(video);
     if (q.audio || q.vcodec !== 'h264' || !fs.existsSync(poster)) { problems.push(`${x.move}: the result isn't right (sound: ${q.audio}, codec: ${q.vcodec}, poster: ${fs.existsSync(poster)})`); continue; }
-    say(`${x.move}: ${show(video)} (${q.width} x ${q.height}, ${q.duration.toFixed(1)} s, ${Math.round(fs.statSync(video).size / 1024)} KB, no sound) and ${show(poster)}, from ${x.take} of ${x.run} (coach ${x.coach}, approved by ${x.approvedBy} on ${x.date})`);
+    say(`${x.move}: ${show(video)} (${q.width} x ${q.height}, ${q.duration.toFixed(1)} s${x.end ? ', cut where the loop closes' : ''}, ${Math.round(fs.statSync(video).size / 1024)} KB, no sound) and ${show(poster)}, from ${x.take} of ${x.run} (coach ${x.coach}, approved by ${x.approvedBy} on ${x.date})`);
     done.push(x);
   }
   if (done.length) {

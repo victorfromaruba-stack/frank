@@ -390,6 +390,18 @@
   }
   function thumbHtml(id, cls) { return '<div class="thumb' + (cls ? ' ' + cls : '') + '" data-thumb="' + esc(id) + '"></div>'; }
   function media(id) { return (WBF.MEDIA || {})[id] || null; }
+  // a clip made by AI (ai: true in js/media.js) says so wherever it shows, and is never tagged as Frank's
+  function aiTag(thumb) { return '<span class="ai-tag"' + (thumb ? ' aria-hidden="true">AI' : '>AI demo') + '</span>'; }
+  // Frank's own explanation on YouTube (howto in js/media.js) plays inside the How-to tab. Nothing loads from YouTube
+  // until the person taps play; then YouTube's privacy-enhanced player (youtube-nocookie.com).
+  function ytId(u) {
+    var x = /^https:\/\/(?:www\.|m\.)?(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?(?:[^#]*&)?v=|embed\/|shorts\/|live\/))([\w-]{11})(?![\w-])/.exec(u || '');
+    return x ? x[1] : null;
+  }
+  function ytBox(vid) {
+    return '<div class="fig-box yt" data-yt="' + vid + '"><button class="yt-play" data-act="yt-play">' + ic('play') + '<span>Watch Frank explain it</span></button>' +
+      '<span class="yt-note">Plays from YouTube</span></div>';
+  }
   // 3D when WebGL, three.js and the model are there; the 2D skeleton otherwise
   function use3d() { return !!(WBF.fig3d && WBF.fig3d.ready()); }
   var thumbWatch = ('IntersectionObserver' in W) ? new IntersectionObserver(function (entries) {
@@ -399,7 +411,7 @@
     var ex = EX[el.getAttribute('data-thumb')];
     if (!ex || !el.isConnected) return;
     var m = media(ex.id);
-    if (m && m.poster) { el.classList.add('is3d'); el.innerHTML = '<img src="' + esc(m.poster) + '" alt="">'; return; }
+    if (m && m.poster) { el.classList.add('is3d'); el.innerHTML = '<img src="' + esc(m.poster) + '" alt="">' + (m.ai ? aiTag(true) : ''); return; }
     if (use3d()) new WBF.fig3d.Figure(ex.anim, {}).mount(el).still(thumbKey(ex));
     else new F.Figure(ex.anim, { aspect: 1, minW: 60, minH: 60, pad: 6, bare: true }).mount(el).still(thumbKey(ex));
   }
@@ -414,8 +426,9 @@
       var m = media(ex.id), still = el.getAttribute('data-still');
       if (m && m.video && mode === 'demo' && el.getAttribute('data-video') !== '0') {
         el.classList.add('is3d');
-        el.innerHTML = '<video src="' + esc(m.video) + '"' + (m.poster ? ' poster="' + esc(m.poster) + '"' : '') + ' autoplay muted loop playsinline' + (flip ? ' style="transform:scaleX(-1)"' : '') + '></video>';
+        el.innerHTML = '<video src="' + esc(m.video) + '"' + (m.poster ? ' poster="' + esc(m.poster) + '"' : '') + ' autoplay muted loop playsinline' + (flip ? ' style="transform:scaleX(-1)"' : '') + '></video>' + (m.ai ? aiTag() : '');
         el._fig = { video: el.firstChild, pause: function () { this.video.pause(); }, play: function () { this.video.play(); }, still: function () {} };
+        if (+el.getAttribute('data-speed')) el.firstChild.defaultPlaybackRate = el.firstChild.playbackRate = +el.getAttribute('data-speed');
         return;
       }
       if (use3d()) {
@@ -432,7 +445,8 @@
       else f.play();
     });
     $$('[data-turn]', root).forEach(function (b) {
-      b.hidden = !use3d() || !!b.parentNode.querySelector('video');
+      // only over a 3D figure: not over a video, nor Frank's YouTube panel
+      b.hidden = !use3d() || !b.parentNode.querySelector('[data-fig]') || !!b.parentNode.querySelector('video');
     });
     // a map drawn before the coach was in is hidden: it shows once the coach draws it (upgrade3d)
     $$('img[data-map]', root).forEach(function (im) {
@@ -700,22 +714,24 @@
     // other moves for the same job: only the ones this person may do, with the kit they have
     var av = WBF.plan.avoidFor(S.profile), have = (S.profile && S.profile.kit) || WBF.DEFAULT_KIT;
     var alts = (ex.alts || []).filter(function (a) { return EX[a] && WBF.plan.safe(EX[a], av) && WBF.plan.canDo(EX[a], have); });
-    var m = media(id), tabFig;
+    var m = media(id), tabFig, yt = m && ytId(m.howto), frankHow = m && m.howto && (yt || !/youtu/.test(m.howto));
+    var aiShown = m && m.video && m.ai && XS.tab !== 'muscle' && !(XS.tab === 'howto' && frankHow);
     if (XS.tab === 'muscle') tabFig = figHtml(id, { mode: 'muscle', drag: true, note: false, video: false, orbit: 20 });
-    else if (XS.tab === 'howto') tabFig = m && m.howto && !/youtu/.test(m.howto) ? '<div class="fig-box is3d"><video src="' + esc(m.howto) + '"' + (m.poster ? ' poster="' + esc(m.poster) + '"' : '') + ' controls playsinline></video></div>'
-      : figHtml(id, { drag: true, speed: 0.55, video: false, noteTop: 30 });
+    else if (XS.tab === 'howto') tabFig = yt ? ytBox(yt) : frankHow ? '<div class="fig-box is3d"><video src="' + esc(m.howto) + '"' + (m.poster ? ' poster="' + esc(m.poster) + '"' : '') + ' controls playsinline></video></div>'
+      : figHtml(id, { drag: true, speed: 0.55, noteTop: 30, note: !(m && m.video) });
     else tabFig = figHtml(id, { drag: true, note: false });
     var mus = ex.mus || { p: [], s: [] };
     var n = XS.list.length;
     var html = '<div class="xs">' +
       '<div class="between"><h2 class="h2">' + esc(ex.name) + '</h2><button class="icon-btn" data-act="close" aria-label="Close">' + ic('close') + '</button></div>' +
       '<div class="media" id="xs-media">' + tabFig +
-      '<div class="tags-on">' + (m && m.video && XS.tab === 'video' ? '<span class="tag">Frank</span>' : '') + (XS.tab === 'howto' && !(m && m.howto) ? '<span class="tag">Slow motion</span>' : '') + '</div>' +
+      '<div class="tags-on">' + (m && m.video && !m.ai && XS.tab === 'video' ? '<span class="tag">Frank</span>' : '') + (XS.tab === 'howto' && !frankHow ? '<span class="tag">Slow motion</span>' : '') + '</div>' +
       '<button class="icon-btn glass turn" data-act="turn" data-turn="1" aria-label="Turn the figure" hidden>' + ic('turn') + '</button></div>' +
       '<div class="tabs3" role="group" aria-label="View">' + [['video', 'Video'], ['muscle', 'Muscle'], ['howto', 'How-to']].map(function (t) {
         return '<button data-act="xs-tab" data-v="' + t[0] + '" aria-pressed="' + (XS.tab === t[0]) + '">' + t[1] + '</button>';
       }).join('') + '</div>' +
-      (m && m.howto && /youtu/.test(m.howto) && XS.tab === 'howto' ? '<a class="btn two block" href="' + esc(m.howto) + '" target="_blank" rel="noopener">Watch Frank explain it</a>' : '') +
+      (aiShown ? '<p class="note s ai-note">Made by AI, not filmed.</p>' : '') +
+      (yt && XS.tab === 'howto' ? '<a class="yt-out" href="https://www.youtube.com/watch?v=' + yt + '" target="_blank" rel="noopener">Open in YouTube</a>' : '') +
       '<div class="xs-dose"><span class="label">' + (ex.type === 'time' ? 'Duration' : 'Reps') + (ex.each ? ' · each side' : '') + '</span><b>' + (ex.type === 'time' ? mmss(dose) : '× ' + dose) + '</b></div>' +
       (kit.length ? '<div class="kit-line">' + kit.map(function (k) { return '<span class="tag">' + esc(k) + '</span>'; }).join('') + '</div>' : '') +
       '<section class="stack"><p class="label">Instructions</p><p>' + esc(ex.setup) + '</p><ol class="steps">' + ex.steps.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ol></section>' +
@@ -2602,6 +2618,14 @@
       var b = $('[data-act="pl-pause"]');
       if (b) { b.innerHTML = pauseFace(b.classList.contains('pl-main')); b.setAttribute('aria-label', PL.paused ? 'Resume' : 'Pause'); }
       var fig = $('.pl-fig'); if (fig && fig._fig) { if (PL.paused) fig._fig.pause(); else fig._fig.play(); }
+    },
+    'yt-play': function (el) {
+      var box = el.closest('[data-yt]');
+      if (!box) return;
+      if (navigator.onLine === false) { toast('Frank\'s video needs the internet.'); return; }
+      var ex = XS && XS.list[XS.i] && EX[XS.list[XS.i].ex];
+      box.innerHTML = '<iframe src="https://www.youtube-nocookie.com/embed/' + box.getAttribute('data-yt') + '?autoplay=1&playsinline=1&rel=0" title="' + esc('Frank explains ' + (ex ? ex.name : 'the move')) + '"' +
+        ' allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>';
     },
     'pl-how': function () {
       var wasPaused = PL.paused; PL.paused = true; SND.hush();
