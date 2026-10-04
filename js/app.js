@@ -1963,8 +1963,10 @@
     title: function () { return 'Me'; },
     html: function (p) {
       var pr = S.profile, all = S.sessions, totalSec = all.reduce(function (a, r) { return a + r.sec; }, 0);
+      // the plan's line breaks only after a "·", also next to a module's wider button (me.edit): no-break spaces keep each
+      // "·" with the word before it and "3 days a week" whole, so a number never ends a line without its unit
       var head = '<div class="profile-head"><span class="avatar">' + esc(((pr && pr.name) || 'F').charAt(0).toUpperCase()) + '</span><div class="grow"><h1 class="h2">' + esc((pr && pr.name) || 'Welcome') + '</h1>' +
-        '<p class="meta">' + (pr ? esc(WBF.GOALS[pr.goal].name + ' · ' + WBF.LEVELS[WBF.plan.levelFor(pr)] + ' · ' + pr.days + ' days a week') : 'No plan yet') + '</p></div>' +
+        '<p class="meta">' + (pr ? esc(WBF.GOALS[pr.goal].name + ' · ' + WBF.LEVELS[WBF.plan.levelFor(pr)] + ' · ' + pr.days + ' days a week') : 'No plan yet') + '</p></div>' +
         (pr ? slot('me.edit', p) || '<button class="btn two small" data-act="ob-edit">Edit</button>' : '<button class="btn small" data-act="ob-start">Get my plan</button>') + '</div>';
       var tiles = '<div class="stats"><div><b>' + all.length + '</b><span>Workouts</span></div><div><b>' + Math.round(totalSec / 60) + '</b><span>Minutes</span></div>' +
         '<div><b>' + streakDays() + '</b><span>Day streak</span></div></div>';

@@ -81,6 +81,18 @@ const fold = (p) => p.evaluate(() => {
     pictures: [...document.querySelectorAll('.wk1-day [data-thumb]')].map((e) => e.getAttribute('data-thumb'))
   };
 });
+// Me's plan line under the name ("Lose fat · Beginner · 3 days a week"), as the lines a person sees on screen
+const metaLines = (p) => p.evaluate(() => {
+  const tn = document.querySelector('#app .profile-head .meta').firstChild, r = document.createRange(), rows = [];
+  for (let i = 0; i < tn.length; i++) {
+    r.setStart(tn, i); r.setEnd(tn, i + 1);
+    const b = r.getBoundingClientRect();
+    if (!b.width && /\s/.test(tn.data[i])) continue;               // the space where a line breaks
+    const row = rows.find((x) => Math.abs(x.top - b.top) < 4);
+    if (row) row.s += tn.data[i]; else rows.push({ top: b.top, s: tn.data[i] });
+  }
+  return rows.map((x) => x.s.replace(/\s+/g, ' ').trim());
+});
 // the app with FITNESS_FIRST turned on in js/onboard-flow.js (Frank's decision), on a fresh phone
 async function fitnessFirst(t) {
   const src = fs.readFileSync(path.join(L.REPO, 'js', 'onboard-flow.js'), 'utf8');
@@ -94,7 +106,7 @@ async function fitnessFirst(t) {
 
 module.exports = {
   name: 'fast-start',
-  about: 'the fast start (js/onboard-flow.js): eight questions with one progress bar and no Part screens, the plan built, Your first week with its real session lengths (before any scroll, also at 375x667: the safety rows and the days above the buttons, the free trial line above Start Day 1), Start Day 1 starting the free trial, Today after it with no weight; Make it yours after Day 1 (the fitness check first, each answer saved on its own with its toast, Not now; not after a session from Frank); Me\'s Your answers (every row opens its question, Back comes back, no Back loop); the phone\'s Back through the questions; older plans keep their answers and get no card; Frank\'s client with no plan; a move link keeps what is still to ask; two windows of one browser; FITNESS_FIRST on (Frank\'s decision) asks the fitness check up front, not in gentle mode',
+  about: 'the fast start (js/onboard-flow.js): eight questions with one progress bar and no Part screens, the plan built, Your first week with its real session lengths (before any scroll, also at 375x667: the safety rows and the days above the buttons, the free trial line above Start Day 1), Start Day 1 starting the free trial, Today after it with no weight; Make it yours after Day 1 (the fitness check first, each answer saved on its own with its toast, Not now; not after a session from Frank); Me\'s Your answers (the plan line beside it breaks only after a "·", every row opens its question, Back comes back, no Back loop); the phone\'s Back through the questions; older plans keep their answers and get no card; Frank\'s client with no plan; a move link keeps what is still to ask; two windows of one browser; FITNESS_FIRST on (Frank\'s decision) asks the fitness check up front, not in gentle mode',
   async run(t) {
     await t.flow('Welcome to Day 1: eight questions, the plan built, its first week', async () => {
       const p = await t.page({ speed: 50 });
@@ -263,6 +275,10 @@ module.exports = {
       const p = await t.page({ state: fresh({ kg: 70, cm: 170, asked: { body: L.TODAY } }) });
       await app.tap(p, '.tab[data-tab="me"]');
       t.equal(await p.locator('#app [data-act="ob-edit"]').count(), 0, 'Me: Edit (every question again)');
+      // next to Your answers (wider than Edit) the plan's line wraps: only after a "·", and the days a week stay whole
+      const meta = await metaLines(p);
+      t.check(meta.slice(0, -1).every((l) => l.endsWith('·')) && /(^|· )\d days a week$/.test(meta[meta.length - 1] || ''),
+        () => 'Me: the plan line next to Your answers breaks only after a "·" (' + meta.join(' / ') + ')');
       await answers(p);
       const rows = await rowsOn(p);
       t.equal(rows, ['goal', 'days', 'minutes', 'kit', 'born', 'health', 'sore', 'coach', 'body', 'target', 'focus', 'want', 'fitness', 'name'], 'the rows of Your answers');

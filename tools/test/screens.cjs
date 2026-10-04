@@ -263,6 +263,8 @@ module.exports = {
       await app.tap(p, '[data-act="browse"]');
       await tab(p, 'plan');
       await snap(p, 'plan without a profile');
+      await tab(p, 'today');
+      await snap(p, 'today without a profile');
       // one of Frank's clients with no plan: the plan for the days between his sessions (js/onboard-flow.js)
       p = await t.page({ state: L.state({ access: { client: true }, inbox: [L.spec({ i: 'cl', t: 'Glutes and core' })] }) });
       await app.tap(p, '[data-act="browse"]');
@@ -273,8 +275,6 @@ module.exports = {
       await tab(p, 'me');
       await app.tap(p, '[data-act="flow-answers"]');
       await snap(p, 'your answers of an older plan');
-      await tab(p, 'today');
-      await snap(p, 'today without a profile');
       // a new version took over (the first takeover is the worker's first install, the second a deploy)
       p = await t.page({ state: L.member() });
       await p.evaluate(() => { for (let i = 0; i < 2; i++) navigator.serviceWorker.dispatchEvent(new Event('controllerchange')); });
