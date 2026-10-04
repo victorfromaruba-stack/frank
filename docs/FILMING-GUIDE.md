@@ -1,8 +1,9 @@
 # Filming Frank's videos and photos
 
 Every exercise's demo, the short video that loops in the Video tab, in the
-workout player and in the lists, is made by AI from this shot list and is tagged
-AI demo in the app (`tools/media/ai/`, the frank-coach-video skill). Frank films
+workout player and in the lists, is made by AI from this shot list; the app says so
+on the welcome screen and in the exercise sheet (`tools/media/ai/`, the frank-coach-video
+skill). Frank films
 one video per move where he explains it, the way he would to a client, and puts
 it on YouTube: the app plays it inside the exercise's How-to tab. Until a move
 has his video, How-to says it's coming, and the written steps are below it (the

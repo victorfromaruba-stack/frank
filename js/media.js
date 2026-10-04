@@ -3,7 +3,8 @@
    The demos are made by AI (tools/media/ai/, the frank-coach-video skill): process.mjs there puts
    each approved one in media/ and prints its line, for example:
      'squat': { video: 'media/squat.mp4', poster: 'media/squat.jpg', ai: true, howto: 'https://youtu.be/VIDEO_ID' },
-   ai: true: the app tags the video "AI demo" wherever it shows, never "Frank".
+   ai: true: made by AI. No tag on the picture (Victor, 4 October) and never "Frank" on it; the welcome
+   screen says the videos are made with AI, and a note under the video in the exercise sheet.
    frank: true in its place: a loop Frank filmed himself (tools/media/process.sh), tagged "Frank".
    Every video needs one of the two (the static suite checks it); a line with neither shows as AI.
    howto: Frank explaining the move, a YouTube link (docs/FILMING-GUIDE.md): the How-to tab plays it

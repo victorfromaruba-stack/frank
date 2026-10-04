@@ -1,9 +1,10 @@
-// media: the exercise videos in js/media.js. Frank's own clip (frank: true) is tagged Frank; any other clip is made by
-// AI (ai: true, or a line that forgot its flag) and says "AI demo" wherever it shows (the exercise sheet's Video tab
-// with its note, the player, Next, the plan cards, the welcome screen, a workout) and "AI" on its still in the lists,
-// clear of the buttons and badges, and never with "Frank" on it. How-to is Frank's alone (no AI clip there), and the
-// Muscle tab shows the muscle maps, front and back, standing still. Offline, or when a clip or still doesn't load, the 3D coach shows,
-// with no tag and no note. With reduced motion a decorative clip stands still. Frank's explanation on YouTube (howto)
+// media: the exercise videos in js/media.js. Frank's own clip (frank: true) is tagged Frank in the exercise sheet; any
+// other clip is made by AI (ai: true, or a line that forgot its flag): no tag on any picture (Victor, 4 October), never
+// "Frank" on it, a note under it in the exercise sheet, and a line on the welcome screen that the videos are made with
+// AI. The main pictures show a real person: the welcome screen the squat's clip, a workout or session its first main
+// move with a clip. How-to is Frank's alone (no AI clip there), and the Muscle tab shows the muscle maps, front and
+// back, standing still. Offline, or when a clip or still doesn't load, the 3D coach shows,
+// with no note. With reduced motion a decorative clip stands still. Frank's explanation on YouTube (howto)
 // plays inside the How-to tab, nothing loads from YouTube before a tap on play, and a link the app can't read is left
 // out. The suite serves its own js/media.js, so it runs before any real clip is in the repo: every move gets an AI clip
 // but plank, which gets one of Frank's; the glute bridge's line has no flag; the push-up gets Frank's YouTube video, the
@@ -23,12 +24,12 @@ const MEDIA = "(function (W) { 'use strict'; W.WBF.MEDIA = {}; Object.keys(W.WBF
   " W.WBF.MEDIA['" + EXPLAINED + "'].howto = 'https://youtu.be/" + YT + "';" +
   " W.WBF.MEDIA['" + ODDLINK + "'].howto = 'https://vimeo.com/76979871'; })(window);";
 
-// a page with this suite's js/media.js and clips; o as t.page's, plus hash and reduce (reduced motion). The calf
-// raise's clip and still come back as something that isn't one, as a broken file would.
+// a page with this suite's js/media.js and clips; o as t.page's, plus hash, reduce (reduced motion) and media (another
+// js/media.js). The calf raise's clip and still come back as something that isn't one, as a broken file would.
 async function open(t, o = {}) {
   const p = await t.page(Object.assign({}, o, { go: false }));
   if (o.reduce) await p.emulateMedia({ reducedMotion: 'reduce' });
-  await p.route('**/js/media.js', (r) => r.fulfill({ contentType: 'application/javascript', body: MEDIA }));
+  await p.route('**/js/media.js', (r) => r.fulfill({ contentType: 'application/javascript', body: o.media || MEDIA }));
   await p.route('**/media/qa-*', (r) => {
     const u = r.request().url(), still = /\.jpg$/.test(u);
     if (u.includes('qa-ai-' + BROKEN + '.')) return r.fulfill({ contentType: still ? 'image/jpeg' : 'video/webm', body: 'not a picture' });
@@ -39,32 +40,22 @@ async function open(t, o = {}) {
   return p;
 }
 
-// Every clip and still on the screen (and the open sheet), checked: an AI one carries its tag, inside the picture and
-// clear of the other things on it (buttons, links, a badge, a caption, the wordmark), with no "Frank" on it; Frank's
-// carries none. Returns what's wrong, and how many clips and stills it saw.
+// Every clip and still on the screen (and the open sheet), checked: no tag on any picture, and no "Frank" on an AI one.
+// Returns what's wrong, and how many clips and stills it saw.
 function audit(p) {
   return p.evaluate((franks) => {
     const bad = [], seen = { clips: 0, stills: 0 };
     const hit = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+    document.querySelectorAll('.ai-tag').forEach((el) => { if (el.isConnected) bad.push('a tag on a picture: "' + el.textContent + '"'); });
     document.querySelectorAll('[data-fig], [data-thumb]').forEach((el) => {
       if (!el.isConnected || !el.checkVisibility()) return;
       const thumb = el.hasAttribute('data-thumb'), id = el.getAttribute(thumb ? 'data-thumb' : 'data-fig');
       const shows = el.querySelector(thumb ? ':scope > img' : ':scope > video');
       if (!shows) return;
       seen[thumb ? 'stills' : 'clips']++;
-      const tag = el.querySelector(':scope > .ai-tag'), where = id + (thumb ? ' (a still in a list)' : ' (a clip)');
-      if (id === franks) { if (tag) bad.push(where + ": Frank's own, with an AI tag"); return; }
-      if (!tag) return bad.push(where + ': made by AI, with no tag');
-      const want = thumb ? 'AI' : 'AI demo';
-      if (tag.textContent !== want) bad.push(where + ': the tag says "' + tag.textContent + '", not "' + want + '"');
-      if (!tag.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) bad.push(where + ': the tag is hidden');
-      const box = el.getBoundingClientRect(), r = tag.getBoundingClientRect();
-      if (r.width < 1 || r.left < box.left - 0.5 || r.right > box.right + 0.5 || r.top < box.top - 0.5 || r.bottom > box.bottom + 0.5) bad.push(where + ': the tag is not inside the picture');
+      if (id === franks) return;
+      const where = id + (thumb ? ' (a still in a list)' : ' (a clip)'), box = el.getBoundingClientRect();
       const host = el.closest('.media, .pc-media, .pl-media, .wd-media, .welcome-hero, .reveal-fig') || el.parentElement;
-      host.querySelectorAll('button, a, .pc-badge, .tags-on .tag, .cap, .wordmark').forEach((o) => {
-        if (el.contains(o) || !o.checkVisibility()) return;
-        if (hit(r, o.getBoundingClientRect())) bad.push(where + ': the tag and ' + (o.textContent.trim() || o.getAttribute('aria-label') || o.className) + ' overlap');
-      });
       // never Frank on an AI clip: no word "Frank" on the picture (a tag, a badge)
       host.querySelectorAll('*').forEach((o) => {
         if (!o.children.length && /\bFrank\b/.test(o.textContent) && o.checkVisibility() && hit(box, o.getBoundingClientRect())) bad.push(where + ': "' + o.textContent.trim() + '" on an AI clip');
@@ -88,7 +79,7 @@ const sheetTags = (p) => p.evaluate(() => [(document.querySelector('#overlay .ta
 
 module.exports = {
   name: 'media',
-  about: 'exercise videos (its own js/media.js: an AI clip for every move but one of Frank\'s (frank: true), one line with no flag, Frank\'s YouTube video for one, a link from another site for one, a clip that does not load): the exercise sheet tags Frank\'s clip Frank, an AI clip "AI demo" with a note and never Frank (also with no flag), the Muscle tab shows the muscle maps, front and back, standing still, How-to never the AI clip: Frank\'s YouTube video in the app after a tap, or a note that it\'s coming (nothing from YouTube before it, the focus in the player; offline, a toast), a link it can\'t read left out; offline or when a clip or still does not load, the coach, no tag, no note, nothing asked for; reduced motion stills the decorative clips; every clip and still on the welcome screen, the Plan, a workout, the player and Next (a member\'s plan, and Frank\'s session with an AI clip and then his own) carries its tag, inside the picture, clear of buttons, badges and captions, and no "Frank" on an AI clip',
+  about: 'exercise videos (its own js/media.js: an AI clip for every move but one of Frank\'s (frank: true), one line with no flag, Frank\'s YouTube video for one, a link from another site for one, a clip that does not load): the exercise sheet tags Frank\'s clip Frank, an AI clip gets a note and never Frank (also with no flag), no tag on any picture; the welcome screen shows the squat\'s clip and says the videos are made with AI, a session\'s picture is its first main move with a clip, with no clips the coach and no line; the Muscle tab shows the muscle maps, front and back, standing still, How-to never the AI clip: Frank\'s YouTube video in the app after a tap, or a note that it\'s coming (nothing from YouTube before it, the focus in the player; offline, a toast), a link it can\'t read left out; offline or when a clip or still does not load, the coach, no tag, no note, nothing asked for; reduced motion stills the decorative clips; every clip and still on the welcome screen, the Plan, a workout, the player and Next (a member\'s plan, and Frank\'s session with an AI clip and then his own): no tag, and no "Frank" on an AI clip',
   async run(t) {
     await t.flow('the exercise sheet', async () => {
       const p = await open(t, { state: L.member(), hash: 'ex.squat' });
@@ -227,6 +218,28 @@ module.exports = {
       await p.evaluate(() => { location.hash = '#ex.squat'; });
       await p.waitForSelector('#overlay #xs-media video');
       t.equal(await p.evaluate(() => document.querySelector('#overlay #xs-media video').autoplay), true, 'reduced motion: the exercise sheet still plays the demo');
+    });
+
+    await t.flow('the main pictures: a real person first', async () => {
+      // only the squat has a clip: the welcome screen shows it, and so does Frank's session that starts with jumping jacks
+      const ONE = "(function (W) { W.WBF.MEDIA = { squat: { video: 'media/qa-ai-squat.mp4', poster: 'media/qa-ai-squat.jpg', ai: true } }; })(window);";
+      const hero = (p) => p.evaluate(() => { const f = document.querySelector('.welcome-hero [data-fig]');
+        return [f ? f.getAttribute('data-fig') : '', !!(f && f.querySelector('video')), [...document.querySelectorAll('.ob .ob-note')].map((n) => n.textContent).join(' | ')]; });
+      const w = await open(t, { media: ONE });
+      await w.waitForSelector('.welcome-hero video');
+      t.equal(await hero(w), ['squat', true, 'Your answers and progress stay on this phone. | The exercise videos are made with AI.'],
+        "welcome: the squat's clip, and the line that the videos are made with AI [move, clip, small print]");
+      await audited(t, w, 'welcome screen: the squat', { clips: 1 });
+      const sp = L.spec({ i: 'qa-cover', t: 'Cover test', x: [['jumping-jacks', 30], ['squat', 10]], rs: 15 });
+      const p = await open(t, { media: ONE, state: L.state({ profile: L.profile(), access: { client: true }, inbox: [sp] }) });
+      t.has(await app.text(p), 'Cover test', "the Plan: Frank's session");
+      const card = () => p.evaluate(() => { const b = document.querySelector('[data-act="start-coach"][data-id="qa-cover"]'), f = b && b.closest('.plan-card').querySelector('.pc-media [data-fig]');
+        return f ? f.getAttribute('data-fig') + (f.querySelector('video') ? ', a clip' : ', the coach') : ''; });
+      await p.waitForFunction(() => document.querySelector('.plan-card .pc-media video'), null, { timeout: 5000 }).catch(() => null);
+      t.equal(await card(), 'squat, a clip', "Frank's session of jumping jacks then squats: its card shows the squat's clip, the first main move with one");
+      t.step('no clips at all');
+      const none = await open(t, { media: '(function (W) { W.WBF.MEDIA = {}; })(window);' });
+      t.equal(await hero(none), ['jumping-jacks', false, 'Your answers and progress stay on this phone.'], 'welcome with no clips: the coach\'s jumping jacks, no line about AI [move, clip, small print]');
     });
 
     await t.flow('the welcome screen, the Plan, a workout, the player', async () => {

@@ -32,6 +32,7 @@
   --line-d: rgba(1, 45, 18, 0.12);
   --grad: linear-gradient(100deg, #B9E3FA 0%, #7CC4EE 48%, #4C9FD8 100%);
   --studio: radial-gradient(120% 95% at 50% 28%, #FFFFFF 0%, #F0F3F1 52%, #DEE5E0 100%);
+  --clip-wall: #D3D3C7;   /* the studio wall at the top of the clips of a real person (js/media.js) */
   --f-display: 'Nunito', ui-rounded, 'Arial Rounded MT Bold', system-ui, sans-serif;
   --f-body: 'Nunito', ui-rounded, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --f-note: 'Gilda Display', 'Didot', 'Bodoni 72', Georgia, serif;
@@ -187,6 +188,7 @@ body.light .part :focus-visible { outline-color: var(--sky-hi); }
 .fig-box.tall { aspect-ratio: 1 / 1; }
 .fig-box .fig, .fig-box .fig3d, .fig-box video { position: absolute; inset: 0; width: 100%; height: 100%; }
 .fig-box video { object-fit: contain; }
+.fig-box[data-deco] video { object-fit: cover; }   /* the pictures on the welcome screen, the cards and a workout fill their box; the sheet and the player show the whole move */
 .fig3d { display: block; width: 100%; height: 100%; }
 .media { position: relative; }
 .media .turn { position: absolute; right: 10px; bottom: 10px; }
@@ -194,9 +196,6 @@ body.light .part :focus-visible { outline-color: var(--sky-hi); }
 .media .tags-on { position: absolute; left: 10px; top: 10px; display: flex; gap: 6px; }
 .media .tags-on .tag { background: rgba(255, 255, 255, 0.85); color: var(--ink-d); border-color: transparent; }
 /* an AI-made clip says so wherever it plays (ai: true in js/media.js), and is never tagged Frank */
-.ai-tag { position: absolute; right: 10px; top: 10px; z-index: 2; display: inline-flex; align-items: center; font: 800 11px/1 var(--f-body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink); background: var(--ground); border-radius: 999px; padding: 6px 10px; pointer-events: none; }
-.thumb > .ai-tag { top: auto; right: 4px; bottom: 4px; font-size: 9px; letter-spacing: 0.04em; padding: 3px 5px; }
-.wd-media .ai-tag { top: auto; bottom: 10px; }   /* under the workout's Back and settings buttons */
 /* Frank's video from YouTube in the How-to tab: a panel until the person taps play, then YouTube's player */
 .fig-box.yt, .xs .media .fig-box.yt { aspect-ratio: 16 / 9; display: grid; place-items: center; background: var(--ground-2); }
 .fig-box.yt iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
@@ -527,6 +526,8 @@ body:not(.light) .warnbox { background: rgba(242, 201, 107, 0.12); color: var(--
 .welcome-hero .fig-box { position: absolute; inset: calc(var(--safe-t) + 40px) 0 0 0; aspect-ratio: auto; border-radius: 0; }
 .welcome-hero:has(.is3d) { background: var(--studio); }
 .welcome-hero .fig-box.is3d { background: transparent !important; }
+.welcome-hero:has(.is3d > video) { background: var(--clip-wall); }   /* a clip of a real person fills the picture, under the wordmark on its wall's colour */
+.welcome-hero .fig-box:has(> video)::after { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 32px; background: linear-gradient(var(--clip-wall), rgba(211, 211, 199, 0)); pointer-events: none; }
 .welcome-hero .wm { position: absolute; left: 20px; top: calc(var(--safe-t) + 18px); z-index: 2; color: var(--sky-hi); }
 /* on the light studio behind the coach: Frank's deep green, as in his light logo (img/brand/*-light.svg) */
 .welcome-hero:has(.is3d) .wm { color: var(--ground-3); }

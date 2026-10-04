@@ -50,8 +50,8 @@ Two kinds of users:
   Shoulders & back, Cardio, Stretch) at three levels, filters by level and
   length, search, Frank's three programs (Essentials, Change the method,
   Gravity) and the library of 80 exercises.
-- **Every exercise** has a Video tab (a demo video made by AI and tagged AI demo,
-  or the moving 3D coach where a move has none yet, and offline), a Muscle tab (the
+- **Every exercise** has a Video tab (a demo video made by AI, with "Made by AI, not
+  filmed." under it, or the moving 3D coach where a move has none yet, and offline), a Muscle tab (the
   muscles the move works, front and back, standing still), and a How-to tab (Frank
   explaining it, his YouTube video inside the app; until it's there, a note that it's
   coming), plus steps, cues, common mistakes, "why it works" and other options.
@@ -113,8 +113,10 @@ look from the models' own muscle detail (`--hd` makes the sharper set in
 `assets/hd/` that screenshots use).
 
 The demo videos replace the coach move by move: realistic clips made by AI
-(`tools/media/ai/`, the frank-coach-video skill), tagged AI demo in the app. The
-coach stays for moves without a clip yet and offline, and draws the muscle maps.
+(`tools/media/ai/`, the frank-coach-video skill). No tag on the pictures; the welcome
+screen and the exercise sheet say the videos are made with AI. The main pictures (the
+welcome screen, a workout's card and header) show a move with a clip. The coach stays for
+moves without a clip yet and offline, and draws the muscle maps.
 
 ## Decided
 
@@ -124,8 +126,8 @@ coach stays for moves without a clip yet and offline, and draws the muscle maps.
   the exercise texts (`js/exercises.js`), the daily lessons and the method lines
   (`js/programs.js`, `js/app.js`). New or changed text goes to him before it ships:
   `docs/TEXT-FOR-FRANK.md` holds the lines waiting for his yes.
-- **The videos (4 October 2026):** AI makes every move's demo, tagged AI demo in the
-  app. Frank films one video per move where he explains it, on YouTube; the How-to
+- **The videos (4 October 2026):** AI makes every move's demo; the app says so on the
+  welcome screen and in the exercise sheet, with no tag on the pictures. Frank films one video per move where he explains it, on YouTube; the How-to
   tab plays it inside the app (`howto` in `js/media.js`, `docs/FILMING-GUIDE.md`).
 
 ## Frank needs to check or supply
@@ -192,7 +194,7 @@ phones pick up the update. The `static` suite fails until you do.
 | `assets/coach-m.glb`, `assets/coach-f.glb`, `assets/CREDITS.txt` | the two coaches and their licence |
 | `vendor/` | three.js r170 and its model loader (MIT) |
 | `js/exercises.js` | the 80 exercises: text, doses, kit, swaps, muscles, animations |
-| `js/media.js` | the exercise videos: AI demos (tagged AI demo) and Frank's YouTube explanations (How-to) |
+| `js/media.js` | the exercise videos: AI demos (`ai: true`) and Frank's YouTube explanations (How-to) |
 | `js/programs.js` | Frank's details, prices, workouts, the 28-day plan, safety rules, session builder |
 | `js/science.js` | the science screen and its sources |
 | `js/app.js` | screens, onboarding, the player, access (trial, member, client), coach tools, Today, Me, and the seam modules plug into (`WBF.ext`) |

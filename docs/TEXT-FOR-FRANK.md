@@ -256,13 +256,15 @@ supervised activity, or the matching switch on the Today screen's food card.
 
 ## AI demos and Frank's videos
 
-The demo videos of the moves are made by AI and say so; Frank's own videos explain the
-moves, on YouTube, and play inside the app (How-to).
+The demo videos of the moves are made by AI and the app says so, on the welcome screen and
+under the video in the exercise sheet (no tag on the pictures since 4 October); Frank's own
+videos explain the moves, on YouTube, and play inside the app (How-to).
 
 | Where | New text | Old text |
 |---|---|---|
-| A tag on every demo video made by AI: the exercise sheet, the workout, Next, the plan cards, the welcome screen | AI demo | new |
-| A tag on the small picture of a move in the lists, when its demo is made by AI (not read aloud) | AI | new |
+| A tag on every demo video made by AI: the exercise sheet, the workout, Next, the plan cards, the welcome screen | (none: Victor, 4 October, "remove the thing that says AI demo") | AI demo |
+| A tag on the small picture of a move in the lists, when its demo is made by AI (not read aloud) | (none, as above) | AI |
+| The welcome screen, the small print under the buttons, when any demo is made by AI | The exercise videos are made with AI. | new |
 | The exercise sheet, under a demo made by AI (the Video tab) | Made by AI, not filmed. | new |
 | The exercise sheet, How-to, when Frank has a video for the move: the button on the panel | Watch Frank explain it | The same words on a button that left the app for YouTube |
 | The same panel, under the button | Plays from YouTube | new |
@@ -334,7 +336,8 @@ moves, on YouTube, and play inside the app (How-to).
     one of Frank's sessions, or a workout from Look around first, before asking for a
     plan gets the card after Day 1 of the plan, not straight away.
 15. **Victor: AI makes the demos, Frank explains on YouTube.** Every move's demo video is
-    made by AI (`tools/media/ai/`) and tagged AI demo wherever it shows, never Frank.
+    made by AI (`tools/media/ai/`) and never shown as Frank's (see 19 for how the app says
+    it's AI).
     Frank films one video per move where he explains it, puts it on YouTube, and its link
     goes in `howto` in `js/media.js`: the How-to tab then plays it inside the app. Nothing
     loads from YouTube until someone taps play, and then YouTube's privacy-enhanced player
@@ -357,6 +360,16 @@ moves, on YouTube, and play inside the app (How-to).
     is too big for the app's offline store), so offline the moves show the 3D coach, as
     before. The same when a video doesn't load. The single-file builds show the 3D coach
     too.
+19. **Victor: no AI tag on the pictures, the real person first.** On 4 October Victor asked
+    to remove the "AI demo" tags and for the main pictures to show the real person. The
+    tags are gone from every video and still. The welcome screen shows the squat's demo, and
+    a workout's card and header its first main move that has a demo. The app still says the
+    videos are made with AI in two places: one line in the welcome screen's small print, and
+    "Made by AI, not filmed." under the video in the exercise sheet. Why keep those two:
+    Frank works in the Netherlands, and the EU's AI Act asks for realistic AI-made video of
+    people to be disclosed; and the man wears Frank's green, so without a word members could
+    take him for Frank. Frank's clients who open his link skip the welcome screen; Frank can
+    tell them himself. Victor and Frank decide whether that's enough, or too much.
 
 ## Older lines to check
 

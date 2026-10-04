@@ -163,7 +163,7 @@ module.exports = {
     });
 
     await t.flow('exercise videos (js/media.js)', async () => {
-      // every clip says whose it is: ai: true (made by AI, tagged AI demo) or frank: true (Frank's own, tagged Frank). The
+      // every clip says whose it is: ai: true (made by AI, never Frank) or frank: true (Frank's own, tagged Frank). The
       // app shows a line with neither as AI, but the line has to say it. Every file is there, every howto is a YouTube
       // video the app can play or a file in media/, and an approved AI take that is in media/ keeps its ai: true.
       const ctx = { document: { addEventListener() {}, hidden: false } };

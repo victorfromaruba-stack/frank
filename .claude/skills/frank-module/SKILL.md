@@ -97,7 +97,8 @@ The app's own functions (also `WBF.app`, which the tests and the showcase captur
 | `draft()` | a copy of the answers on the onboarding while it shows, else `null`. A module that draws one of its steps (an `override` of `onboard`, as `js/onboard-flow.js` draws Your first week on `ready`) reads them there. Changing the copy changes nothing: the onboarding's own actions change the answers |
 
 `app.util`: `esc` (escape every text you put in html), `iso`, `fromIso`, `addDays`,
-`monday`, `mins`, `mmss`, `plural`, `ic` (the app's icons), `figHtml`, `thumbHtml`,
+`monday`, `mins`, `mmss`, `plural`, `ic` (the app's icons), `figHtml`, `thumbHtml`, `hasClip` (a move has a
+clip of a real person: pick it for a big picture),
 `backBar` (a screen's top bar with Back), `fmtShort`, `fmtLong`. The app's words for a plan
 and its answers, so a module says them as the app does: `planName(p)` ("28-day fat
 burner"), `kgShow(kg)` and `wUnit()` (a weight in the units picked: `kgShow(kg) + ' ' +

@@ -44,7 +44,7 @@ The other project skills, each for one job:
 | `assets/coach-m.glb`, `assets/coach-f.glb` | the two coaches, built by `tools/coach/build_coach.py` from Quaternius' Universal Base Characters (CC0, `assets/CREDITS.txt`) |
 | `assets/hd/` | 2048 px texture copies of the coaches (`build_coach.py --hd`), only for screenshots and marketing renders: the app never loads them |
 | `js/exercises.js` | the 80 exercises: text, doses, kit, swaps, METs, muscles (`MUS`), joint stress (`STRESS`), animation keyframes |
-| `js/media.js` | the exercise videos, by exercise id: AI demos (`ai: true`, tagged AI demo) replace the 3D coach in the Video tab, the player and lists; Frank's YouTube explanations (`howto`) play in the How-to tab |
+| `js/media.js` | the exercise videos, by exercise id: AI demos (`ai: true`) replace the 3D coach in the Video tab, the player and lists; Frank's YouTube explanations (`howto`) play in the How-to tab |
 | `js/programs.js` | Frank's details, `BILLING`, body parts, kit, workouts, the 28-day plan, safety (`avoidFor`, `safe`), the session builder, kcal |
 | `js/science.js` | the science screen: rules and 36 sources. Mirrors `references/science.md` |
 | `js/app.js` | screens and navigation, onboarding, paywall, plan, workouts, exercise sheet, player, Today, Me, Frank, coach tools, access; at its end the module seam (`WBF.ext`, `WBF.app`) |
@@ -87,13 +87,16 @@ The other project skills, each for one job:
 
 Each move's demo is an AI clip (the frank-coach-video skill); Frank explains the
 moves on YouTube, and a move's link goes in its `howto` in `js/media.js`
-(`docs/FILMING-GUIDE.md`). The app tags an AI clip AI demo wherever it shows and
-never Frank. How-to plays Frank's YouTube video inside the app after a tap
+(`docs/FILMING-GUIDE.md`). No tag on the pictures (Victor, 4 October): the welcome
+screen's small print and a note under the video in the exercise sheet say the videos
+are made with AI, and an AI clip never shows "Frank". The main pictures show a move with
+a clip: the welcome screen the squat, a workout's card and header `coverMove` (its first
+main move with a clip; modules use `u.hasClip`). How-to plays Frank's YouTube video inside the app after a tap
 (youtube-nocookie.com; nothing loads from YouTube before the tap), else a note
 that his video is coming: How-to is Frank's, never the AI demo. The Muscle tab
 shows the muscle maps, front and back, standing still (the moving anatomy figure
 moved unlike a real person). The 3D coach stays for every move without a clip.
-`tools/test/media.cjs` checks the tags and the three tabs.
+`tools/test/media.cjs` checks the pictures, the AI lines and the three tabs.
 Videos are H.264 MP4: the test Chromium can't play them, so tests serve VP9
 copies with the same names. The service worker leaves videos to the browser.
 

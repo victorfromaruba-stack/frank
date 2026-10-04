@@ -30,7 +30,7 @@ review and the processing. Each script explains itself at its top.
 4. **Review**: a sheet with each take, its frames and the move's cues. Frank looks at the form.
    Whoever says yes approves the take (`approved.json`).
 5. **Into the app**: approved takes become `media/<id>.mp4` and `media/<id>.jpg` through
-   `process.sh`, with a `js/media.js` line marked `ai: true`, which the app tags AI demo.
+   `process.sh`, with a `js/media.js` line marked `ai: true` (never shown as Frank's).
 6. **Frank explains a move on YouTube**: the link goes in the move's `howto`; the AI demo stays.
 
 A person decides between steps 1, 2 and 3, so each runs as its own request.
@@ -234,34 +234,44 @@ line with neither `ai: true` nor `frank: true` (someone has to say whose it is).
 
 ### How the app shows an AI clip
 
-A move whose `js/media.js` line has `ai: true` gets an "AI demo" tag on its video wherever it
-plays (the exercise sheet, the workout player, Next, the plan cards, the welcome screen, a
-workout), an "AI" tag on its still in the lists, and "Made by AI, not filmed." under it in the
-exercise sheet. It never gets the "Frank" tag: only a line with `frank: true` does, and a clip
-line with neither flag shows as AI (the static suite asks for one of the two on every clip).
+A move whose `js/media.js` line has `ai: true` plays its video in place of the 3D coach (the
+exercise sheet, the workout player, Next, the plan cards, the welcome screen, a workout) and
+shows its still in the lists, with no tag on the picture (Victor, 4 October). The app says the
+videos are made with AI in two places: "The exercise videos are made with AI." in the welcome
+screen's small print (while any clip is AI), and "Made by AI, not filmed." under the video in
+the exercise sheet. An AI clip never gets the "Frank" tag: only a line with `frank: true` does,
+and a clip line with neither flag shows as AI (the static suite asks for one of the two on
+every clip). The main pictures show the real person: the welcome screen the squat's clip (the
+coach's jumping jacks without it), a workout's card and header its first main move with a clip
+(`coverMove` in `js/app.js`, `u.hasClip` for modules). Those pictures fill their box; the
+sheet and the player show the whole video.
 The How-to tab plays Frank's YouTube video when the move's `howto` has one (a panel first:
 nothing loads from YouTube until a tap), else a note that his video is coming: How-to is
 Frank's, never the AI demo (Victor, 4 October). A `howto` that is neither a YouTube video nor a
 file in `media/` is left out. The Muscle tab shows the muscle maps, front and back, standing
 still. Offline, or when a video or still doesn't load, the move shows the 3D coach
-without the tag and the note (videos aren't kept offline); with reduced motion the decorative
+without the note (videos aren't kept offline); with reduced motion the decorative
 clips (the welcome screen, the plan cards) stand still; the single-file builds show the coach.
 `tools/test/media.cjs` checks all of it.
 
 Adding the lines `process.mjs` prints: put them in `js/media.js`, keeping a move's `howto` if it
 has one, bump `VERSION` in `sw.js` (`js/media.js` is cached), run the suites, look at the moves
-in the app, and ship (frank-release). New words for the label go through frank-words first.
+in the app, and ship (frank-release). New words about AI go through frank-words first.
 
 ## Labelling AI demos honestly
 
-- Every AI clip in the app says it's AI, wherever it plays.
+- The app says the videos are made with AI: the welcome screen's line, and the note under the
+  video in the exercise sheet. Victor took the tags off the pictures on 4 October; those two
+  lines stay unless Victor and Frank decide otherwise (`docs/TEXT-FOR-FRANK.md`, decision 19).
+- Never "Frank" on an AI clip, and never a word that makes it read as Frank filming.
 - The coaches are made-up people. Never give the models a photo, a name or a description of a
   real person: not Frank, not a client.
-- Store screenshots, posts and previews (frank-showcase) show an AI clip only with its label,
-  never as Frank filming.
+- Store screenshots, posts and previews (frank-showcase) never present an AI clip as Frank
+  filming; say it's an AI demo in the post or listing.
 - Every Veo video and Gemini image carries Google's invisible SynthID watermark. Leave it.
 - Frank works in the Netherlands: the EU's AI Act asks for realistic AI-made video of people to
-  be disclosed as AI-made. The label does that.
+  be disclosed as AI-made. The two lines above do that; take them out only with Victor's and
+  Frank's yes, knowing that.
 
 ## When Frank's video of a move is on YouTube
 

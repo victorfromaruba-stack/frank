@@ -250,7 +250,9 @@
     s.steps.forEach(function (st) { if (st.block === 'main' && !seen[st.ex + st.side]) { seen[st.ex + st.side] = 1; if (st.side !== 2) out.push(st); } });
     return out;
   }
-  function firstMove(s) { var m = mainMoves(s)[0]; return m ? m.ex : (s.steps[0] && s.steps[0].ex); }
+  // a workout's picture: its first main move with a clip of a real person, else its first main move (Victor, 4 October:
+  // the main pictures show the human)
+  function coverMove(s) { var ms = mainMoves(s), m = ms.filter(function (x) { return hasClip(x.ex); })[0] || ms[0]; return m ? m.ex : (s.steps[0] && s.steps[0].ex); }
   function kcalOf(s, seconds) { return WBF.plan.kcal(s, lastWeight(), seconds, older()); }
   function metaLine(s) {
     var n = mainMoves(s).length;
@@ -390,11 +392,15 @@
   }
   function thumbHtml(id, cls) { return '<div class="thumb' + (cls ? ' ' + cls : '') + '" data-thumb="' + esc(id) + '"></div>'; }
   function media(id) { return (WBF.MEDIA || {})[id] || null; }
-  // A clip is Frank's own only when its line in js/media.js says frank: true. Any other clip is an AI demo (ai: true) and
-  // says so wherever it shows, so a line that forgets its flag never passes an AI clip off as Frank's.
+  // a clip of a real person for the move (js/media.js); offline and in the one-file builds the coach takes its place
+  function hasClip(id) { var m = media(id); return !!(m && m.video); }
+  // A clip is Frank's own only when its line in js/media.js says frank: true. Any other clip is an AI demo (ai: true): it
+  // never shows "Frank", so a line that forgets its flag never passes an AI clip off as Frank's. No tag on the pictures
+  // (Victor, 4 October): the welcome screen says the videos are made with AI, and so does a note under the video in the
+  // exercise sheet.
   function aiClip(m) { return !!(m && m.video && (m.ai || !m.frank)); }
   function franksClip(m) { return !!(m && m.video && !aiClip(m)); }
-  function aiTag(thumb) { return '<span class="ai-tag"' + (thumb ? ' aria-hidden="true">AI' : '>AI demo') + '</span>'; }
+  function anyAiClip() { return Object.keys(WBF.MEDIA || {}).some(function (id) { return aiClip(media(id)); }); }
   // Frank's own explanation on YouTube (howto in js/media.js) plays inside the How-to tab. Nothing loads from YouTube
   // until the person taps play; then YouTube's privacy-enhanced player (youtube-nocookie.com).
   function ytId(u) {
@@ -427,7 +433,7 @@
     // offline, or a still that doesn't load (the phone never had it, the one-file builds): the coach, as before
     if (m && m.poster && navigator.onLine !== false && !el._noPoster) {
       el.classList.add('is3d');
-      el.innerHTML = '<img src="' + esc(m.poster) + '" alt="">' + (aiClip(m) ? aiTag(true) : '');
+      el.innerHTML = '<img src="' + esc(m.poster) + '" alt="">';
       el.firstChild.addEventListener('error', function () { el._noPoster = true; el.classList.remove('is3d'); el.innerHTML = ''; drawThumb(el); });
       return;
     }
@@ -466,7 +472,7 @@
       // a decorative clip stands still on its first frame with reduced motion, as the coach does, and in screenshots
       var calm = (reduce && el.hasAttribute('data-deco')) || (W.WBF_SHOT && W.WBF_SHOT.still);
       el.classList.add('is3d');
-      el.innerHTML = '<video src="' + esc(m.video) + '"' + (m.poster ? ' poster="' + esc(m.poster) + '"' : '') + (calm ? ' preload="metadata"' : ' autoplay') + ' muted loop playsinline' + (flip ? ' style="transform:scaleX(-1)"' : '') + '></video>' + (aiClip(m) ? aiTag() : '');
+      el.innerHTML = '<video src="' + esc(m.video) + '"' + (m.poster ? ' poster="' + esc(m.poster) + '"' : '') + (calm ? ' preload="metadata"' : ' autoplay') + ' muted loop playsinline' + (flip ? ' style="transform:scaleX(-1)"' : '') + '></video>';
       var v = el.firstChild;
       v.addEventListener('error', function () {
         if (el.firstChild !== v || !el.isConnected) return;
@@ -849,13 +855,14 @@
   SCREENS.welcome = {
     html: function (p) {
       return '<div class="ob">' +
-        '<div class="welcome-hero">' + figHtml('jumping-jacks', { deco: true, note: false }) + '<span class="wordmark wm">Wellness by Frank</span></div>' +
+        '<div class="welcome-hero">' + figHtml(hasClip('squat') ? 'squat' : 'jumping-jacks', { deco: true, note: false }) + '<span class="wordmark wm">Wellness by Frank</span></div>' +
         slot('welcome.top', p) +
         '<div class="welcome-text"><h1>Your personal plan</h1><p>Built on Frank\'s method and the research. Every move shown by a moving coach, with the why behind it.</p></div>' +
         '<div class="ob-cta"><button class="btn dark block" data-act="ob-start">Get my plan</button>' +
         '<button class="btn white block" data-act="join">I train with Frank</button>' +
         '<div class="rowx wrap" style="justify-content:center;gap:0 20px"><button class="ob-skip" data-act="browse">Look around first</button>' + slot('welcome.cta', p) + '</div>' +
-        '<p class="ob-note">Your answers and progress stay on this phone.</p></div></div>';
+        '<p class="ob-note">Your answers and progress stay on this phone.</p>' +
+        (anyAiClip() ? '<p class="ob-note ai-line">The exercise videos are made with AI.</p>' : '') + '</div></div>';
     }
   };
 
@@ -1416,7 +1423,7 @@
       var hero;
       if (nd) {
         var s = session(nd.workoutId, nd);
-        hero = '<div class="plan-card"><div class="pc-media is3d">' + figHtml(firstMove(s), { deco: true, note: false }) + '<span class="pc-badge">Built for you</span></div>' +
+        hero = '<div class="plan-card"><div class="pc-media is3d">' + figHtml(coverMove(s), { deco: true, note: false }) + '<span class="pc-badge">Built for you</span></div>' +
           '<div class="pc-body"><h2 class="pc-title">' + esc(planName(p)) + '</h2>' +
           '<div class="pc-grid"><div>' + ic('clock') + '<span><b>' + mins(s.estSec) + '</b><span>Next session</span></span></div>' +
           '<div>' + ic('bars') + '<span><b>' + WBF.LEVELS[s.level] + '</b><span>Level</span></span></div>' +
@@ -1447,7 +1454,7 @@
           if (!d.train) return '<div class="day-card rest"><span class="state">' + ic('walk') + '</span><span class="grow"><b style="font-size:15px">Day ' + d.day + ': rest</b><span>A 20 to 30 minute walk counts toward your week</span></span></div>';
           var ss = session(d.workoutId, d), done = !!S.done[d.day], isNext = nd && nd.day === d.day;
           var kc = kcalOf(ss);
-          return '<button class="day-card' + (done ? ' done' : '') + (isNext ? ' next' : '') + '" data-act="open-day" data-day="' + d.day + '">' + thumbHtml(firstMove(ss)) +
+          return '<button class="day-card' + (done ? ' done' : '') + (isNext ? ' next' : '') + '" data-act="open-day" data-day="' + d.day + '">' + thumbHtml(coverMove(ss)) +
             '<span class="grow"><b>Day ' + d.day + '</b><span>' + esc(ss.title) + ' · ' + mins(ss.estSec) + (kc ? ' · ' + kc + ' kcal est.' : '') + '</span></span>' +
             '<span class="state">' + (done ? ic('check') : isNext ? ic('play') : '') + '</span></button>';
         }).join('') + '</div></section>';
@@ -1466,7 +1473,7 @@
     var sp = pending[0] || S.inbox[0], s = WBF.plan.custom(sp);
     var done = !!S.inboxDone[sp.i];
     // "From Frank" goes with the session, not on the picture: on a clip made by AI it could read as the clip's credit
-    return '<div class="plan-card"><div class="pc-media is3d">' + figHtml(firstMove(s), { deco: true, note: false }) + '</div><div class="pc-body">' +
+    return '<div class="plan-card"><div class="pc-media is3d">' + figHtml(coverMove(s), { deco: true, note: false }) + '</div><div class="pc-body">' +
       '<span class="pc-badge" style="position:static;align-self:flex-start">From Frank' + (done ? ' · done' : '') + '</span>' +
       '<h2 class="pc-title" style="font-size:24px">' + esc(s.title) + '</h2><p class="meta">' + esc(fmtShort.format(fromIso(sp.d))) + ' · ' + metaLine(s) + '</p>' +
       (sp.n ? '<p class="note s">' + esc(sp.n) + '</p>' : '') +
@@ -1486,7 +1493,7 @@
     return '<section class="stack"><h2 class="h2">Short sessions</h2><div class="rail">' +
       ['wake-up', 'desk-reset', 'back-care', 'evening', 'mobility'].map(function (id) {
         var s = session(id);
-        return '<button class="mini" data-act="open-workout" data-id="' + id + '">' + thumbHtml(firstMove(s)) + '<b>' + esc(s.title) + '</b><span class="meta">' + mins(s.estSec) + '</span></button>';
+        return '<button class="mini" data-act="open-workout" data-id="' + id + '">' + thumbHtml(coverMove(s)) + '<b>' + esc(s.title) + '</b><span class="meta">' + mins(s.estSec) + '</span></button>';
       }).join('') + '</div></section>';
   }
 
@@ -1497,7 +1504,7 @@
   function workoutCard(id) {
     var s = session(id), w = WBF.WORKOUT[id], lv = { b: 1, i: 2, a: 3 }[s.level] || 1;
     var kc = kcalOf(s);
-    return '<button class="wo-card" data-act="open-workout" data-id="' + id + '">' + thumbHtml(firstMove(s)) + '<span class="grow"><b>' + esc(w.kind === 'area' ? s.title + ' · ' + WBF.LEVELS[s.level] : s.title) + '</b>' +
+    return '<button class="wo-card" data-act="open-workout" data-id="' + id + '">' + thumbHtml(coverMove(s)) + '<span class="grow"><b>' + esc(w.kind === 'area' ? s.title + ' · ' + WBF.LEVELS[s.level] : s.title) + '</b>' +
       '<span>' + mins(s.estSec) + ' · ' + plural(mainMoves(s).length, 'move') + (kc ? ' · ' + kc + ' kcal est.' : '') + '</span>' +
       (w.kind === 'area' ? '<span class="lv" aria-label="' + WBF.LEVELS[s.level] + '">' + [1, 2, 3].map(function (i) { return '<i class="' + (i <= lv ? 'on' : '') + '"></i>'; }).join('') + '</span>' : '<span class="meta">' + esc(w.blurb || '') + '</span>') + '</span></button>';
   }
@@ -1638,7 +1645,7 @@
       });
       var kc = kcalOf(s), mus = WBF.plan.musclesOf(s);
       var label = p.coach ? 'From Frank' : day ? 'Day ' + day.day + ' · Week ' + day.week : w.kind === 'program' ? 'Frank\'s program' : w.kind === 'quick' ? 'Short session' : (WBF.BODY_BY_ID[w.area] || {}).name || '';
-      var hero = w.img ? '<img src="' + img(w.img) + '" alt="' + esc(w.phrase) + '">' : figHtml(firstMove(s), { deco: true, note: false, cls: 'is3d' });
+      var hero = w.img ? '<img src="' + img(w.img) + '" alt="' + esc(w.phrase) + '">' : figHtml(coverMove(s), { deco: true, note: false, cls: 'is3d' });
       return '<div class="screen bare"><div class="wd-media">' + hero + '<div class="top-bar"><button class="icon-btn glass" data-act="back" aria-label="Back">' + ic('back') + '</button>' +
         '<button class="icon-btn glass" data-act="settings" aria-label="Workout settings">' + ic('sliders') + '</button></div></div>' +
         '<div class="stack"><p class="label">' + esc(label) + '</p><h1 class="wd-title">' + esc(s.title) + '</h1>' +
@@ -1942,7 +1949,7 @@
       var nd = nextDay(), card = '';
       if (nd) {
         var s = session(nd.workoutId, nd);
-        card = '<button class="wo-card" data-act="open-day" data-day="' + nd.day + '">' + thumbHtml(firstMove(s)) + '<span class="grow"><span class="label">Next in your plan</span><b>Day ' + nd.day + ': ' + esc(s.title) + '</b><span>' + mins(s.estSec) + '</span></span>' + ic('chev', 'chev') + '</button>';
+        card = '<button class="wo-card" data-act="open-day" data-day="' + nd.day + '">' + thumbHtml(coverMove(s)) + '<span class="grow"><span class="label">Next in your plan</span><b>Day ' + nd.day + ': ' + esc(s.title) + '</b><span>' + mins(s.estSec) + '</span></span>' + ic('chev', 'chev') + '</button>';
       }
       return '<div class="screen"><div class="stack tight"><p class="label">' + esc(fmtLong.format(new Date())) + '</p><h1 class="h1">Today</h1></div>' + slot('today.top', p) +
         '<div class="week-strip" aria-label="This week">' + strip + '</div>' +
@@ -2206,7 +2213,7 @@
       return '<div class="screen bare">' + backBar('From Frank') +
         '<h1 class="h1">Sessions from Frank</h1><div class="list">' + S.inbox.map(function (sp) {
           var s = WBF.plan.custom(sp);
-          return '<button class="item" data-act="open-coach" data-id="' + sp.i + '">' + thumbHtml(firstMove(s)) + '<span class="grow"><b>' + esc(sp.t) + '</b><span class="meta">' +
+          return '<button class="item" data-act="open-coach" data-id="' + sp.i + '">' + thumbHtml(coverMove(s)) + '<span class="grow"><b>' + esc(sp.t) + '</b><span class="meta">' +
             esc(fmtShort.format(fromIso(sp.d))) + ' · ' + metaLine(s) + (S.inboxDone[sp.i] ? ' · done' : '') + '</span></span>' + ic('chev', 'chev') + '</button>';
         }).join('') + '</div>' +
         '<button class="btn two block" data-act="join">Add a session from a link</button></div>';
@@ -2967,7 +2974,7 @@
     canInstall: function () { return !!deferredInstall; }, install: promptInstall,
     sheet: function (id, tabName) { exerciseSheet(id); if (tabName && XS) { XS.tab = tabName; paintExMedia(); } },
     util: { esc: esc, iso: iso, fromIso: fromIso, addDays: addDays, monday: monday, mins: mins, mmss: mmss, plural: plural, ic: ic,
-            figHtml: figHtml, thumbHtml: thumbHtml, backBar: backBar, fmtShort: fmtShort, fmtLong: fmtLong,
+            figHtml: figHtml, thumbHtml: thumbHtml, hasClip: hasClip, backBar: backBar, fmtShort: fmtShort, fmtLong: fmtLong,
             planName: planName, kgShow: kgShow, wUnit: wUnit, heightShow: heightShow, kitWords: kitWords, focusWords: focusWords, soreName: soreName,
             safeRows: safeRows }
   };

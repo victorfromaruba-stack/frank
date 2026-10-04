@@ -139,11 +139,13 @@
 
     // ---- "Your first week": after the build, in place of the app's summary ------------------------------------------------
     function mainOf(s) { return s.steps.filter(function (st) { return st.block === 'main'; }).map(function (st) { return st.ex; }); }
-    function firstMove(s) { return mainOf(s)[0] || s.steps[0].ex; }
+    // Day 1's picture: its first main move with a clip of a real person, else its first main move (as the app's cards)
+    function firstMove(s) { var ms = mainOf(s); return ms.filter(u.hasClip)[0] || ms[0] || s.steps[0].ex; }
     // a session's picture: its first main move that no day above shows, so the days don't all look alike (many workouts
-    // start with the same move)
+    // start with the same move); one with a clip first
     function picture(s, shown) {
-      var m = mainOf(s).filter(function (ex) { return !shown[ex]; })[0] || firstMove(s);
+      var left = mainOf(s).filter(function (ex) { return !shown[ex]; });
+      var m = left.filter(u.hasClip)[0] || left[0] || firstMove(s);
       shown[m] = 1;
       return m;
     }
