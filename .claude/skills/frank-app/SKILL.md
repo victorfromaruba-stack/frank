@@ -89,9 +89,11 @@ Each move's demo is an AI clip (the frank-coach-video skill); Frank explains the
 moves on YouTube, and a move's link goes in its `howto` in `js/media.js`
 (`docs/FILMING-GUIDE.md`). The app tags an AI clip AI demo wherever it shows and
 never Frank. How-to plays Frank's YouTube video inside the app after a tap
-(youtube-nocookie.com; nothing loads from YouTube before the tap), else the
-demo in slow motion. The 3D coach stays for the Muscle tab and every move
-without a clip. `tools/test/media.cjs` checks the tags and the How-to tab.
+(youtube-nocookie.com; nothing loads from YouTube before the tap), else a note
+that his video is coming: How-to is Frank's, never the AI demo. The Muscle tab
+shows the muscle maps, front and back, standing still (the moving anatomy figure
+moved unlike a real person). The 3D coach stays for every move without a clip.
+`tools/test/media.cjs` checks the tags and the three tabs.
 Videos are H.264 MP4: the test Chromium can't play them, so tests serve VP9
 copies with the same names. The service worker leaves videos to the browser.
 

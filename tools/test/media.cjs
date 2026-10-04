@@ -1,7 +1,8 @@
 // media: the exercise videos in js/media.js. Frank's own clip (frank: true) is tagged Frank; any other clip is made by
-// AI (ai: true, or a line that forgot its flag) and says "AI demo" wherever it shows (the exercise sheet with its note,
-// the player, Next, the plan cards, the welcome screen, a workout) and "AI" on its still in the lists, clear of the
-// buttons and badges, and never with "Frank" on it. Offline, or when a clip or still doesn't load, the 3D coach shows,
+// AI (ai: true, or a line that forgot its flag) and says "AI demo" wherever it shows (the exercise sheet's Video tab
+// with its note, the player, Next, the plan cards, the welcome screen, a workout) and "AI" on its still in the lists,
+// clear of the buttons and badges, and never with "Frank" on it. How-to is Frank's alone (no AI clip there), and the
+// Muscle tab shows the muscle maps, front and back, standing still. Offline, or when a clip or still doesn't load, the 3D coach shows,
 // with no tag and no note. With reduced motion a decorative clip stands still. Frank's explanation on YouTube (howto)
 // plays inside the How-to tab, nothing loads from YouTube before a tap on play, and a link the app can't read is left
 // out. The suite serves its own js/media.js, so it runs before any real clip is in the repo: every move gets an AI clip
@@ -79,12 +80,15 @@ async function audited(t, p, label, want = {}) {
   if (want.stills) t.check(a.seen.stills >= want.stills, label + ': ' + a.seen.stills + ' still(s) in the lists, expected ' + want.stills + ' or more');
   await t.look(p, label);
 }
+// How-to's note while Frank's video is to come, and the figures in the media box (none: no demo in How-to)
+const soon = (p) => p.evaluate(() => [((document.querySelector('#overlay #xs-media .soon b') || {}).textContent || ''),
+  document.querySelectorAll('#overlay #xs-media [data-fig], #overlay #xs-media video').length]);
 const sheetTags = (p) => p.evaluate(() => [(document.querySelector('#overlay .tags-on') || {}).textContent || '',
   (document.querySelector('#overlay .ai-note') || {}).textContent || '', !!document.querySelector('#overlay #xs-media video')]);
 
 module.exports = {
   name: 'media',
-  about: 'exercise videos (its own js/media.js: an AI clip for every move but one of Frank\'s (frank: true), one line with no flag, Frank\'s YouTube video for one, a link from another site for one, a clip that does not load): the exercise sheet tags Frank\'s clip Frank, an AI clip "AI demo" with a note and never Frank (also with no flag), the Muscle tab keeps the 3D muscles, How-to plays the clip in slow motion, or Frank\'s YouTube video in the app after a tap (nothing from YouTube before it, the focus in the player; offline, a toast), a link it can\'t read left out; offline or when a clip or still does not load, the coach, no tag, no note, nothing asked for; reduced motion stills the decorative clips; every clip and still on the welcome screen, the Plan, a workout, the player and Next (a member\'s plan, and Frank\'s session with an AI clip and then his own) carries its tag, inside the picture, clear of buttons, badges and captions, and no "Frank" on an AI clip',
+  about: 'exercise videos (its own js/media.js: an AI clip for every move but one of Frank\'s (frank: true), one line with no flag, Frank\'s YouTube video for one, a link from another site for one, a clip that does not load): the exercise sheet tags Frank\'s clip Frank, an AI clip "AI demo" with a note and never Frank (also with no flag), the Muscle tab shows the muscle maps, front and back, standing still, How-to never the AI clip: Frank\'s YouTube video in the app after a tap, or a note that it\'s coming (nothing from YouTube before it, the focus in the player; offline, a toast), a link it can\'t read left out; offline or when a clip or still does not load, the coach, no tag, no note, nothing asked for; reduced motion stills the decorative clips; every clip and still on the welcome screen, the Plan, a workout, the player and Next (a member\'s plan, and Frank\'s session with an AI clip and then his own) carries its tag, inside the picture, clear of buttons, badges and captions, and no "Frank" on an AI clip',
   async run(t) {
     await t.flow('the exercise sheet', async () => {
       const p = await open(t, { state: L.member(), hash: 'ex.squat' });
@@ -98,10 +102,16 @@ module.exports = {
         return [!!v, v ? v.playbackRate : 0, document.querySelectorAll('#overlay #xs-media .ai-tag').length, !!document.querySelector('#overlay .ai-note'),
           (document.querySelector('#overlay .tags-on') || {}).textContent || '']; });
       await app.tap(p, '#overlay [data-act="xs-tab"][data-v="muscle"]');
-      t.equal(await shown(), [false, 0, 0, false, ''], 'squat, Muscle tab: the 3D muscles, no AI tag or note [clip, speed, tags, note, tag row]');
+      t.equal(await shown(), [false, 0, 0, false, ''], 'squat, Muscle tab: no clip, no AI tag or note [clip, speed, tags, note, tag row]');
+      // the muscles, front and back, standing still: no moving figure (it moved unlike a real person)
+      await L.settle(p);
+      t.equal(await p.evaluate(() => [document.querySelectorAll('#overlay #xs-media [data-fig]').length,
+        [...document.querySelectorAll('#overlay #xs-media img[data-map]')].map((i) => i.getAttribute('data-view') + (!i.hidden && i.getAttribute('src') ? ' shown' : ' hidden')).join(', ')]),
+      [0, 'front shown, back shown'], 'squat, Muscle tab: the muscle maps, front and back, and no moving figure [figures, maps]');
       await app.tap(p, '#overlay [data-act="xs-tab"][data-v="howto"]');
-      t.equal(await shown(), [true, 0.55, 1, true, 'Slow motion'], 'squat, How-to without a video of Frank: the AI clip in slow motion, tagged, with the note [clip, speed, tags, note, tag row]');
-      await audited(t, p, 'sheet: How-to, an AI clip in slow motion', { clips: 1 });
+      t.equal(await shown(), [false, 0, 0, false, ''], 'squat, How-to without a video of Frank: no AI clip there, no tag, no note [clip, speed, tags, note, tag row]');
+      t.equal(await soon(p), ['Frank explains this move here', 0], 'squat, How-to without a video of Frank: the note that his video is coming, and no figure [note, figures]');
+      await t.look(p, 'sheet: How-to before Frank\'s video');
       await app.tap(p, '#overlay [data-act="xs-tab"][data-v="video"]');
       await audited(t, p, 'sheet: back on the Video tab', { clips: 1 });
       t.step("Frank's own clip");
@@ -161,14 +171,14 @@ module.exports = {
 
     await t.flow('a link the app can\'t read', async () => {
       // the bird dog's howto is a link from another site: no player for it, nothing loaded from that site (t.page
-      // fails on any request to another site), the AI clip in slow motion as for a move with no video of Frank
+      // fails on any request to another site), the note as for a move with no video of Frank
       const p = await open(t, { state: L.member(), hash: 'ex.' + ODDLINK });
       await p.waitForSelector('#overlay .xs h2');
       await app.tap(p, '#overlay [data-act="xs-tab"][data-v="howto"]');
       const how = await p.evaluate(() => [!!document.querySelector('#overlay [data-yt]'), !!document.querySelector('#overlay .yt-out'),
         [...document.querySelectorAll('#overlay #xs-media video')].map((v) => v.getAttribute('src')).join(' '), (document.querySelector('#overlay .tags-on') || {}).textContent || '']);
-      t.equal(how, [false, false, 'media/qa-ai-' + ODDLINK + '.mp4', 'Slow motion'], 'How-to with a link that is not YouTube: the AI clip in slow motion [YouTube panel, Open in YouTube, video, tag row]');
-      await audited(t, p, 'sheet: How-to with a link the app leaves out', { clips: 1 });
+      t.equal(how, [false, false, '', ''], 'How-to with a link that is not YouTube: no player, no video [YouTube panel, Open in YouTube, video, tag row]');
+      t.equal(await soon(p), ['Frank explains this move here', 0], 'How-to with a link the app leaves out: the note that his video is coming');
     });
 
     await t.flow('offline, and a clip that does not load', async () => {

@@ -51,10 +51,11 @@ Two kinds of users:
   length, search, Frank's three programs (Essentials, Change the method,
   Gravity) and the library of 80 exercises.
 - **Every exercise** has a Video tab (a demo video made by AI and tagged AI demo,
-  or the moving 3D coach where a move has none yet, and offline), a Muscle tab (an anatomy view that turns slowly, the
-  muscles the move works in red), and a How-to tab (slow motion, or Frank
-  explaining it), plus steps, cues, common mistakes, "why it works" and other
-  options. Drag the coach to turn it.
+  or the moving 3D coach where a move has none yet, and offline), a Muscle tab (the
+  muscles the move works, front and back, standing still), and a How-to tab (Frank
+  explaining it, his YouTube video inside the app; until it's there, a note that it's
+  coming), plus steps, cues, common mistakes, "why it works" and other options.
+  Drag the coach to turn it.
 - **The player**: get-ready countdown, timers or rep counts, rest with +20 s and
   skip, switching sides, pause, How-to mid-workout, voice coach, beeps,
   vibration, and the screen stays on.
@@ -107,13 +108,13 @@ Quaternius' Universal Base Characters (CC0, free for commercial use). Each
 exercise is written as 2D key poses (`js/figure.js`); the 3D coach copies the
 joints, keeps hands and feet on the floor, a box, the table or the wall, and
 can light up the muscles. `tools/coach/build_coach.py` fitted the models to the
-pose engine, dressed them in Frank's green and drew the Muscle tab's anatomy
+pose engine, dressed them in Frank's green and drew the muscle maps' anatomy
 look from the models' own muscle detail (`--hd` makes the sharper set in
 `assets/hd/` that screenshots use).
 
 The demo videos replace the coach move by move: realistic clips made by AI
 (`tools/media/ai/`, the frank-coach-video skill), tagged AI demo in the app. The
-coach stays for the Muscle tab and for moves without a clip yet.
+coach stays for moves without a clip yet and offline, and draws the muscle maps.
 
 ## Decided
 
