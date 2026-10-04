@@ -5,9 +5,9 @@ workout player and in the lists, is made by AI from this shot list and is tagged
 AI demo in the app (`tools/media/ai/`, the frank-coach-video skill). Frank films
 one video per move where he explains it, the way he would to a client, and puts
 it on YouTube: the app plays it inside the exercise's How-to tab. Until a move
-has his video, How-to plays the demo in slow motion, with the written steps. The
-3D coach stays for the Muscle tab and for any move without a demo yet, so the
-app works the whole time, with 1 of Frank's videos or 80.
+has his video, How-to says it's coming, and the written steps are below it (the
+demo stays in the Video tab). The 3D coach stays for any move without a demo
+yet, so the app works the whole time, with 1 of Frank's videos or 80.
 
 Below the moves are the other videos and photos the apps need: Personal, food,
 portraits and brand files. Frank works from the same list as a checklist that

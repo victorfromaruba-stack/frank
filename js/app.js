@@ -407,6 +407,10 @@
     var u = m && m.howto, yt = ytId(u);
     return yt ? { yt: yt } : /^media\/[\w.-]+\.(?:mp4|webm|m4v)$/i.test(u || '') ? { file: u } : null;
   }
+  // How-to without Frank's video yet: a note in its place (How-to is his; no demo there)
+  function soonBox() {
+    return '<div class="fig-box yt soon"><div class="soon-in">' + ic('clock') + '<b>Frank explains this move here</b><span>His video is coming soon. The steps are below.</span></div></div>';
+  }
   function ytBox(vid) {
     return '<div class="fig-box yt" data-yt="' + vid + '"><button class="yt-play" data-act="yt-play">' + ic('play') + '<span>Watch Frank explain it</span></button>' +
       '<span class="yt-note">Plays from YouTube</span></div>';
@@ -745,20 +749,22 @@
     // other moves for the same job: only the ones this person may do, with the kit they have
     var av = WBF.plan.avoidFor(S.profile), have = (S.profile && S.profile.kit) || WBF.DEFAULT_KIT;
     var alts = (ex.alts || []).filter(function (a) { return EX[a] && WBF.plan.safe(EX[a], av) && WBF.plan.canDo(EX[a], have); });
-    var m = media(id), tabFig, how = howtoOf(m), yt = how && how.yt, frankHow = !!how;
-    // the clip shows in the Video tab, and in How-to when Frank has no video of his own there; offline, the coach
-    var clipShown = m && m.video && navigator.onLine !== false && XS.tab !== 'muscle' && !(XS.tab === 'howto' && frankHow);
-    var aiShown = clipShown && aiClip(m);
-    if (XS.tab === 'muscle') tabFig = figHtml(id, { mode: 'muscle', drag: true, note: false, video: false, orbit: 20 });
-    else if (XS.tab === 'howto') tabFig = yt ? ytBox(yt) : frankHow ? '<div class="fig-box is3d"><video src="' + esc(how.file) + '"' + (m.poster ? ' poster="' + esc(m.poster) + '"' : '') + ' controls playsinline></video></div>'
-      : figHtml(id, { drag: true, speed: 0.55, noteTop: 30, note: !clipShown });
-    else tabFig = figHtml(id, { drag: true, note: false });
+    var m = media(id), tabFig, how = howtoOf(m), yt = how && how.yt;
     var mus = ex.mus || { p: [], s: [] };
+    // Video: the demo clip (the coach offline or where there's none). Muscle: the muscles it works, front and back,
+    // standing still (a moving anatomy figure looked unlike a real person). How-to: Frank's own video, or a note
+    // that it's coming; never the AI demo
+    var clipShown = m && m.video && navigator.onLine !== false && XS.tab === 'video';
+    var aiShown = clipShown && aiClip(m);
+    if (XS.tab === 'muscle') tabFig = '<div class="fig-box mus-box">' + mapImg(mus, 'front', 150, 300) + mapImg(mus, 'back', 150, 300) + '</div>';
+    else if (XS.tab === 'howto') tabFig = yt ? ytBox(yt) : how ? '<div class="fig-box is3d"><video src="' + esc(how.file) + '"' + (m.poster ? ' poster="' + esc(m.poster) + '"' : '') + ' controls playsinline></video></div>'
+      : soonBox();
+    else tabFig = figHtml(id, { drag: true, note: false });
     var n = XS.list.length;
     var html = '<div class="xs">' +
       '<div class="between"><h2 class="h2">' + esc(ex.name) + '</h2><button class="icon-btn" data-act="close" aria-label="Close">' + ic('close') + '</button></div>' +
       '<div class="media" id="xs-media">' + tabFig +
-      '<div class="tags-on">' + (clipShown && franksClip(m) && XS.tab === 'video' ? '<span class="tag">Frank</span>' : '') + (XS.tab === 'howto' && !frankHow ? '<span class="tag">Slow motion</span>' : '') + '</div>' +
+      '<div class="tags-on">' + (clipShown && franksClip(m) && XS.tab === 'video' ? '<span class="tag">Frank</span>' : '') + '</div>' +
       '<button class="icon-btn glass turn" data-act="turn" data-turn="1" aria-label="Turn the figure" hidden>' + ic('turn') + '</button></div>' +
       '<div class="tabs3" role="group" aria-label="View">' + [['video', 'Video'], ['muscle', 'Muscle'], ['howto', 'How-to']].map(function (t) {
         return '<button data-act="xs-tab" data-v="' + t[0] + '" aria-pressed="' + (XS.tab === t[0]) + '">' + t[1] + '</button>';
@@ -768,7 +774,7 @@
       '<div class="xs-dose"><span class="label">' + (ex.type === 'time' ? 'Duration' : 'Reps') + (ex.each ? ' · each side' : '') + '</span><b>' + (ex.type === 'time' ? mmss(dose) : '× ' + dose) + '</b></div>' +
       (kit.length ? '<div class="kit-line">' + kit.map(function (k) { return '<span class="tag">' + esc(k) + '</span>'; }).join('') + '</div>' : '') +
       '<section class="stack"><p class="label">Instructions</p><p>' + esc(ex.setup) + '</p><ol class="steps">' + ex.steps.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ol></section>' +
-      '<section class="stack"><p class="label">Focus area</p><div class="focus-row">' + focusMaps(mus, 64, 128) + musChips(mus, 8) + '</div></section>' +
+      '<section class="stack"><p class="label">Focus area</p><div class="focus-row">' + (XS.tab === 'muscle' ? '' : focusMaps(mus, 64, 128)) + musChips(mus, 8) + '</div></section>' +
       '<section class="stack"><p class="label">Frank\'s cues</p><ul class="bul">' + ex.cue.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ul></section>' +
       '<section class="stack"><p class="label">Watch out for</p><ul class="bul x">' + ex.mistakes.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ul></section>' +
       '<div class="card"><p class="label">Why it works</p><p class="note s">' + esc(ex.why) + '</p></div>' +

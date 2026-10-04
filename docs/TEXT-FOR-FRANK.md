@@ -263,12 +263,14 @@ moves, on YouTube, and play inside the app (How-to).
 |---|---|---|
 | A tag on every demo video made by AI: the exercise sheet, the workout, Next, the plan cards, the welcome screen | AI demo | new |
 | A tag on the small picture of a move in the lists, when its demo is made by AI (not read aloud) | AI | new |
-| The exercise sheet, under a demo made by AI (Video, and How-to in slow motion) | Made by AI, not filmed. | new |
+| The exercise sheet, under a demo made by AI (the Video tab) | Made by AI, not filmed. | new |
 | The exercise sheet, How-to, when Frank has a video for the move: the button on the panel | Watch Frank explain it | The same words on a button that left the app for YouTube |
 | The same panel, under the button | Plays from YouTube | new |
 | Under the panel, a link to the same video in YouTube's app or site | Open in YouTube | new |
 | A tap on the button without internet | Frank's video needs the internet. | new |
 | Frank's video once it plays, its name for a screen reader | Frank explains (the move's name), for example Frank explains Squat | new |
+| The exercise sheet, How-to, before Frank's video of the move is in the app | Frank explains this move here / His video is coming soon. The steps are below. | The demo in slow motion, with a Slow motion tag |
+| The exercise sheet, Muscle | (no words: the muscles, front and back, standing still) | A moving anatomy figure |
 | Frank's sessions on the Plan: the badge moves off the picture, above the session's name (on an AI demo it could read as the video's credit) | From Frank (unchanged) | The same badge on the picture |
 | Personal (the prototype for Frank's own clients), under a session's moves | Frank's own videos will explain each move. | Frank's own videos replace the 3D coach as he films them. |
 
@@ -336,8 +338,10 @@ moves, on YouTube, and play inside the app (How-to).
     Frank films one video per move where he explains it, puts it on YouTube, and its link
     goes in `howto` in `js/media.js`: the How-to tab then plays it inside the app. Nothing
     loads from YouTube until someone taps play, and then YouTube's privacy-enhanced player
-    (youtube-nocookie.com) is used. Without Frank's video, How-to plays the AI demo in slow
-    motion; the Muscle tab keeps the 3D muscles.
+    (youtube-nocookie.com) is used. Without Frank's video, How-to says it's coming (Victor,
+    4 October: How-to is for Frank's videos, never the AI demo). The Muscle tab shows the
+    muscles, front and back, standing still: the moving anatomy figure moved unlike a real
+    person.
 16. **Victor: the AI demos go in before Frank sees them.** Victor decided on 4 October to
     add the clips as they're made, once their form is checked against Frank's cues (by
     Claude, or a person). Frank looks at each one in the app; one he doesn't like comes out

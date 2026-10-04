@@ -68,6 +68,83 @@
       "note": "Victor's go-ahead (4 Oct 2026, the man coach, all moves); form checked by Claude against Frank's cues; Frank sees it; the loop closes at 7.625 s",
       "model": "veo-3.1-fast-generate-preview",
       "end": 7.625
+    },
+    {
+      "move": "march",
+      "coach": "m",
+      "take": "take-1",
+      "run": "gh-37191107479-1-full-5-clips",
+      "sha256": "90817175fc83ec3668b7d38e51de66f496bcfb80abf45c92292ab5ea0489d8e3",
+      "approvedBy": "Victor",
+      "date": "2026-10-04",
+      "note": "Victor's go-ahead on 4 Oct 2026 (add the clips as they're made); form checked by Claude against Frank's cues, every 0.5 s and at full size; Frank sees it in the app",
+      "model": "veo-3.1-fast-generate-preview"
+    },
+    {
+      "move": "hip-hinge",
+      "coach": "m",
+      "take": "take-1",
+      "run": "gh-37191107479-1-full-5-clips",
+      "sha256": "a8c8015b3dfedeab8e79b845334f05d0961405ef09c406ed5478af3705f80a6c",
+      "approvedBy": "Victor",
+      "date": "2026-10-04",
+      "note": "Victor's go-ahead on 4 Oct 2026 (add the clips as they're made); form checked by Claude against Frank's cues, every 0.5 s and at full size; Frank sees it in the app",
+      "model": "veo-3.1-fast-generate-preview"
+    },
+    {
+      "move": "mountain-climber",
+      "coach": "m",
+      "take": "take-1",
+      "run": "gh-37191107479-1-full-5-clips",
+      "sha256": "5f883daf24f0dfbbb73779d5849d47a359361fd25a6659c209c2cd95dd91a17e",
+      "approvedBy": "Victor",
+      "date": "2026-10-04",
+      "note": "Victor's go-ahead on 4 Oct 2026 (add the clips as they're made); form checked by Claude against Frank's cues, every 0.5 s and at full size; Frank sees it in the app",
+      "model": "veo-3.1-fast-generate-preview"
+    },
+    {
+      "move": "leg-swings",
+      "coach": "m",
+      "take": "take-1",
+      "run": "gh-37191107479-1-full-5-clips",
+      "sha256": "fca6015ab0ffcae6c9b27e0a5270c37f2e15420c357956c2e77d5fbcf93545b9",
+      "approvedBy": "Victor",
+      "date": "2026-10-04",
+      "note": "Victor's go-ahead on 4 Oct 2026 (add the clips as they're made); form checked by Claude against Frank's cues, every 0.5 s and at full size; Frank sees it in the app",
+      "model": "veo-3.1-fast-generate-preview"
+    },
+    {
+      "move": "forward-fold",
+      "coach": "m",
+      "take": "take-1",
+      "run": "gh-37191107479-1-full-5-clips",
+      "sha256": "d8686241005463452a70d1fc0fcd9c7bed9728a00377059f7c88969a5f168b22",
+      "approvedBy": "Victor",
+      "date": "2026-10-04",
+      "note": "Victor's go-ahead on 4 Oct 2026 (add the clips as they're made); form checked by Claude against Frank's cues, every 0.5 s and at full size; Frank sees it in the app",
+      "model": "veo-3.1-fast-generate-preview"
+    },
+    {
+      "move": "cobra",
+      "coach": "m",
+      "take": "take-1",
+      "run": "gh-37191107479-1-full-5-clips",
+      "sha256": "a0d3a88c36d208f7563d3ecab5d0f3ca5a31d079bb604d160a54c44fa6c45f01",
+      "approvedBy": "Victor",
+      "date": "2026-10-04",
+      "note": "Victor's go-ahead on 4 Oct 2026 (add the clips as they're made); form checked by Claude against Frank's cues, every 0.5 s and at full size; Frank sees it in the app",
+      "model": "veo-3.1-fast-generate-preview"
+    },
+    {
+      "move": "hip-flexor-stretch",
+      "coach": "m",
+      "take": "take-1",
+      "run": "gh-37191107479-1-full-5-clips",
+      "sha256": "3d709f45a33e0617a37523e01a66481256c35ab11dcd291528ffa0895edabeaf",
+      "approvedBy": "Victor",
+      "date": "2026-10-04",
+      "note": "Victor's go-ahead on 4 Oct 2026 (add the clips as they're made); form checked by Claude against Frank's cues, every 0.5 s and at full size; Frank sees it in the app",
+      "model": "veo-3.1-fast-generate-preview"
     }
   ]
 }

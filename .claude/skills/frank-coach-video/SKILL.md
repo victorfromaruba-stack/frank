@@ -238,9 +238,10 @@ workout), an "AI" tag on its still in the lists, and "Made by AI, not filmed." u
 exercise sheet. It never gets the "Frank" tag: only a line with `frank: true` does, and a clip
 line with neither flag shows as AI (the static suite asks for one of the two on every clip).
 The How-to tab plays Frank's YouTube video when the move's `howto` has one (a panel first:
-nothing loads from YouTube until a tap), else the AI demo in slow motion, still tagged; a
-`howto` that is neither a YouTube video nor a file in `media/` is left out. The Muscle tab keeps
-the 3D muscles. Offline, or when a video or still doesn't load, the move shows the 3D coach
+nothing loads from YouTube until a tap), else a note that his video is coming: How-to is
+Frank's, never the AI demo (Victor, 4 October). A `howto` that is neither a YouTube video nor a
+file in `media/` is left out. The Muscle tab shows the muscle maps, front and back, standing
+still. Offline, or when a video or still doesn't load, the move shows the 3D coach
 without the tag and the note (videos aren't kept offline); with reduced motion the decorative
 clips (the welcome screen, the plan cards) stand still; the single-file builds show the coach.
 `tools/test/media.cjs` checks all of it.
