@@ -19,5 +19,12 @@
     'arm-circles': { video: 'media/arm-circles.mp4', poster: 'media/arm-circles.jpg', ai: true },
     'box-squat': { video: 'media/box-squat.mp4', poster: 'media/box-squat.jpg', ai: true },
     'cat-cow': { video: 'media/cat-cow.mp4', poster: 'media/cat-cow.jpg', ai: true },
+    'march': { video: 'media/march.mp4', poster: 'media/march.jpg', ai: true },
+    'hip-hinge': { video: 'media/hip-hinge.mp4', poster: 'media/hip-hinge.jpg', ai: true },
+    'mountain-climber': { video: 'media/mountain-climber.mp4', poster: 'media/mountain-climber.jpg', ai: true },
+    'leg-swings': { video: 'media/leg-swings.mp4', poster: 'media/leg-swings.jpg', ai: true },
+    'forward-fold': { video: 'media/forward-fold.mp4', poster: 'media/forward-fold.jpg', ai: true },
+    'cobra': { video: 'media/cobra.mp4', poster: 'media/cobra.jpg', ai: true },
+    'hip-flexor-stretch': { video: 'media/hip-flexor-stretch.mp4', poster: 'media/hip-flexor-stretch.jpg', ai: true },
   };
 })(window);
