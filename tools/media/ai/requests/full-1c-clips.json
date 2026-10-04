@@ -1,0 +1,10 @@
+{
+  "about": "Full set, batch 1 again: the 11 clips Google's quota refused (429, not charged) and the three moves with new start poses, one at a time, in case the limit is per minute.",
+  "steps": ["clip", "review"],
+  "coaches": ["m"],
+  "moves": ["childs-pose", "forward-fold", "hip-hinge", "jump-squat", "jumping-jacks", "knee-to-chest", "leg-swings", "march", "mountain-climber", "single-leg-rdl", "split-squat", "cobra", "hip-flexor-stretch", "table-row"],
+  "takes": 1,
+  "resolution": "720p",
+  "parallel": 1,
+  "budget": 12
+}
