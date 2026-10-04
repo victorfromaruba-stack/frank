@@ -436,8 +436,8 @@ module.exports = {
 
     await t.flow('toasts stay clear of the main button', async () => {
       // without the tab bar (the onboarding, a workout, the welcome) a toast goes above the screen's main button
-      const clear = async (p, what, sel) => {
-        await p.waitForFunction(() => document.getElementById('toast').classList.contains('on'), null, { timeout: 5000 });
+      const clear = async (p, what, sel, timeout = 5000) => {
+        await p.waitForFunction(() => document.getElementById('toast')?.classList.contains('on'), null, { timeout });
         // it slides up 20 px as it comes in: measure where it stops
         await p.waitForFunction(() => !document.getElementById('toast').getAnimations().length, null, { timeout: 5000 });
         const [tb, bb] = await p.evaluate((s) => [document.getElementById('toast'), document.querySelector(s)].map((e) => { const r = e.getBoundingClientRect(); return [Math.round(r.top), Math.round(r.bottom)]; }), sel);
@@ -465,10 +465,12 @@ module.exports = {
       await app.tap(p, '#overlay [data-act="do-swap"]', { wait: 0 });
       await clear(p, 'a swap', '.dock .btn');
       t.step('a broken link on the welcome screen');
-      // its toast comes 0.3 s after the page opens and is gone before the coach is in: watch for it from the start
+      // its toast comes 0.3 s after the app starts and is gone 2.4 s later: watch for it from the start, not from the
+      // load event, which a busy machine can hold back past the toast; and give the cold start time, a busy machine
+      // can take more than 5 s to start the app
       p = await t.page({ go: false });
-      await p.goto(p.srv.home + 'index.html#frank.not-a-real-code');
-      await clear(p, 'a broken link', '.ob-cta .btn');
+      await p.goto(p.srv.home + 'index.html#frank.not-a-real-code', { waitUntil: 'commit' });
+      await clear(p, 'a broken link', '.ob-cta .btn', 30000);
       t.step('a tab: above the tab bar');
       p = await t.page({ state: L.member() });
       await app.tap(p, '.tab[data-tab="today"]');
