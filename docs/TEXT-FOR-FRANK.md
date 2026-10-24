@@ -154,7 +154,7 @@ supervised activity, or the matching switch on the Today screen's food card.
 | Your data, a warning box above the card's text, while the phone can't save | This phone isn't saving your progress. Storage is full or blocked. | New |
 | Put it on your home screen, on an iPhone: in place of the steps, a button that opens the Keep your progress sheet (its first step copies the plan, since the app on the Home Screen starts empty) | Show me how | iPhone: tap the Share button in Safari, then Add to Home Screen. Android: open the browser menu and tap Install app. (still shown on Android and computers) |
 | Put it on your home screen, inside Instagram's browser (which can't put the app there): in place of the steps | You're in Instagram's browser, and your plan stays in it. Move it to Safari or Chrome. (or the sessions from Frank and progress lines of the Plan's card) / Button: Move my plan. With nothing to keep yet: You're in Instagram's browser. Open the app in Safari or Chrome to keep your plan. | iPhone: tap the Share button in Safari, then Add to Home Screen. Android: open the browser menu and tap Install app. |
-| Your data, the card's text | Everything you enter stays in this browser on this phone. Nothing is sent to Frank or anyone else. Clearing your browser data clears it too. | Everything you enter stays on this phone. Nothing is sent to Frank or anyone else. Clearing your browser data clears it too. |
+| Your data, the card's text (changed again for booking, 24 October) | Everything you enter stays in this browser on this phone. Only a session you book goes to Frank: the time, your name, contact and goal. Clearing your browser data clears the rest. | Everything you enter stays on this phone. Nothing is sent to Frank or anyone else. Clearing your browser data clears it too. |
 | Your data, a line under it: what the browser says about keeping the data. No line where the browser can't tell, nor while the phone can't save | Protected from automatic clearing. / Not protected yet: save a backup. | New |
 | Your data, two buttons and a link. The buttons show once there's something to keep | Save a backup / Move my plan / Restore from a backup | New |
 | Your data, after a backup | Last backup: 2 Oct. | New |
@@ -190,12 +190,55 @@ supervised activity, or the matching switch on the Today screen's food card.
 | A list under that line, three rows (a screen reader calls the list Training and interests). Once your diploma is in, "in training" comes out and the first two rows change | NHA Fitness Trainer, level 3 / In training. Diploma expected January 2027. — Studying sports nutrition and biomechanics / Part of his NHA course. — Neuroscience / His own research interest. | New |
 | The same card, two numbered steps | 35 to 45 minutes / Frank checks how you move. — The rest of the 2 hours / You train at your level. He fixes one thing at a time. | The app teaches the method. In The Hague, Frank starts with an assessment of how you move, then trains you at your level and fixes one thing at a time. He coaches at several gyms, so you train at the one you go to. |
 | The same card, where. Once you pick a gym it says the gym's name and The Hague | The Hague. The gym is still being chosen. | (part of the line above) |
-| The same card, the button and the line under it. The button opens your Instagram chat | Ask for a session / Opens a chat with Frank on Instagram. | Message on Instagram |
+| The same card, the buttons and the line between them. Book a session opens the booking screen (next table); Ask on Instagram opens your Instagram chat | Book a session / Free to book. No account needed. / Ask on Instagram | Message on Instagram |
+| The same card, only if the booking part of the app fails to load: the button and its line, as before | Ask for a session / Opens a chat with Frank on Instagram. | Message on Instagram |
 | A new card under Already train with Frank?, for an adult with no health yes | Coming to the app / Meal plans: Simple plans to eat for your training. / Guides: The why behind training, food and rest. / Cooking videos: Frank shows you how to make it. | New |
 | The last line of that card, for an adult with no health yes | Meal plans will be for healthy adults. Pregnant, under 18 or a medical condition? Talk to a dietitian or your doctor first. | New |
 | The same card for someone at risk, and for someone with no plan yet (age unknown): no food rows | Coming to the app / Guides: The why behind how you train. / Meal plans and cooking videos will be for healthy adults. For food, talk to a dietitian or your doctor first. | New |
 | A small link at the bottom, on every phone where Frank's coach code wasn't typed | Frank? Open coach tools | New. Until now everyone saw the For Frank card with its Coach tools button |
 | The For Frank card: now only on a phone where Frank's coach code was typed | For Frank / Write sessions for your clients and send them as a link. / Coach tools | The same card, on every phone |
+
+## Book a session (new: from the Frank tab, or the link #book.session)
+
+Anyone can book: no account, no membership, no payment. The times are yours (Booking
+requests, below); the time zone is always The Hague's, whatever the phone's own.
+
+| Where | New text | Old text |
+|---|---|---|
+| The screen's name, its top bar and its heading | Book a session | New |
+| Under the heading. The numbers come from the in-person card | 2 hours with Frank in The Hague: 35 to 45 minutes of assessment, then training at your level. €39.99. | New |
+| The line under it | Booking is free: no account and no payment in the app. | New |
+| The times: the label (shown in capitals) and the line under it | Pick a time / Times in The Hague. Each session is 2 hours. | New |
+| While the times load | Looking up Frank's times… | New |
+| Each day (shown in capitals), then a button for each time | Sat 31 Oct / 10:00 to 12:00 | New |
+| When there are no open times, with a button to your Instagram chat | No open times right now. Frank adds his times each week. / Button: Ask Frank on Instagram | New |
+| When the times can't load (no connection), with a button | Frank's times didn't load. Check your connection and try again. / Button: Try again | New |
+| The details: the label (shown in capitals) and the three fields' names (shown in capitals) | Your details / First name / Phone or email / Your goal (optional) | New |
+| The hints inside the fields | +31 6 12345678 or you@mail.com / What do you want to work on? | New |
+| The line under Phone or email | Frank uses it to confirm your time. | New |
+| The line under Your goal | No medical details here, please. Tell Frank in person. | New |
+| The privacy notice, a box above the button. Its label is shown in capitals | How your details are kept | New |
+| The privacy notice, first paragraph | Frank (Wellness by Frank, The Hague) keeps your first name, your phone or email, the time you picked and your goal. He uses them only to answer your request and arrange the session. | New |
+| The privacy notice, second paragraph | They're stored with Supabase, on servers in the United States, and deleted 30 days after the session date. To stop spam, a scrambled code made from your internet address is kept for one hour. | New |
+| The privacy notice, third paragraph (your Instagram name) | To see, correct or delete your details, message Frank on Instagram (@wellnessbyfrank). You can also complain to the Dutch data protection authority, the Autoriteit Persoonsgegevens. | New |
+| The tick box under the notice: no request goes out without it | I've read how my details are kept. | New |
+| The button, and while it sends | Send my request / Sending… | New |
+| The line under the button | Frank confirms by message. Until then, the time is held for you. | New |
+| A box above the button when something is missing, one at a time | Pick a time first. / Add your first name. / Add a phone number or an email address. / Your goal is too long. Keep it to 500 characters. / Tick that you've read how your details are kept. | New |
+| The same box when the request didn't go through. Everything typed stays | That time was just taken. Pick another one. / Too many requests from this connection. Try again in an hour, or ask Frank on Instagram. / You're offline. Your answers are still here. Send when you're back online. / Not sent: Frank's calendar didn't answer. Your answers are still here. Try again. | New |
+
+## Request sent (new: after Send my request)
+
+| Where | New text | Old text |
+|---|---|---|
+| The screen's name, its top bar and its heading | Request sent | New |
+| Under the heading: the time asked for | Sat 31 Oct, 10:00 to 12:00, in The Hague. | New |
+| The line under it, with what they typed | Frank will message you on +31 6 12345678 to confirm. It's not booked until he does. | New |
+| The button to tell you, once your WhatsApp number is in the app (not yet): it opens WhatsApp with the message below typed in | Tell Frank on WhatsApp | New |
+| The button to tell you now: it opens your Instagram chat and copies the message below, and the line under it | Tell Frank on Instagram / Copies a message for you to paste in the chat. | New |
+| The message they send you | Hi Frank, I asked for a session in your app: Sat 31 Oct at 10:00. I'm Sam. | New |
+| A toast after Tell Frank on Instagram: the first when the phone copied the message (as on the price screen), the second when it couldn't | Message copied. Paste it in the chat with Frank. / Tell Frank which time you asked for. | New |
+| The last button: back to the Frank tab | Done | New |
 
 ## Coach tools
 
@@ -210,6 +253,35 @@ supervised activity, or the matching switch on the Today screen's food card.
 | On Frank's phone, a small link at the bottom | Lock coach tools on this phone | New |
 | The question box after Lock coach tools on this phone, with Cancel and Lock | Lock coach tools on this phone? / Your sessions stay saved. To open them again, type your coach code. / Lock | New |
 | A toast after Lock | Coach tools are locked on this phone | New |
+| On Frank's phone, a card under New session. Its label is shown in capitals | Booking requests / See who asked for a session, confirm it, and set your weekly times. / Button: Open booking requests | New |
+
+## Booking requests (new: your own screen, from Coach tools, behind your PIN)
+
+Victor has your PIN. Five wrong tries lock the screen for 15 minutes. It signs you out after
+12 hours, and when you tap Lock this screen.
+
+| Where | New text | Old text |
+|---|---|---|
+| The screen's name, its top bar and its heading | Booking requests | New |
+| Before the PIN: the line, the field (its hint, and its name for a screen reader) and the button | Type your PIN to see who asked for a session and to set your times. / PIN / Open (while it checks: Opening…) | New |
+| A box after a PIN that doesn't work | Your PIN has 6 digits. / That PIN didn't work. / Too many wrong tries. Wait 15 minutes, then try again. / No PIN is set yet. Ask Victor. / You were signed out. Type your PIN again. | New |
+| Next to the heading | Refresh | New |
+| While it loads, and when it can't (with Try again) | Loading… / You're offline. Try again when you're back online. / No answer from the calendar. Try again. | New |
+| The three lists, their labels shown in capitals with the number in each. Declined shows only when there is one | Waiting for you (2) / Confirmed (1) / Declined (1) | New |
+| An empty list | No new requests. / None yet. | New |
+| Each request: the time, the first name, the phone or email (a tap opens WhatsApp, a mail or a call, with a message ready), the goal, when they asked, and Past once the session is over | Sat 31 Oct, 10:00 to 12:00 / Lena / +31 6 11112222 / Run a 10k / Asked Tue 13 Oct, 20:30 · Past | New |
+| The buttons: a new request, a confirmed one, a declined one | Confirm, Decline / Cancel / Delete | New |
+| The message ready for you after a tap on their phone or email: a new request, a confirmed one, a declined one. For an email, the subject is Your session with Frank. You read it and send it yourself | Hi Lena, this is Frank, about your session request for Sat 31 Oct at 10:00. / Hi Lena, this is Frank. Your session on Sat 31 Oct at 10:00 is confirmed. / Hi Lena, this is Frank. Sorry, I can't do Sat 31 Oct at 10:00. | New |
+| Toasts after Confirm and Decline, and when the request changed meanwhile | Confirmed. Message Lena to say so. / Declined. The time is open again. / That request changed meanwhile. Here it is as it is now. | New |
+| The question box after Cancel, with Keep it and Cancel it, and the toast after | Cancel this session? / Sat 31 Oct, 10:00 to 12:00 with Lena. Message them too. / Cancelled. The time is open again. | New |
+| The question box after Delete, with Keep it and Delete, and the toast after | Delete Lena's request? / Their name, contact and goal are gone for good. / Deleted | New |
+| The line under the lists | Every request is deleted 30 days after its date. Someone asks you to delete theirs: decline it, then Delete. | New |
+| Your weekly times: the label (shown in capitals) and the line under it | Your weekly times / People can ask for any 2-hour slot inside these times, from 12 hours to 4 weeks ahead. 09:00 to 15:00 gives 09:00, 11:00 and 13:00. Leave a day empty when you're not free. | New |
+| A row for each day: its name, from, to, and a button that empties both (a screen reader says the day, then "from", "to", "not free") | Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday / to / Clear / Monday, from / Monday, to / Monday: not free | New |
+| The button under the days, and its toasts | Save times / Times saved / Those times didn't save. Check them and try again. | New |
+| Toasts when a day's times don't work | Saturday needs a start and an end, or neither. / Saturday: the end comes after the start. / Saturday: at least 2 hours, for one session. | New |
+| A card to change the PIN: label (shown in capitals), the field's hint, the button, its toasts | Change PIN / New PIN, 6 digits / Change PIN / A PIN has 6 digits. / PIN changed. Other phones are signed out. / That PIN didn't save. | New |
+| A small link at the bottom | Lock this screen | New |
 
 ## On several screens
 
@@ -380,6 +452,16 @@ videos explain the moves, on YouTube, and play inside the app (How-to).
     people to be disclosed; and the man wears Frank's green, so without a word members could
     take him for Frank. Frank's clients who open his link skip the welcome screen; Frank can
     tell them himself. Victor and Frank decide whether that's enough, or too much.
+
+20. **Frank and Victor: booking, free for everyone (Victor, 24 October).** Anyone books a
+    2-hour session in the app: no account, no membership, no payment. A request holds its
+    time until you confirm or decline it; a declined or cancelled one frees it. Nobody is
+    told automatically: the person gets "Request sent" and one tap to tell you on Instagram
+    (WhatsApp once your number is in the app), and you message them from your screen.
+    Requests are kept with Supabase, on servers in the United States, under Victor's
+    account, and deleted 30 days after the session date. The privacy notice says so, names
+    you as the one who keeps the details, and sends deletion requests to your Instagram. If
+    you have an email address for privacy questions, it can go there instead.
 
 ## Older lines to check
 

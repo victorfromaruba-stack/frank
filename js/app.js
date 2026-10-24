@@ -1,5 +1,5 @@
 /* Wellness by Frank: screens, the plan, the workout player and the person's data.
-   Everything is stored on the phone (localStorage); nothing is sent anywhere. */
+   Everything is stored on the phone (localStorage); only a booking request (js/booking.js) goes to Frank, through Supabase. */
 (function (W) {
   'use strict';
   var WBF = W.WBF, EX = WBF.EX, F = WBF.fig, SND = WBF.sound, FR = WBF.FRANK;
@@ -2152,7 +2152,7 @@
       membershipCard() + install +
       '<section class="card"><p class="label">The science</p><p class="small">How the plans follow the research on strength, cardio, balance and safety, with every source.</p>' +
       '<button class="btn two block" data-act="science">Why the plans work</button></section>' +
-      '<section class="card quiet"><p class="label">Your data</p>' + (savedOk ? '' : '<p class="warnbox" id="save-fail">' + esc(SAVE_FAIL) + '</p>') + '<p class="small">Everything you enter stays in this browser on this phone. Nothing is sent to Frank or anyone else. Clearing your browser data clears it too.</p>' +
+      '<section class="card quiet"><p class="label">Your data</p>' + (savedOk ? '' : '<p class="warnbox" id="save-fail">' + esc(SAVE_FAIL) + '</p>') + '<p class="small">Everything you enter stays in this browser on this phone. Only a session you book goes to Frank: the time, your name, contact and goal. Clearing your browser data clears the rest.</p>' +
       slot('me.data', p) + '<button class="link" data-act="reset">Delete my data and start over</button></section>';
   }
   function membershipCard() {
@@ -2184,8 +2184,9 @@
         '<div class="offer-price"><b>' + esc(se.price) + '</b><span>Launch price<br><span class="sr">Regular price </span><s>' + esc(se.regular) + '</s></span></div>' +
         '<ol class="offer-steps"><li><b>' + esc(se.assess) + '</b><span>Frank checks how you move.</span></li><li><b>The rest of the ' + se.hours + ' hours</b><span>You train at your level. He fixes one thing at a time.</span></li></ol>' +
         '<p class="small">' + (se.gym ? esc(se.gym) + ', ' + esc(FR.city) + '.' : esc(FR.city) + '. The gym is still being chosen.') + '</p>' +
-        '<a class="btn block" href="' + FR.dm + '" target="_blank" rel="noopener">' + ic('msg') + 'Ask for a session</a>' +
-        '<p class="meta">Opens a chat with Frank on Instagram.</p>' +
+        // a module's way to ask (js/booking.js: Book a session) in place of the Instagram button; '' keeps the button
+        (slot('frank.book', p) || '<a class="btn block" href="' + FR.dm + '" target="_blank" rel="noopener">' + ic('msg') + 'Ask for a session</a>' +
+        '<p class="meta">Opens a chat with Frank on Instagram.</p>') +
         (wa ? '<a class="btn two block" href="' + wa + '" target="_blank" rel="noopener">WhatsApp</a>' : '') +
         '<div class="between"><span class="handle">@' + esc(FR.handle) + '</span><button class="link" data-act="copy" data-v="@' + esc(FR.handle) + '">' + ic('copy') + 'Copy</button></div></section>' +
         (S.inbox.length ? '<section class="card"><p class="label">Sessions from Frank</p><p class="lead">' + plural(S.inbox.length, 'session') + ' on this phone.</p><button class="btn two block" data-act="inbox">See them</button></section>'
@@ -2283,7 +2284,7 @@
       return '<div class="screen bare">' + backBar('Coach tools') +
         '<div class="stack tight"><h1 class="h1">Your clients\' sessions</h1>' +
         '<p class="lead">Build a session from the ' + Object.keys(EX).length + ' moves, then send it as a link. It opens in your client\'s app with the 3D coach, timers and voice.</p></div>' +
-        '<button class="btn block" data-act="coach-new">' + ic('plus') + 'New session</button>' +
+        '<button class="btn block" data-act="coach-new">' + ic('plus') + 'New session</button>' + slot('coach.top', {}) +
         (list ? '<section class="stack"><p class="label">Saved sessions</p><div class="list">' + list + '</div></section>' : '<p class="empty">No sessions yet. Your first one takes about a minute.</p>') +
         '<section class="card quiet"><p class="label">How your clients get in</p><p class="small">Anyone who opens one of your links gets your sessions in the app without paying the membership. You charge them for your coaching yourself.</p>' +
         '<button class="link" data-act="paywall">See what members see</button></section>' +
@@ -2907,7 +2908,7 @@
   // had added taken back; one that throws later loses only that card, screen, action or event. Either way the console
   // names the module and the place, and the app carries on.
   var ONE = ['welcome.top', 'plan.top', 'workouts.top', 'today.top', 'me.top', 'frank.top', 'pay.top', 'done.next'];   // the card with the highest priority
-  var PLAIN = ['welcome.cta', 'plan.start', 'plan.after-hero', 'done.after-stats', 'me.edit', 'me.data', 'me.install', 'sheet.foot'];   // every module's piece, in order
+  var PLAIN = ['welcome.cta', 'plan.start', 'plan.after-hero', 'done.after-stats', 'me.edit', 'me.data', 'me.install', 'sheet.foot', 'frank.book', 'coach.top'];   // every module's piece, in order
   var EVENTS = ['boot', 'hash', 'screen', 'finish', 'profile', 'saved'];
   var SLOTS = {}, EV = {}, OWNER = {}, APP_KEYS = defaults(), failed = {}, hearing = {}, started = 0;
   // a module's function, run so that its error stays in the module: undefined comes back, the console says it once

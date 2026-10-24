@@ -160,6 +160,14 @@ module.exports = {
         for (const m of src.matchAll(/\b(?:fetch|importScripts|import)\s*\(\s*['"](https?:)?\/\/[^'"]+/g)) t.fail(f + ' fetches ' + m[0].slice(0, 100));
       }
       t.check(players <= 1, 'js/app.js builds YouTube\'s player in ' + players + ' places, not one (the tap on play)');
+      // the other exception: booking (js/booking.js) calls Frank's frank_* functions in our Supabase project, and only
+      // from its two screens (the booking suite checks nothing is asked before Book a session). No other file names it
+      const API = 'https://cdkopyphjvfxjqhasrae.supabase.co/rest/v1/rpc/';
+      for (const f of [...list('js', /\.js$/), ...list('personal', /\.js$/), 'sw.js', 'index.html']) {
+        const src = stripComments(read(f));
+        for (const m of src.matchAll(/https:\/\/[a-z0-9-]+\.supabase\.(?:co|in)[^'"\s]*/g)) t.check(f === 'js/booking.js' && m[0] === API, f + ' names ' + m[0] + ': only js/booking.js may, and only ' + API);
+      }
+      t.check(/sb_publishable_[A-Za-z0-9_-]+/.test(read('js/booking.js')), 'js/booking.js has no publishable key: booking can\'t reach Supabase');
     });
 
     await t.flow('exercise videos (js/media.js)', async () => {
@@ -206,7 +214,7 @@ module.exports = {
 
     await t.flow('secrets and plain client codes', async () => {
       const tracked = (git(['ls-files']) || '').split('\n').filter((f) => f && /\.(js|cjs|mjs|json|html|css|md|txt|webmanifest|sh|py|ya?ml|env)$/i.test(f));
-      const SECRET = /\b(sk-(?:ant-|proj-)?[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{30,}|xox[abprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{35}|\d{8,10}:AA[A-Za-z0-9_-]{30,})\b|-----BEGIN [A-Z ]*PRIVATE KEY-----/;
+      const SECRET = /\b(sk-(?:ant-|proj-)?[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{30,}|xox[abprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{35}|sb_secret_[A-Za-z0-9_-]{10,}|\d{8,10}:AA[A-Za-z0-9_-]{30,})\b|-----BEGIN [A-Z ]*PRIVATE KEY-----/;
       for (const f of tracked) {
         if (!exists(f)) continue;
         const lines = read(f).split('\n');

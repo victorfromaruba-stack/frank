@@ -95,9 +95,17 @@ Two kinds of users:
   are connected, "Tell me when it opens" copies a message for Frank and opens his
   Instagram chat.
 - **The science** screen: every rule the plans follow, with 36 sources.
+- **Book a session** (`js/booking.js`): anyone books Frank's 2-hour in-person session for
+  free, no account: a time from his weekly hours (The Hague's time), first name, phone or
+  email, an optional goal, a privacy notice to tick, Send. Frank sees the requests on his
+  own screen (Coach tools > Booking requests, behind a PIN), confirms or declines, and sets
+  his weekly hours there. A pending or confirmed request holds its time. The data lives in
+  our Supabase project, in `frank_*` tables nobody reads directly
+  (`supabase/migrations/20261024120000_frank_booking.sql`); requests are deleted 30 days
+  after the session date. `#book.session` opens it, for his Instagram bio.
 
-Everything a person enters stays in their own browser (localStorage). Nothing is
-sent anywhere. A backup file or a move link carries it to another browser only when
+Everything a person enters stays in their own browser (localStorage). The one thing
+sent anywhere is a booking request (below), and only when the person sends it. A backup file or a move link carries it to another browser only when
 the person saves or shares it themselves: the link holds the data after the `#`,
 which browsers never send to a server, and the app says who can see it.
 
@@ -199,6 +207,8 @@ phones pick up the update. The `static` suite fails until you do.
 | `js/science.js` | the science screen and its sources |
 | `js/app.js` | screens, onboarding, the player, access (trial, member, client), coach tools, Today, Me, and the seam modules plug into (`WBF.ext`) |
 | `js/links.js` | links to one move or one workout: a module, a feature in its own file (`.claude/skills/frank-module`) |
+| `js/booking.js` | book a session (free, no account) and Frank's requests screen behind his PIN; the only file that talks to a server (Supabase, `frank_*` functions only) (a module) |
+| `supabase/migrations/` | the booking's tables and functions, as run on the project: who may call what is at the top |
 | `js/keep.js` | keep my progress: the backup file, the move link (`#move.`), the Instagram warning, the Home Screen sheet, storage the browser keeps, the moved banner (a module) |
 | `js/onboard-flow.js` | the fast start: the eight questions before the plan, Your first week, Make it yours after Day 1, Me's Your answers (a module) |
 | `js/sound.js` | beeps, voice, vibration, keeping the screen on |
