@@ -12,7 +12,7 @@ CSS and JavaScript, no build step, no server code. Modelled on Leap Fitness's
 "Home Workout - No Equipment" app. Two audiences:
 
 - **Members** get generated, science-based 28-day plans. Free trial, then a
-  membership (`BILLING` in `js/programs.js`: up to $4 a month is decided, the rest are
+  membership (`BILLING` in `js/programs.js`: up to €4 a month is decided, the rest are
   placeholders the price screen doesn't show).
 - **Frank's clients** follow sessions Frank writes in Coach tools and sends as a
   link (`#frank.<code>`). Opening a link gives them access without the membership.
@@ -143,7 +143,7 @@ api, the template and the test it needs.
   plus a webhook that marks `paid`. Until then the paywall is a client-side gate,
   easy to bypass. See `docs/ACCOUNTS-AND-PAYMENTS.md`.
 - The price screen (`SCREENS.pay`) shows only the plans in `BILLING.plans` with
-  `approved: true` (Frank's yes; today only up to $4 a month). It offers the free trial
+  `approved: true` (Frank's yes; today only up to €4 a month). It offers the free trial
   only before it starts. With no `paymentLink`, the trial and after it get "Tell me
   when it opens": it opens Frank's Instagram chat and copies a message for him. A
   member or one of Frank's clients gets their line from Me instead (`HAVE`).

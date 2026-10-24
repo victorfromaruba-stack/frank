@@ -88,7 +88,7 @@ supervised activity, or the matching switch on the Today screen's food card.
 | For a member, in place of a button: the line from Me. Members and clients only see this screen through Frank's Coach tools (See what members see) | You're a member. Thank you. | Start my 7-day free trial, as for someone new |
 | For one of Frank's clients, in place of a button: the line from Me | You train with Frank. His sessions show up on your plan, and the whole app is open to you. | Start my 7-day free trial, as for someone new |
 | For one of Frank's clients, the white button | (no button) | I'm one of Frank's clients |
-| The monthly plan's price, everywhere the price screen shows it (your answer of 24 October: the app costs $4 a month at most; the exact price and euro or dollar are still open) | Up to $4 a month / Under $1 a week | €15 a month / €3.46 a week |
+| The monthly plan's price, everywhere the price screen shows it (your answer of 24 October: the app costs €4 a month at most, in euros like the session; the exact price is still open) | Up to €4 a month / Under €1 a week | €15 a month / €3.46 a week |
 | Right after the questions, for someone new | Not shown. Your first week goes straight to Day 1 or the Plan. The price screen still shows from Me's Membership card, and when the free trial has ended (from Your first week's See membership, over the Plan) | Shown after Get my plan on Your plan is ready |
 
 ## Plan

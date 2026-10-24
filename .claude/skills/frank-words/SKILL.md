@@ -79,7 +79,7 @@ The diploma is expected in January 2027. Until then he is "in training", never j
 | A calorie number without "est." | MET estimates (`kcal()` in `js/programs.js`), not measurements | "… kcal est." The suites fail a kcal without it |
 | Food, drink, calorie, BMI or weight-loss advice to anyone `atRisk()` | they need a dietitian or doctor (`.claude/skills/frank-safety/`) | "For a diet or a medical question, talk to a dietitian or your doctor first." |
 | Made-up social proof: reviews, ratings, user counts, "joined today", "#1" | nobody measured it | nothing. A real review only with Frank's yes and the reviewer's |
-| A price, or a new one, without Frank's yes | `BILLING` in `js/programs.js`: up to $4 a month is decided (exact price open); the yearly price and the 7-day trial are placeholders. The price screen shows only plans with `approved: true` | the decided price only |
+| A price, or a new one, without Frank's yes | `BILLING` in `js/programs.js`: up to €4 a month is decided (in euros; exact price open); the yearly price and the 7-day trial are placeholders. The price screen shows only plans with `approved: true` | the decided price only |
 | Frank's WhatsApp number | `FRANK.whatsapp` stays empty until he gives it and says yes | his Instagram DM (`FRANK.dm`) |
 | Words in Frank's mouth: quotes, "Frank recommends…" | he didn't say them | the app's own voice |
 | Business terms: fees, what Frank charges, client numbers | the repo is public | nothing |
@@ -184,7 +184,7 @@ What it can't see, so look yourself:
 
 - `node tools/test/run.cjs` (`.claude/skills/frank-qa/`): every screen a test looks at
   fails on a "kcal" without "est."; the `safety` suite checks the food card's referral
-  and has a "no made-up social proof" flow; `static` checks the "Up to $4" monthly price and its
+  and has a "no made-up social proof" flow; `static` checks the "Up to €4" monthly price, that no price is in dollars, and its
   `approved: true`, and that `FRANK.codes` and `FRANK.coachCodes` hold only hashes; the
   `paywall` suite fails on "Yearly", "€119.99", "placeholder" or "preview" on the price
   screen.

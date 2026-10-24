@@ -44,8 +44,9 @@
     ]
   };
 
-  // Membership for people who train with the app. Frank (24 October 2026): the app costs $4 a month at most; the exact
-  // price and the currency (he sells from the Netherlands) are open, so the price screen says "Up to $4". The yearly
+  // Membership for people who train with the app. Frank (24 October 2026): the app costs €4 a month at most, in euros
+  // (Victor, 24 October: euros on both, the app and the session); the exact price is open, so the price screen says
+  // "Up to €4", and a payment link stays off while it does (tools/test/static.cjs). The yearly
   // price and the trial are placeholders. paymentLink: any checkout link
   // (Mollie, Stripe, Paddle). Frank's own clients don't pay here. See docs/ACCOUNTS-AND-PAYMENTS.md.
   // approved: Frank said yes to this price. The price screen shows only approved plans.
@@ -53,7 +54,7 @@
     trialDays: 7, paymentLink: '',
     plans: [
       { id: 'year', name: 'Yearly', price: '€119.99', per: 'year', perWeek: '€2.31', best: true },
-      { id: 'month', name: 'Monthly', price: 'Up to $4', per: 'month', perWeek: 'Under $1', approved: true }
+      { id: 'month', name: 'Monthly', price: 'Up to €4', per: 'month', perWeek: 'Under €1', approved: true }
     ]
   };
 
