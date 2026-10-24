@@ -160,6 +160,14 @@ module.exports = {
         for (const m of src.matchAll(/\b(?:fetch|importScripts|import)\s*\(\s*['"](https?:)?\/\/[^'"]+/g)) t.fail(f + ' fetches ' + m[0].slice(0, 100));
       }
       t.check(players <= 1, 'js/app.js builds YouTube\'s player in ' + players + ' places, not one (the tap on play)');
+      // the other exception: booking (js/booking.js) calls Frank's frank_* functions in our Supabase project, and only
+      // from its two screens (the booking suite checks nothing is asked before Book a session). No other file names it
+      const API = 'https://cdkopyphjvfxjqhasrae.supabase.co/rest/v1/rpc/';
+      for (const f of [...list('js', /\.js$/), ...list('personal', /\.js$/), 'sw.js', 'index.html']) {
+        const src = stripComments(read(f));
+        for (const m of src.matchAll(/https:\/\/[a-z0-9-]+\.supabase\.(?:co|in)[^'"\s]*/g)) t.check(f === 'js/booking.js' && m[0] === API, f + ' names ' + m[0] + ': only js/booking.js may, and only ' + API);
+      }
+      t.check(/sb_publishable_[A-Za-z0-9_-]+/.test(read('js/booking.js')), 'js/booking.js has no publishable key: booking can\'t reach Supabase');
     });
 
     await t.flow('exercise videos (js/media.js)', async () => {
@@ -205,12 +213,14 @@ module.exports = {
     });
 
     await t.flow('secrets and plain client codes', async () => {
-      const tracked = (git(['ls-files']) || '').split('\n').filter((f) => f && /\.(js|cjs|mjs|json|html|css|md|txt|webmanifest|sh|py|ya?ml|env)$/i.test(f));
-      const SECRET = /\b(sk-(?:ant-|proj-)?[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{30,}|xox[abprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{35}|\d{8,10}:AA[A-Za-z0-9_-]{30,})\b|-----BEGIN [A-Z ]*PRIVATE KEY-----/;
+      const tracked = (git(['ls-files']) || '').split('\n').filter((f) => f && /\.(js|cjs|mjs|json|html|css|md|txt|webmanifest|sh|py|ya?ml|env|sql)$/i.test(f));
+      // Supabase: a Management API token, a JWT (the legacy service_role key is one), a database URL with its password
+      const SECRET2 = /\bsbp_[a-f0-9]{40}\b|\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}|postgres(?:ql)?:\/\/[^\s:@\/]+:[^\s@]+@/;
+      const SECRET = /\b(sk-(?:ant-|proj-)?[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{30,}|xox[abprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{35}|sb_secret_[A-Za-z0-9_-]{10,}|\d{8,10}:AA[A-Za-z0-9_-]{30,})\b|-----BEGIN [A-Z ]*PRIVATE KEY-----/;
       for (const f of tracked) {
         if (!exists(f)) continue;
         const lines = read(f).split('\n');
-        lines.forEach((l, i) => { if (SECRET.test(l)) t.fail(f + ':' + (i + 1) + ' looks like a secret (key or token): remove it and tell the owner'); });
+        lines.forEach((l, i) => { if (SECRET.test(l) || SECRET2.test(l)) t.fail(f + ':' + (i + 1) + ' looks like a secret (key or token): remove it and tell the owner'); });
       }
       if (exists('.env')) t.fail('a .env file is in the repo folder');
       // FRANK.codes must hold SHA-256 hashes only, so codes can't be read in the public repo
@@ -225,8 +235,13 @@ module.exports = {
       for (const c of FR.coachCodes || []) t.check(/^[0-9a-f]{64}$/.test(c), 'FRANK.coachCodes holds "' + String(c).slice(0, 6) + '…", not a SHA-256 hash: use node tools/client-code.mjs --coach <code>');
       if (FR.whatsapp) t.note('FRANK.whatsapp is set (' + FR.whatsapp.replace(/\d(?=\d{3})/g, '•') + '): only with Frank\'s yes');
       if (B.paymentLink) t.note('BILLING.paymentLink is set: payments are live for members');
+      // a checkout needs a real price, not the ceiling "Up to €4"
+      if (B.paymentLink) t.check((B.plans || []).every((pl) => !pl.approved || /^[$€]\d/.test(pl.price)), 'BILLING.paymentLink is set while an approved price is not an exact one: ' + (B.plans || []).map((pl) => pl.price).join(', '));
       const month = (B.plans || []).find((p) => p.id === 'month');
-      t.check(month && month.price === '€15', 'the monthly price is no longer €15 (decided with Frank): ' + (month && month.price));
+      t.check(month && month.price === 'Up to €4', 'the monthly price is no longer "Up to €4" (Frank, 24 October 2026: €4 a month at most, in euros): ' + (month && month.price));
+      // euros on both, the app and the session (Victor, 24 October 2026): no dollar price anywhere people read
+      for (const pr of [...(B.plans || []).flatMap((pl) => [pl.price, pl.perWeek]), FR.session.price, FR.session.regular]) t.check(!/\$|USD|dollar/i.test(String(pr)), 'a price in dollars: ' + pr);
+      for (const f of [...list('js', /\.js$/), 'index.html', 'manifest.webmanifest']) for (const m of stripComments(read(f)).matchAll(/\$\s?\d|\bUSD\b|\bdollars?\b/gi)) t.fail(f + ' shows a dollar price: ' + m[0] + ' (euros only)');
       // the price screen shows only plans with approved: true (Frank's yes)
       t.check(month && month.approved === true, 'the monthly plan has no approved: true, so the price screen hides it');
     });

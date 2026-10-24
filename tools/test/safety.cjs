@@ -558,6 +558,19 @@ module.exports = {
         'merged [cleared stays with no new yes, off for a yes not cleared, comes with a cleared yes, off when this phone\'s yes wasn\'t; year: 60 and over, maybe under 18, no rule crossed, 60 and over kept, the first version\'s under 18; its injury question a yes not cleared; sore spots join]');
     });
 
+    await t.flow('coming to the app: meal plans and cooking only for someone not at risk', async () => {
+      const food = /Simple plans to eat|Frank shows you how to make it/;
+      for (const [label, st, risk] of [['no profile', L.state(), true], ['pregnant', L.member({ health: { pregnant: true } }), true],
+        ['under 18', L.member({ birthYear: new Date().getFullYear() - 16 }), true], ['adult', L.member(), false]]) {
+        const p = await t.page({ state: st });
+        await p.evaluate(() => WBF.app.tab('frank'));
+        await p.waitForTimeout(200);
+        const txt = await app.text(p);
+        t.has(txt, 'Coming to the app', label);
+        if (risk) { t.lacks(txt, food, label); t.has(txt, 'talk to a dietitian or your doctor first', label); } else t.has(txt, food, label);
+      }
+    });
+
     await t.flow('no made-up social proof', async () => {
       const bad = /\b\d[\d,.]*\s*(k\+?\s*)?(people|members|users|clients|downloads)\b|\breviews?\b|★|\brated\s+\d|\bjoined today\b|#1\b|\bbest[- ]selling\b/i;
       const p = await t.page();

@@ -12,7 +12,7 @@ CSS and JavaScript, no build step, no server code. Modelled on Leap Fitness's
 "Home Workout - No Equipment" app. Two audiences:
 
 - **Members** get generated, science-based 28-day plans. Free trial, then a
-  membership (`BILLING` in `js/programs.js`: €15 a month is decided, the rest are
+  membership (`BILLING` in `js/programs.js`: up to €4 a month is decided, the rest are
   placeholders the price screen doesn't show).
 - **Frank's clients** follow sessions Frank writes in Coach tools and sends as a
   link (`#frank.<code>`). Opening a link gives them access without the membership.
@@ -51,6 +51,7 @@ The other project skills, each for one job:
 | `js/links.js` | a module: links to one move (`#ex.<move>`) or one workout (`#w.<workout>`) for Frank to send. The example to read before writing one (`.claude/skills/frank-module/`) |
 | `js/keep.js` | a module, keep my progress: the backup file and the move link (`#move.<code>`, made and checked here, merged into the phone's data with `WBF.app.replace`), "I already have a plan", the warning in Instagram's browser, the Home Screen sheet after a workout, `navigator.storage.persist()`, and the "Frank's app has moved" banner once `FRANK.home` is set |
 | `js/onboard-flow.js` | a module, the fast start: the eight questions someone new answers before the plan (`FIRST`; the fitness check up front or after Day 1 is `FITNESS_FIRST`, Frank's decision), "Your first week" in place of the summary, "Make it yours" after Day 1 (the finish screen and the Plan), Me's "Your answers" (each answer on its own), and the plan card for Frank's clients with none. It keeps `profile.asked` (when each later question was answered) and `profile.later` (Not now) |
+| `js/booking.js` | a module, book a session: free, no account, a time from Frank's weekly hours, then Frank's requests screen behind his PIN (Coach tools). The one file that calls a server: the `frank_*` functions in our Supabase project (`supabase/migrations/`). Nothing of it goes into `wbf.v1` |
 | `js/sound.js` | beeps, voice coach, vibration, screen wake lock |
 | `app.css` | Frank's look; tokens at the top. Light screens (welcome, onboarding, paywall) use `body.light` |
 | `vendor/` | three.js r170 and its GLTF loader (MIT). Single-file builds load them from jsDelivr |
@@ -143,7 +144,7 @@ api, the template and the test it needs.
   plus a webhook that marks `paid`. Until then the paywall is a client-side gate,
   easy to bypass. See `docs/ACCOUNTS-AND-PAYMENTS.md`.
 - The price screen (`SCREENS.pay`) shows only the plans in `BILLING.plans` with
-  `approved: true` (Frank's yes; today only €15 a month). It offers the free trial
+  `approved: true` (Frank's yes; today only up to €4 a month). It offers the free trial
   only before it starts. With no `paymentLink`, the trial and after it get "Tell me
   when it opens": it opens Frank's Instagram chat and copies a message for him. A
   member or one of Frank's clients gets their line from Me instead (`HAVE`).

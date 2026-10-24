@@ -10,8 +10,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
 const dataUri = (f, type) => `data:${type};base64,` + fs.readFileSync(path.join(root, f)).toString('base64');
 
-const images = ['img/wellness-1.jpg', 'img/wellness-2.jpg', 'img/wellness-3.jpg', 'img/wellness-4.jpg'];
-const imgMap = Object.fromEntries(images.map((f) => [f, dataUri(f, 'image/jpeg')]));
+const images = ['img/wellness-1.jpg', 'img/wellness-2.jpg', 'img/wellness-3.jpg', 'img/wellness-4.jpg', 'img/brand/w-by-frank-dark.svg'];
+const imgMap = Object.fromEntries(images.map((f) => [f, dataUri(f, f.endsWith('.svg') ? 'image/svg+xml' : 'image/jpeg')]));
 const html = read('index.html');
 // the app's scripts in the order index.html loads them, so a module added there (js/<feature>.js) comes along. The
 // importmap and the three.js loader at the end have no src: the single files load three.js below

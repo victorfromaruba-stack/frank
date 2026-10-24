@@ -156,10 +156,14 @@ data (article 9): the PAR-Q answers, pregnancy, sore spots, the food card's swit
 weight, height, BMI, a target weight, and fitness test results. Sending them anywhere
 needs the person's explicit consent for that one purpose (article 9(2)(a)).
 
-The app sends nothing anywhere. Data leaves the phone only when the person takes it: a
-backup file they save, or a move link they copy or share (`js/keep.js`), which says where
-it's made who can see it. Me > Your data says "Everything you enter stays in this browser
-on this phone. Nothing is sent to Frank or anyone else." The Instagram button opens a
+The app sends one thing: a booking request (`js/booking.js`), when the person sends it, to
+Frank through Supabase: the time, a first name, a phone or email and an optional goal (the
+form asks for no medical details), after a privacy notice they tick. Nothing from the plan,
+the health answers or the food card goes with it. Otherwise data leaves the phone only when
+the person takes it: a backup file they save, or a move link they copy or share
+(`js/keep.js`), which says where it's made who can see it. Me > Your data says "Everything
+you enter stays in this browser on this phone. Only a session you book goes to Frank: the
+time, your name, contact and goal." The Instagram button opens a
 chat with nothing filled in, and the WhatsApp button (only once `FRANK.whatsapp` is
 filled in) fills in a hello with no health data. "Tell me when it opens" on the price
 screen copies a message with no health data for the person to paste in Frank's chat.

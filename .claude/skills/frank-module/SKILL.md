@@ -156,6 +156,8 @@ modules.
 | `done.after-stats` | html | the finish screen, under Time, Moves and kcal | the session's record |
 | `done.next` | card | the finish screen, under "How did that feel?" (and the weights used), above "Want this with Frank, in person?" | the session's record |
 | `sheet.foot` | html | a move's sheet, at the end, above the pager and Close | the move's id |
+| `frank.book` | html | Frank, in the "Train with Frank in person" card: in place of "Ask for a session" (Instagram) and its line. Give `''` to keep them (`js/booking.js` puts Book a session there) | the screen's params |
+| `coach.top` | html | Coach tools on Frank's phone (after his coach code), under New session | `{}` |
 
 Welcome and the price screen are light (`body.light`): use what those screens use
 (`.infobox`, `.ob-note`, `.btn.dark`, `.btn.white`). Everywhere else, the app's dark
