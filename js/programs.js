@@ -18,9 +18,10 @@
     // person's progress there in a move link (js/keep.js). Victor sets it on the day of the move (frank-release skill)
     home: '',
     city: 'The Hague',
-    // what his certificate says (NHA Fitness Trainer level 3, which covers sports nutrition and biomechanics);
-    // keep claims to what he holds: neuroscience is his own interest, not a qualification
-    bio: 'Fitness trainer (NHA level 3), trained in sports nutrition and biomechanics. Based in The Hague. Neuroscience is his side passion.',
+    // keep claims to what he holds. He is taking NHA Fitness Trainer level 3 (it covers sports nutrition and
+    // biomechanics); the diploma is expected in January 2027, so until then he is "in training". Neuroscience is his own
+    // interest, not a qualification
+    bio: 'Fitness trainer in training (NHA level 3, diploma expected January 2027), studying sports nutrition and biomechanics. Based in The Hague. Neuroscience is his side passion.',
     tagline: 'Not only a trainer, but purposely an educator.',
     // Client codes: typing one on "Frank's clients" opens the whole app without the membership.
     // Only hashes live here, so the codes can't be read in this public repo. Add one with
@@ -181,7 +182,7 @@
   var GOALS = {
     fat: { name: 'Lose fat', line: 'Burn more, keep your muscle.', plan: 'Fat burner' },
     strength: { name: 'Build strength', line: 'More muscle, stronger joints.', plan: 'Strength builder' },
-    move: { name: 'Move better', line: 'Less stiffness, better balance, no pain.', plan: 'Move better' },
+    move: { name: 'Move better', line: 'Less stiffness, better balance.', plan: 'Move better' },
     fit: { name: 'Stay fit', line: 'A bit of everything, every week.', plan: 'Fit for life' }
   };
   var ROTATION = {
@@ -238,7 +239,8 @@
   }
 
   // ---- Safety ---------------------------------------------------------------------------------------
-  // PAR-Q+ 2025: any yes means nothing vigorous until a doctor or qualified professional clears you.
+  // PAR-Q+ 2025: any yes means nothing vigorous until a doctor or qualified professional clears you; chest pain,
+  // dizziness or fainting, or "medically supervised only" mean no training until a doctor clears you (avoidFor: hold).
   var PARQ = [
     ['heart', 'Has your doctor ever said you have a heart condition or high blood pressure?'],
     ['chest', 'Do you feel pain in your chest at rest, in daily life, or when you are active?'],
@@ -251,17 +253,24 @@
   // 'other' is a sore spot the app can't place: it only leaves out jumps (see avoidFor)
   var SORE = [['shoulder', 'Shoulder'], ['wrist', 'Wrist'], ['knee', 'Knee'], ['ankle', 'Ankle'], ['back', 'Lower back'], ['other', 'Other']];
 
-  // what a person's answers rule out: { supine, prone, jump, vigorous, kit: [...], stress: [...], gentle, older }
+  // what a person's answers rule out: { supine, prone, jump, vigorous, kit: [...], stress: [...], gentle, hold, older }
   function avoidFor(profile) {
     profile = profile || {};
     var h = profile.health || {}, a = { kit: [], stress: (profile.injuries || []).slice() };
     var parq = PARQ.some(function (q) { return h[q[0]]; });
     if (parq && !h.cleared) { a.gentle = true; a.jump = true; a.vigorous = true; }
+    // chest pain, dizziness or fainting, or "medically supervised only": no workouts at all until a doctor clears it
+    // (ACSM 2015 screening: signs or symptoms mean medical clearance first; PAR-Q+ 2025)
+    if (!h.cleared && (h.chest || h.dizzy || h.supervised)) a.hold = true;
+    var yrs = age(profile);
+    // 45 or older and not training most days yet: nothing vigorous (PAR-Q+ 2025: over 45 and not used to vigorous
+    // effort, check with a qualified exercise professional first). The fitness check's "I train most days", or Me's
+    // "Cleared by a doctor" (it says vigorous work is fine), ends it
+    if (yrs != null && yrs >= 45 && !(+profile.active >= 3) && !h.cleared) a.vigorous = true;
     if (h.pregnant) {
       // no lying on the back after the first trimester, nothing with a fall risk (WHO 2020, Mottola 2018)
       a.supine = true; a.prone = true; a.jump = true; a.kit = a.kit.concat(['pad', 'rings']);
     }
-    var yrs = age(profile);
     if (yrs != null && yrs >= 60) { a.jump = true; a.older = true; }
     if (h.injury) a.jump = true;                      // the older yes/no injury question
     if (a.stress.indexOf('other') !== -1) a.jump = true;   // a sore spot the app can't place

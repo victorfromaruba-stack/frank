@@ -13,9 +13,10 @@
           { text: 'Adults: 150 to 300 minutes of moderate activity a week, or 75 to 150 minutes of vigorous activity. A vigorous minute counts as two moderate ones.', src: [1, 2] },
           { text: 'Strength work for all major muscles on at least two days a week.', src: [1, 3] },
           { text: 'From 65: add balance and strength work on at least three days a week.', src: [1] },
+          { text: 'Children and teens (5 to 17): at least 60 minutes a day on average, with vigorous and strength work on three days a week.', src: [1] },
           { text: 'Every bout counts, however short. Short bursts of vigorous effort during the day are linked to lower mortality, though those studies are observational.', src: [1, 34] }
         ],
-        app: 'The moving-minutes card counts your workouts and walks toward 150 minutes a week, or 250 if you want to lose fat. If you\'re pregnant, may be under 18 or have a medical condition, it stays at 150. Plans train every muscle at least twice a week.' },
+        app: 'The moving-minutes card counts your workouts and walks toward 150 minutes a week, or 250 if you want to lose fat. If you\'re pregnant or have a medical condition, it stays at 150. If you may be under 18, it shows the WHO\'s 60 minutes a day for children and teens. Plans train every muscle at least twice a week.' },
       { title: 'How much strength work',
         rules: [
           { text: 'Any resistance training beats none. Train each major muscle at least twice a week.', src: [5, 6] },
@@ -75,11 +76,12 @@
         app: 'Plans put a rest day or a different body part between hard sessions for the same muscles.' },
       { title: 'Safety first',
         rules: [
-          { text: 'The PAR-Q+ (2025) asks seven questions. Any yes means checking with a doctor or qualified professional before vigorous activity.', src: [30] },
+          { text: 'The PAR-Q+ (2025) asks seven questions. Any yes means follow-up questions with a professional. Chest pain, fainting or "supervised only" means no training until a doctor clears you.', src: [30, 31] },
+          { text: 'Over 45 and not used to vigorous exercise? Check with a qualified exercise professional before you train hard.', src: [30] },
           { text: 'Stop and get checked if you feel chest, jaw or arm discomfort, breathlessness on light effort, dizziness or fainting, palpitations, or unusual tiredness.', src: [31] },
           { text: 'Intervals are safe in supervised cardiac rehab, but risk is higher than with moderate work, so screening comes first.', src: [22] }
         ],
-        app: 'The health check uses the PAR-Q+ questions. Any yes keeps the plan gentle (no jumping, nothing vigorous) until you tell the app you\'ve been cleared.' },
+        app: 'The health check uses the PAR-Q+ questions. A yes to chest pain, dizziness or fainting, or supervised activity only holds the plan: no workouts until you tell the app a doctor cleared you. Any other yes keeps the plan gentle (no jumping, nothing vigorous) until you\'ve been cleared. From 45, nothing vigorous until you train most days. The warning signs show before every workout.' },
       { title: 'Pregnancy',
         rules: [
           { text: 'At least 150 minutes a week of moderate activity over three days or more, strength work included, with pelvic-floor training. Already active? Vigorous training can continue.', src: [1, 35] },

@@ -1122,8 +1122,9 @@
             '<button data-act="ob-health" data-k="' + x[0] + '" data-v="0" aria-pressed="' + (v === false) + '">No</button><button data-act="ob-health" data-k="' + x[0] + '" data-v="1" aria-pressed="' + (v === true) + '">Yes</button></span></div>';
         }).join('') + '</div>' +
           opt('ob-health-none', 'health', 'none', 'None of these apply to me', '', HQ.every(function (k) { return d.health[k] === false; })) +
-          (any ? '<p class="warnbox">Check with your doctor or a qualified exercise professional before you train hard, and tell Frank. Until then your plan stays gentle: no jumping, nothing vigorous. When you\'re cleared, switch it off in Me.</p>' : '') +
-          (d.health.pregnant ? '<p class="warnbox">Pregnancy mode: no lying on your back or front, no jumping, no balance pad or rings. Talk to your midwife or doctor first, and stop if you feel dizzy, short of breath before effort, or any pain.</p>' : '');
+          (held(d) ? '<p class="warnbox">' + esc(HOLD_LINE) + '</p>'
+            : any ? '<p class="warnbox">Check with your doctor or a qualified exercise professional before you train hard, and tell Frank. Until then your plan stays gentle: no jumping, nothing vigorous. When you\'re cleared, switch it off in Me.</p>' : '') +
+          (d.health.pregnant ? '<p class="warnbox">Pregnancy mode: no lying on your back or front, no jumping, no balance pad or rings. Talk to your midwife or doctor first. Stop if anything hurts. Stop and call them for ' + esc(PREG_SIGNS) + '.</p>' : '');
         foot = cta('Next', 'ob-next', !healthDone(d));
       } else if (id === 'sore') {
         q = 'Any <em>sore spots</em> or recent injuries?';
@@ -1291,7 +1292,8 @@
   function safeRows(d) {
     var inj = d.injuries || [];
     return (inj.length ? '<div class="sum-row"><span>Sore spots</span><b>' + esc(inj.map(soreName).join(', ')) + '<small>' + (inj.indexOf('other') === -1 ? 'Moves that load them are left out' : soreKnown(inj).length ? 'Moves that load them, and jumps, are left out' : 'Jumps are left out') + '</small></b></div>' : '') +
-      (WBF.plan.avoidFor(d).gentle ? '<div class="sum-row"><span>Health</span><b>Gentle mode<small>Until your doctor clears you</small></b></div>' : '') +
+      (held(d) ? '<div class="sum-row"><span>Health</span><b>See your doctor first<small>No workouts until a doctor clears you</small></b></div>'
+        : WBF.plan.avoidFor(d).gentle ? '<div class="sum-row"><span>Health</span><b>Gentle mode<small>Until your doctor clears you</small></b></div>' : '') +
       (d.health && d.health.pregnant ? '<div class="sum-row"><span>Pregnancy</span><b>Pregnancy mode</b></div>' : '');
   }
   function readyHtml() {
@@ -1300,7 +1302,7 @@
     // the 28 days' real total: every session as the plan builds it, not days x the minutes picked
     var minutes = Math.round(planSecs(d).reduce(function (x, y) { return x + y; }, 0) / 60);
     var target = d.kg && d.targetKg && Math.abs(d.targetKg - d.kg) >= 0.5 ? (d.targetKg < d.kg ? '−' : '+') + kgShow(Math.abs(d.targetKg - d.kg)) + ' ' + wUnit() : 'Keep';
-    return '<div class="ob"><div class="between"><div><p class="label" style="color:var(--sky-ink)">Done' + (d.name ? ', ' + esc(d.name) : '') + '</p><h1 class="ob-q">Your plan is ready</h1></div></div>' +
+    return '<div class="ob"><div class="between"><div><p class="label" style="color:var(--sky-ink)">Done' + (d.name ? ', ' + esc(d.name) : '') + '</p><h1 class="ob-q">' + (held(d) ? 'See your doctor first' : 'Your plan is ready') + '</h1></div></div>' +
       '<div class="summary"><p class="label" style="color:var(--ink-d2)">About you</p><div class="trio"><div><b>' + (d.cm ? heightShow(d.cm).replace(' cm', '') : '–') + '</b><span>' + (S.settings.hunits === 'ft' ? 'Height' : 'Height, cm') + '</span></div>' +
       '<div><b>' + (d.kg ? kgShow(d.kg) : '–') + '</b><span>Weight, ' + wUnit() + '</span></div><div><b>' + (a || '–') + '</b><span>Age</span></div></div>' +
       (b ? '<div><div class="between"><span style="font-weight:800">BMI ' + b.toFixed(1) + '</span><span class="tag" style="color:var(--ink-d2);border-color:var(--paper-3)">' + bmiWord(b) + '</span></div><div class="bmi-bar"><i style="left:' + clamp((b - 15) / 25 * 100, 0, 100) + '%"></i></div></div>' : '') +
@@ -1308,9 +1310,10 @@
       (atRisk(d) ? '' : '<div class="sum-row"><span>Target weight</span><b>' + target + '</b></div>') +
       '<div class="sum-row"><span>Level</span><b>' + WBF.LEVELS[WBF.plan.levelFor(d)] + '</b></div>' +
       '<div class="sum-row"><span>Focus</span><b>' + esc(focusWords(d)) + '</b></div>' + safeRows(d) + '</div>' +
-      '<div class="summary"><p class="label" style="color:var(--ink-d2)">Plan overview</p><p class="h2" style="text-transform:uppercase">' + esc(planName(d)) + '</p>' +
+      // a yes that needs a doctor first: what to do, in place of the plan
+      (held(d) ? '<p class="warnbox">' + esc(HOLD_LINE) + '</p>' : '<div class="summary"><p class="label" style="color:var(--ink-d2)">Plan overview</p><p class="h2" style="text-transform:uppercase">' + esc(planName(d)) + '</p>' +
       '<div class="trio"><div><b>' + train.length + '</b><span>Workouts</span></div><div><b>' + d.days + '</b><span>Days a week</span></div><div><b>' + minutes + '</b><span>Minutes</span></div></div>' +
-      '<p style="margin:0;color:var(--ink-d2);font-size:14px">Four weeks: Foundation, Build, Push, Peak. Each week asks about 10% more, and your feedback after every session tunes it.</p></div>' +
+      '<p style="margin:0;color:var(--ink-d2);font-size:14px">Four weeks: Foundation, Build, Push, Peak. Each week asks about 10% more, and your feedback after every session tunes it.</p></div>') +
       '<div class="ob-cta"><button class="btn dark block" data-act="ob-finish">Get my plan</button></div></div>';
   }
 
@@ -1418,6 +1421,8 @@
           '<div class="pc-body"><h2 class="pc-title">Your 28-day plan</h2><p class="lead">A few questions about your goal, body and time. Then every session is ready to press play.</p>' +
           '<button class="btn block" data-act="ob-start">Get my plan</button></div></div>') + slot('plan.after-hero', params) + quickRail() + lessonCard() + '</div>';
       }
+      // a yes that needs a doctor first: no plan, no workouts, until a doctor clears it
+      if (held()) return '<div class="screen">' + top + fromFrank + holdHtml() + lessonCard() + '</div>';
       var nd = nextDay(), days = planDays(), trainN = days.filter(function (d) { return d.train; }).length;
       var doneN = days.filter(function (d) { return d.train && S.done[d.day]; }).length;
       var hero;
@@ -1652,7 +1657,8 @@
         '<div class="facts"><span>' + ic('clock') + mins(s.estSec) + '</span>' + (kc ? '<span>' + ic('flame') + kc + ' kcal est.</span>' : '') + '<span>' + ic('bars') + WBF.LEVELS[s.level] + '</span></div>' +
         (w.blurb ? '<p class="lead">' + esc(w.blurb) + '</p>' : '') +
         (p.coach && s.coach.n ? '<div class="card"><p class="label">Note from Frank</p><p class="note s">' + esc(s.coach.n) + '</p></div>' : '') +
-        '<div class="kit-line">' + (kitNames.length ? kitNames.map(function (k) { return '<span class="tag">' + esc(k) + '</span>'; }).join('') : '<span class="tag">No equipment</span>') + '</div></div>' +
+        '<div class="kit-line">' + (kitNames.length ? kitNames.map(function (k) { return '<span class="tag">' + esc(k) + '</span>'; }).join('') : '<span class="tag">No equipment</span>') + '</div>' +
+        '<p class="warnbox" data-stop="1">' + esc(STOP_SIGNS) + (flags().from.pregnant ? ' ' + esc(PREG_STOP) : '') + '</p></div>' +
         (mus.p.length ? '<section class="stack"><p class="label">Focus area</p><div class="focus-row">' + focusMaps(mus, 64, 128) + musChips(mus, 8) + '</div></section>' : '') +
         blocks +
         (p.coach ? '' : '<button class="link" data-act="science">' + ic('info') + 'Why this workout works</button>') +
@@ -1666,12 +1672,33 @@
   function now() { return (W.performance && performance.now()) || Date.now(); }
   function timed(st) { return EX[st.ex].type === 'time'; }
 
-  // members' workouts need the trial or a membership; Frank's sessions are open to his clients
+  // members' workouts need the trial or a membership; Frank's sessions are open to his clients. A yes that needs a
+  // doctor first (held()) gets the screen that says so, not the workout: Frank's own sessions play as he wrote them
   function begin(s) {
     if (!s) return;
+    if (!s.coach && held()) { go('hold', {}); return; }
     if (!mayTrain(s)) { go('pay', {}); return; }
     startSession(s);
   }
+  // the warning signs: on the workout screen, in the player and where the plan waits for a doctor (ACSM 2015)
+  var STOP_SIGNS = 'Stop and get help if you feel chest, jaw or arm pain, faintness, unusual breathlessness or a racing or irregular heartbeat.';
+  // pregnancy's danger signs (WHO 2020, Mottola 2018, ACOG 2020): the health step's Pregnancy mode box and the workout screen
+  var PREG_SIGNS = 'bleeding, fluid leaking, regular painful contractions, chest pain, calf pain or swelling, dizziness, a headache, muscle weakness that affects your balance, or breathlessness before effort';
+  var PREG_STOP = 'Pregnant: also stop and call your midwife or doctor for ' + PREG_SIGNS + '.';
+  var HOLD_LINE = 'You answered yes to chest pain, to dizziness or fainting, or to activity only under a doctor\'s supervision. See your doctor before you train: your plan waits until a doctor clears you.';
+  // a yes to chest pain, dizziness or fainting, or "medically supervised only", not cleared (avoidFor().hold): no plan
+  // and no workouts, only what teaches. p: a profile or the onboarding draft (default: saved)
+  function held(p) { return !!WBF.plan.avoidFor(p === undefined ? S.profile : p).hold; }
+  function holdHtml() {
+    return '<section class="card stack tight" data-hold="1"><p class="label">Before you train</p><h2 class="h2">See your doctor first</h2><p class="small">' + esc(HOLD_LINE) + '</p>' +
+      '<p class="warnbox">' + esc(STOP_SIGNS) + '</p><p class="small">Until then, read how each move works and why the plans work.</p>' +
+      '<button class="btn two block" data-act="moves">The exercise library</button><button class="btn two block" data-act="science">Why the plans work</button>' +
+      '<button class="btn block" data-act="hold-cleared">A doctor cleared me</button></section>';
+  }
+  SCREENS.hold = {
+    title: function () { return 'Before you train'; },
+    html: function () { return '<div class="screen bare">' + backBar('Before you train') + holdHtml() + '</div>'; }
+  };
   function startSession(s) {
     SND.prime();
     closeOverlay();
@@ -1811,7 +1838,7 @@
           '<div class="pl-next"><div class="between"><p class="label">' + (PL.phase === 'ready' ? 'First' : 'Next') + '</p><span class="meta num">' + (nxi + 1) + ' / ' + s.steps.length + '</span></div>' +
           '<div class="pl-next-fig" data-fig="' + nx.ex + '" data-note="0"' + (nx.side === 2 ? ' data-flip="1"' : '') + '></div>' +
           '<div class="between"><p class="h2" style="font-size:18px">' + esc(EX[nx.ex].name) + '</p><p class="dose">' + doseText(nx) + (nx.side === 2 ? ' · side 2' : '') + '</p></div></div>' +
-          '</div></div>';
+          '<p class="small" data-stop="1">' + esc(STOP_SIGNS) + '</p></div></div>';
       }
       var isT = timed(st);
       var side = st.side === 1 ? 'First side' : st.side === 2 ? 'Second side' : st.side === 3 ? 'Each side' : '';
@@ -1953,10 +1980,11 @@
       }
       return '<div class="screen"><div class="stack tight"><p class="label">' + esc(fmtLong.format(new Date())) + '</p><h1 class="h1">Today</h1></div>' + slot('today.top', p) +
         '<div class="week-strip" aria-label="This week">' + strip + '</div>' +
-        '<div class="act-card"><div class="act"><b>' + minToday + '<small>/ ' + goalMin + ' min</small></b><span>Active today</span><div class="bar"><i style="width:' + Math.min(100, minToday / goalMin * 100) + '%"></i></div></div>' +
+        // waiting for a doctor (held()): no minutes to reach, only what to do first
+        (held() ? holdHtml() : '<div class="act-card"><div class="act"><b>' + minToday + '<small>/ ' + goalMin + ' min</small></b><span>Active today</span><div class="bar"><i style="width:' + Math.min(100, minToday / goalMin * 100) + '%"></i></div></div>' +
         '<div class="act"><b>' + (kcNone ? '–' : kcToday + '<small>kcal</small>') + '</b><span>' + (kcNone && !lastWeight() ? 'Add weight' : 'Burned in workouts, est.') + '</span></div></div>' +
-        (card || '<button class="btn block" data-act="tab" data-tab="workouts">Start a workout</button>') +
-        movingCard() + waterCard() + foodCard() + lessonCard() + '</div>';
+          (card || '<button class="btn block" data-act="tab" data-tab="workouts">Start a workout</button>') + movingCard()) +
+        waterCard() + foodCard() + lessonCard() + '</div>';
     }
   };
   // WHO 2020: 150 to 300 minutes of moderate activity a week; fat loss needs more, about 250
@@ -1967,12 +1995,21 @@
     var goal = S.profile && S.profile.goal === 'fat' && !atRisk(S.profile) ? 250 : 150;
     var total = Math.round(train + walk), pct = Math.min(100, total / goal * 100);
     var todayWalk = (S.walks || {})[iso()] || 0;
-    return '<section class="card"><div class="between"><p class="label">Moving minutes this week</p><p class="meta num">' + total + ' of ' + goal + '</p></div>' +
-      '<div class="bar" role="img" aria-label="' + total + ' of ' + goal + ' minutes"><i style="width:' + pct + '%"></i></div>' +
-      '<p class="small">Workouts ' + Math.round(train) + ' min · walks and other activity ' + Math.round(walk) + ' min. ' + (goal === 250 ? 'For fat loss, aim for about 250 minutes; brisk walking counts.' : 'The WHO advises 150 to 300 minutes a week; brisk walking counts.') + '</p>' +
-      '<div class="rowx wrap"><span class="meta">Add activity' + (todayWalk ? ' (' + todayWalk + ' min today)' : '') + ':</span>' +
+    var add = '<div class="rowx wrap"><span class="meta">Add activity' + (todayWalk ? ' (' + todayWalk + ' min today)' : '') + ':</span>' +
       [10, 20, 30].map(function (m) { return '<button class="toggle" data-act="walk" data-m="' + m + '">+' + m + ' min</button>'; }).join('') +
       (todayWalk ? '<button class="toggle" data-act="walk" data-m="0">Clear</button>' : '') + '</div></section>';
+    // under 18, or maybe (no age yet counts too): the WHO's 60 minutes a day for children and teens, not the adults' 150 a week
+    if (flags().child) {
+      var day = 0;
+      S.sessions.forEach(function (r) { if (r.date === iso()) day += r.sec / 60; });
+      day = Math.round(day + todayWalk);
+      return '<section class="card"><div class="between"><p class="label">Moving minutes today</p><p class="meta num">' + day + ' of 60</p></div>' +
+        '<div class="bar" role="img" aria-label="' + day + ' of 60 minutes"><i style="width:' + Math.min(100, day / 60 * 100) + '%"></i></div>' +
+        '<p class="small">Under 18, the WHO advises at least 60 minutes a day on average, and strength work 3 days a week. Play, sport and brisk walking count.</p>' + add;
+    }
+    return '<section class="card"><div class="between"><p class="label">Moving minutes this week</p><p class="meta num">' + total + ' of ' + goal + '</p></div>' +
+      '<div class="bar" role="img" aria-label="' + total + ' of ' + goal + ' minutes"><i style="width:' + pct + '%"></i></div>' +
+      '<p class="small">Workouts ' + Math.round(train) + ' min · walks and other activity ' + Math.round(walk) + ' min. ' + (goal === 250 ? 'For fat loss, aim for about 250 minutes; brisk walking counts.' : 'The WHO advises 150 to 300 minutes a week; brisk walking counts.') + '</p>' + add;
   }
   // 8 glasses is a drinking goal: food and drink advice, so none for anyone at risk (the food card refers them on)
   function waterCard() {
@@ -2010,7 +2047,7 @@
     return '<section class="card"><div class="stack tight"><p class="label">Meals today</p>' + (fd.meals.length ? '<p class="meta">' + plural(fd.meals.length, 'meal') + ': ' + pN + ' with protein, ' + vN + ' with vegetables</p>' : '') + '</div>' +
       (meals ? '<div class="list">' + meals + '</div>' : '<p class="empty">Write down what you eat. Just the food, no counting.</p>') +
       '<form class="inline-form" data-form="meal"><label for="meal-in" class="sr">What did you eat?</label><input class="input" id="meal-in" placeholder="What did you eat?" autocomplete="off" maxlength="120"><button class="btn small" type="submit" aria-label="Add meal">' + ic('plus') + '</button></form>' +
-      '<p class="small">General habits, not a diet. Frank is trained in sports nutrition: for a plan made for you, ask him.</p></section>' + flagBox;
+      '<p class="small">General habits, not a diet. Frank is studying sports nutrition as part of his NHA course. For a plan made for you, ask him.</p></section>' + flagBox;
   }
 
   // ---- me -----------------------------------------------------------------------------------------
@@ -2146,7 +2183,7 @@
       segRow('units', 'Weight', ['kg', 'lb'], function (v) { return v; }) +
       segRow('hunits', 'Height', ['cm', 'ft'], function (v) { return v; }) + '</div></section>' +
       (pr ? '<section class="card"><p class="label">Health</p>' +
-        (parq ? '<div class="set-row"><div><b>Cleared by a doctor</b><span class="meta">You answered yes to a health question. Switch this on once a doctor or qualified professional says vigorous exercise is fine.</span></div><button class="switch" role="switch" data-act="health" data-k="cleared" aria-checked="' + !!h.cleared + '" aria-label="Cleared by a doctor"></button></div>' : '') +
+        (parq ? '<div class="set-row"><div><b>Cleared by a doctor</b><span class="meta">' + (held() ? 'You answered yes to chest pain, fainting or supervised activity. Switch this on once a doctor says you can train.' : 'You answered yes to a health question. Switch this on once a doctor or qualified professional says vigorous exercise is fine.') + '</span></div><button class="switch" role="switch" data-act="health" data-k="cleared" aria-checked="' + !!h.cleared + '" aria-label="Cleared by a doctor"></button></div>' : '') +
         '<div class="set-row"><div><b>Pregnancy mode</b><span class="meta">No lying flat, no jumping, no balance pad or rings</span></div><button class="switch" role="switch" data-act="health" data-k="pregnant" aria-checked="' + !!h.pregnant + '" aria-label="Pregnancy mode"></button></div>' +
         '<p class="small">Sore spots: ' + ((pr.injuries || []).length ? pr.injuries.map(soreName).join(', ') : 'none') + '. <button class="link" data-act="ob-edit-step" data-step="sore">Change</button></p></section>' : '') +
       membershipCard() + install +
@@ -2178,7 +2215,7 @@
       ];
       return '<div class="screen"><div class="frank-hero"><img src="' + img('img/wellness-4.jpg') + '" alt="Frank\'s graphic: Not only a trainer, but purposely an educator"></div>' +
         '<div class="stack tight"><h1 class="display xl sky">Frank</h1><p class="note s">' + esc(FR.bio) + '</p></div>' + slot('frank.top', p) +
-        '<section class="card"><p class="label">Train with Frank in person</p><p class="lead">The app teaches the method. In ' + esc(FR.city) + ', Frank starts with an assessment of how you move, then trains you at your level and fixes one thing at a time. He coaches at several gyms, so you train at the one you go to.</p>' +
+        '<section class="card"><p class="label">Train with Frank in person</p><p class="lead">The app teaches the method. In ' + esc(FR.city) + ', Frank starts with an assessment of how you move, then trains you at your level and fixes one thing at a time. The gym is still being chosen.</p>' +
         '<a class="btn block" href="' + FR.dm + '" target="_blank" rel="noopener">' + ic('msg') + 'Message on Instagram</a>' +
         (wa ? '<a class="btn two block" href="' + wa + '" target="_blank" rel="noopener">WhatsApp</a>' : '') +
         '<div class="between"><span class="handle">@' + esc(FR.handle) + '</span><button class="link" data-act="copy" data-v="@' + esc(FR.handle) + '">' + ic('copy') + 'Copy</button></div></section>' +
@@ -2705,6 +2742,16 @@
       if (!S.flags || !S.flags.manual) S.flags = { manual: {} };
       S.flags.manual[k] = !S.flags.manual[k]; save(); render(false);
     },
+    // the plan that waits for a doctor (held()): the person says a doctor cleared them, as Me's Cleared by a doctor does
+    'hold-cleared': function () {
+      confirmBox('Has a doctor cleared you to train?', 'Yes, I\'m cleared', function () {
+        var old = JSON.parse(JSON.stringify(S.profile));
+        (S.profile.health = S.profile.health || {}).cleared = true; save();
+        emit('profile', old, S.profile, true);
+        tab('plan');
+        toast('Your plan is ready');
+      }, { body: 'Say yes only once a doctor has told you that you can exercise.', no: 'Not yet' });
+    },
     health: function (el) {
       var k = el.getAttribute('data-k'), old = JSON.parse(JSON.stringify(S.profile)), h = S.profile.health = S.profile.health || {};
       h[k] = !h[k]; save();
@@ -2976,7 +3023,7 @@
     util: { esc: esc, iso: iso, fromIso: fromIso, addDays: addDays, monday: monday, mins: mins, mmss: mmss, plural: plural, ic: ic,
             figHtml: figHtml, thumbHtml: thumbHtml, hasClip: hasClip, backBar: backBar, fmtShort: fmtShort, fmtLong: fmtLong,
             planName: planName, kgShow: kgShow, wUnit: wUnit, heightShow: heightShow, kitWords: kitWords, focusWords: focusWords, soreName: soreName,
-            safeRows: safeRows }
+            safeRows: safeRows, held: held, holdLine: HOLD_LINE }
   };
   // starts one module: init(app) gets WBF.app plus its own ways in
   function use(init) {

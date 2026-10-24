@@ -69,6 +69,11 @@ supervised activity, or the matching switch on the Today screen's food card.
 | Your first week, a line with the buttons, just above Start Day 1 (on screen without a scroll): the first before the free trial, the second during it, the third once it has ended. Members and Frank's clients get no line | Your 7-day free trial starts with your first workout. / 6 days left of your free trial. / Your free trial has ended. | New here: the first and the third are Me's Membership lines, the second the price screen's |
 | Your first week, the buttons. Start Day 1 opens Day 1's workout, See my plan opens the Plan. Either one saves the answers | Start Day 1 / See my plan | Get my plan, then the price screen (Get your personal plan) for someone new |
 | Your first week once the free trial has ended (someone who trained from Look around first, then asked for a plan): in place of Start Day 1, the Membership card's button from Me. It saves the answers and opens the price screen over the Plan; closing that shows the Plan | See membership (once payments are on: Become a member) | Start Day 1, which opened the price screen over the questions |
+| Before you start (the health questions), the warning after a yes to chest pain, to dizziness or fainting, or to medically supervised activity only, in place of the gentle-mode warning (safety fixes of 24 October 2026, from the training audit) | You answered yes to chest pain, to dizziness or fainting, or to activity only under a doctor's supervision. See your doctor before you train: your plan waits until a doctor clears you. | Check with your doctor or a qualified exercise professional before you train hard, and tell Frank. Until then your plan stays gentle: no jumping, nothing vigorous. When you're cleared, switch it off in Me. (still shown after any other yes) |
+| Before you start, the Pregnancy mode box after a yes to pregnancy: the full list of danger signs (WHO 2020, the Canadian guideline, ACOG) | Pregnancy mode: no lying on your back or front, no jumping, no balance pad or rings. Talk to your midwife or doctor first. Stop if anything hurts. Stop and call them for bleeding, fluid leaking, regular painful contractions, chest pain, calf pain or swelling, dizziness, a headache, muscle weakness that affects your balance, or breathlessness before effort. | Pregnancy mode: no lying on your back or front, no jumping, no balance pad or rings. Talk to your midwife or doctor first, and stop if you feel dizzy, short of breath before effort, or any pain. |
+| Your first week, for a yes to chest pain, to dizziness or fainting, or to supervised activity only: the heading (doctor in italics), the Health row, the line in place of the week, and one button that saves the answers and opens the Plan | See your doctor first / Health: See your doctor first, No workouts until a doctor clears you / You answered yes to chest pain, to dizziness or fainting, or to activity only under a doctor's supervision. See your doctor before you train: your plan waits until a doctor clears you. / See my plan | Your first week, the week's workouts, Start Day 1 and See my plan |
+| Your plan is ready (after Change in Me), for the same yes: the heading, the Health row, and the line in place of the plan overview | See your doctor first / Health: See your doctor first, No workouts until a doctor clears you / You answered yes to chest pain, to dizziness or fainting, or to activity only under a doctor's supervision. See your doctor before you train: your plan waits until a doctor clears you. | Your plan is ready / Gentle mode / the plan overview |
+| What's your main goal?, the line under Move better (it was in Older lines to check) | Less stiffness, better balance. | Less stiffness, better balance, no pain. |
 
 ## Price screen (Membership)
 
@@ -101,6 +106,8 @@ supervised activity, or the matching switch on the Today screen's food card.
 | The same card with no plan and no session from Frank (workouts or notes from Look around first) | Keep your progress / You're in Instagram's browser, and your progress stays in it. Move it to Safari or Chrome. / Button: Move my plan | New |
 | The first card after the plan's first workout (not after a session from Frank or a workout from Look around first), while questions from the fast start wait, until they're answered or Not now is tapped | Make it yours (the same card as on the finish screen, under Workout player) | New |
 | For one of Frank's clients with no plan of their own: the card that offers one (its heading shown in capitals) | A plan for the days between Frank's sessions / 8 quick questions. Then your first week is ready. / Button: Get my plan | Your 28-day plan / A few questions about your goal, body and time. Then every session is ready to press play. / Button: Get my plan, with Free for 7 days on the picture (all still shown to everyone else) |
+| In place of the whole plan, for a yes to chest pain, to dizziness or fainting, or to supervised activity only, until a doctor clears it. The same card on Today, in place of Active today, the next workout and Moving minutes, and on its own screen (called Before you train) when Start is tapped on any workout. Your sessions from Frank still start | Before you train / See your doctor first / You answered yes to chest pain, to dizziness or fainting, or to activity only under a doctor's supervision. See your doctor before you train: your plan waits until a doctor clears you. / Stop and get help if you feel chest, jaw or arm pain, faintness, unusual breathlessness or a racing or irregular heartbeat. / Until then, read how each move works and why the plans work. / Buttons: The exercise library, Why the plans work, A doctor cleared me | New |
+| A question box after A doctor cleared me, then a toast after Yes | Has a doctor cleared you to train? / Say yes only once a doctor has told you that you can exercise. / Buttons: Not yet, Yes, I'm cleared / Toast: Your plan is ready | New |
 
 ## Workout player
 
@@ -123,6 +130,9 @@ supervised activity, or the matching switch on the Today screen's food card.
 | The same card without Set my level: once the fitness check is answered, or while gentle mode is on | A few more answers make the plan fit you. | New |
 | The same card, who gets Your target: adults who aren't at risk or in gentle mode, once a weight is known | (no row for anyone else) | New |
 | A toast after Not now. The card doesn't come back; the questions stay in Me, Your answers | You can answer them any time in Me, Your answers. | New |
+| A workout's screen (before Start), a yellow box under the equipment, for every workout and your sessions too | Stop and get help if you feel chest, jaw or arm pain, faintness, unusual breathlessness or a racing or irregular heartbeat. | New (it was only on the science screen) |
+| The same box for someone pregnant, after that line | Pregnant: also stop and call your midwife or doctor for bleeding, fluid leaking, regular painful contractions, chest pain, calf pain or swelling, dizziness, a headache, muscle weakness that affects your balance, or breathlessness before effort. | New |
+| The player's Ready to go, Rest and Switch sides screens, a small line at the bottom | Stop and get help if you feel chest, jaw or arm pain, faintness, unusual breathlessness or a racing or irregular heartbeat. | New |
 
 ## Exercise sheet
 
@@ -137,10 +147,11 @@ supervised activity, or the matching switch on the Today screen's food card.
 |---|---|---|
 | The Food card before there is a plan (after Look around first) | For a diet or a medical question, talk to a dietitian or your doctor first. / The food journal comes with your plan: it needs your age and health answers. / Button: Get my plan | Meals today: the meal journal |
 | Before you track food: under a switch that the plan's answers turn on (shown on, and locked) | From your plan answers | New |
-| The Food card, the line under the meal journal | General habits, not a diet. Frank is trained in sports nutrition: for a plan made for you, ask him. | General habits, not a diet. Frank is a sports nutritionist: for a plan made for you, ask him. |
+| The Food card, the line under the meal journal (your diploma comes in January 2027, so not "trained in" yet) | General habits, not a diet. Frank is studying sports nutrition as part of his NHA course. For a plan made for you, ask him. | General habits, not a diet. Frank is trained in sports nutrition: for a plan made for you, ask him. (Before batch 1: Frank is a sports nutritionist.) |
 | Moving minutes this week, Lose fat goal, for someone at risk | … of 150 · The WHO advises 150 to 300 minutes a week; brisk walking counts. | … of 250 · For fat loss, aim for about 250 minutes; brisk walking counts. |
 | The Water card, and Frank's lessons about water and protein, for someone at risk | Not shown | Shown to everyone |
 | Burned in workouts (next to Active today), on a day with a workout that has no calorie estimate (no weight was known then: the fast start asks it after Day 1). A dash in place of the number; the line under it says Add weight while no weight is known, else Burned in workouts, est. | – / Add weight (as on the finish screen) | 0 kcal / Burned in workouts, est. |
+| Moving minutes, for anyone who may be under 18 (also before a plan, when the age isn't known): in place of the week's card. The WHO's target for children and teens | Moving minutes today / 12 of 60 / Under 18, the WHO advises at least 60 minutes a day on average, and strength work 3 days a week. Play, sport and brisk walking count. A screen reader says the bar as: 12 of 60 minutes | Moving minutes this week / … of 150 / The WHO advises 150 to 300 minutes a week; brisk walking counts. |
 
 ## Me
 
@@ -165,6 +176,7 @@ supervised activity, or the matching switch on the Today screen's food card.
 | A toast after Copy. The second when the phone won't copy: the link is then picked out to copy by hand | Link copied. Open it in the other browser. / Copy it from the line above. | New (the second is also Coach tools' toast) |
 | In place of the move sheet when the plan is too big for a link (over 60 KB: years of data) | Save a backup instead / Your plan is too big for a link. Save a backup file, then restore it in the other browser or on your other phone: Me, Your data. / Button: Save a backup | New |
 | The Membership card's button after the free trial, while payments are off | See membership | Become a member (still the button once payments are on) |
+| Health, the line under Cleared by a doctor, after a yes to chest pain, to dizziness or fainting, or to supervised activity only | You answered yes to chest pain, fainting or supervised activity. Switch this on once a doctor says you can train. | You answered yes to a health question. Switch this on once a doctor or qualified professional says vigorous exercise is fine. (still shown after any other yes) |
 
 ## Your answers (Me)
 
@@ -186,6 +198,8 @@ supervised activity, or the matching switch on the Today screen's food card.
 |---|---|---|
 | A small link at the bottom, on every phone where Frank's coach code wasn't typed | Frank? Open coach tools | New. Until now everyone saw the For Frank card with its Coach tools button |
 | The For Frank card: now only on a phone where Frank's coach code was typed | For Frank / Write sessions for your clients and send them as a link. / Coach tools | The same card, on every phone |
+| The line under your name (your diploma comes in January 2027) | Fitness trainer in training (NHA level 3, diploma expected January 2027), studying sports nutrition and biomechanics. Based in The Hague. Neuroscience is his side passion. | Fitness trainer (NHA level 3), trained in sports nutrition and biomechanics. Based in The Hague. Neuroscience is his side passion. |
+| Train with Frank in person, the card's text (the gym isn't chosen yet) | The app teaches the method. In The Hague, Frank starts with an assessment of how you move, then trains you at your level and fixes one thing at a time. The gym is still being chosen. | … He coaches at several gyms, so you train at the one you go to. |
 
 ## Coach tools
 
@@ -232,6 +246,11 @@ supervised activity, or the matching switch on the Today screen's food card.
 |---|---|---|
 | How much to move, the line about the app | The moving-minutes card counts your workouts and walks toward 150 minutes a week, or 250 if you want to lose fat. If you're pregnant, may be under 18 or have a medical condition, it stays at 150. Plans train every muscle at least twice a week. | The moving-minutes card counts your workouts and walks toward 150 minutes a week (250 if you want to lose fat). Plans train every muscle at least twice a week. |
 | Intervals and fat loss, the line about the app | Fat-loss plans keep at least two strength days and at most two interval days, and count walks toward 250 minutes. Target-weight dates use 0.5 to 1% a week. If you're pregnant, may be under 18 or have a medical condition, there is no target weight and no 250-minute goal. | Fat-loss plans keep at least two strength days and at most two interval days, and count walks toward 250 minutes. Target-weight dates use 0.5 to 1% a week. |
+| How much to move, a new rule | Children and teens (5 to 17): at least 60 minutes a day on average, with vigorous and strength work on three days a week. [1] | New |
+| How much to move, the line about the app | The moving-minutes card counts your workouts and walks toward 150 minutes a week, or 250 if you want to lose fat. If you're pregnant or have a medical condition, it stays at 150. If you may be under 18, it shows the WHO's 60 minutes a day for children and teens. Plans train every muscle at least twice a week. | … If you're pregnant, may be under 18 or have a medical condition, it stays at 150. … |
+| Safety first, the first rule | The PAR-Q+ (2025) asks seven questions. Any yes means follow-up questions with a professional. Chest pain, fainting or "supervised only" means no training until a doctor clears you. [30, 31] | The PAR-Q+ (2025) asks seven questions. Any yes means checking with a doctor or qualified professional before vigorous activity. |
+| Safety first, a new rule | Over 45 and not used to vigorous exercise? Check with a qualified exercise professional before you train hard. [30] | New |
+| Safety first, the line about the app | The health check uses the PAR-Q+ questions. A yes to chest pain, dizziness or fainting, or supervised activity only holds the plan: no workouts until you tell the app a doctor cleared you. Any other yes keeps the plan gentle (no jumping, nothing vigorous) until you've been cleared. From 45, nothing vigorous until you train most days. The warning signs show before every workout. | The health check uses the PAR-Q+ questions. Any yes keeps the plan gentle (no jumping, nothing vigorous) until you tell the app you've been cleared. |
 
 ## Height, the Other sore spot and client codes (live since 2 October)
 
@@ -378,5 +397,4 @@ Not changed in this batch, but worth Frank's look.
 | Where | Text | Why |
 |---|---|---|
 | Frank's clients (from I train with Frank, or I'm one of Frank's clients), the card at the bottom | Not training with Frank yet? He coaches in person and online. | Online coaching isn't in his approved bio |
-| Onboarding, What's your main goal?, the line under Move better | Less stiffness, better balance, no pain. | "No pain" is a promise |
 | The plan's name for the Lose fat goal (Your first week, the summary and the plan card) | 28-DAY FAT BURNER | A name that can read as a claim |
