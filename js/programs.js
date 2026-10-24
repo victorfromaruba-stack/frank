@@ -18,9 +18,17 @@
     // person's progress there in a move link (js/keep.js). Victor sets it on the day of the move (frank-release skill)
     home: '',
     city: 'The Hague',
-    // what his certificate says (NHA Fitness Trainer level 3, which covers sports nutrition and biomechanics);
-    // keep claims to what he holds: neuroscience is his own interest, not a qualification
-    bio: 'Fitness trainer (NHA level 3), trained in sports nutrition and biomechanics. Based in The Hague. Neuroscience is his side passion.',
+    // keep claims to what he holds. He is taking NHA Fitness Trainer level 3 (it covers sports nutrition and
+    // biomechanics); the diploma is expected in January 2027, so until then he is "in training". Neuroscience is his own
+    // research interest, never a qualification. When the diploma is in, drop "in training" and reword creds 0 and 1
+    bio: 'Fitness trainer in training. Based in The Hague.',
+    creds: [
+      { title: 'NHA Fitness Trainer, level 3', note: 'In training. Diploma expected January 2027.' },
+      { title: 'Studying sports nutrition and biomechanics', note: 'Part of his NHA course.' },
+      { title: 'Neuroscience', note: 'His own research interest.' }
+    ],
+    // the in-person session (Frank's answers of 24 October 2026). gym: '' until he picks one
+    session: { hours: 2, assess: '35 to 45 minutes', price: '€39.99', regular: '€65', gym: '' },
     tagline: 'Not only a trainer, but purposely an educator.',
     // Client codes: typing one on "Frank's clients" opens the whole app without the membership.
     // Only hashes live here, so the codes can't be read in this public repo. Add one with
@@ -36,15 +44,16 @@
     ]
   };
 
-  // Membership for people who train with the app, in euro (Frank sells from the Netherlands).
-  // The monthly price is decided; the yearly price and the trial are placeholders. paymentLink: any checkout link
+  // Membership for people who train with the app. Frank (24 October 2026): the app costs $4 a month at most; the exact
+  // price and the currency (he sells from the Netherlands) are open, so the price screen says "Up to $4". The yearly
+  // price and the trial are placeholders. paymentLink: any checkout link
   // (Mollie, Stripe, Paddle). Frank's own clients don't pay here. See docs/ACCOUNTS-AND-PAYMENTS.md.
   // approved: Frank said yes to this price. The price screen shows only approved plans.
   var BILLING = {
     trialDays: 7, paymentLink: '',
     plans: [
       { id: 'year', name: 'Yearly', price: '€119.99', per: 'year', perWeek: '€2.31', best: true },
-      { id: 'month', name: 'Monthly', price: '€15', per: 'month', perWeek: '€3.46', approved: true }
+      { id: 'month', name: 'Monthly', price: 'Up to $4', per: 'month', perWeek: 'Under $1', approved: true }
     ]
   };
 

@@ -90,8 +90,8 @@ Two kinds of users:
   Me's "Put it on your home screen"); the browser is asked to keep the data; and once
   `FRANK.home` is set, the old address shows "Frank's app has moved" on every tab, with
   a button that brings each person's progress along.
-- **Membership**: a 7-day free trial that starts with the first workout, then €15
-  a month. The price screen shows only prices Frank said yes to. Until payments
+- **Membership**: a 7-day free trial that starts with the first workout, then up to
+  $4 a month (Frank, 24 October 2026; the exact price is open). The price screen shows only prices Frank said yes to. Until payments
   are connected, "Tell me when it opens" copies a message for Frank and opens his
   Instagram chat.
 - **The science** screen: every rule the plans follow, with 36 sources.
@@ -120,9 +120,9 @@ moves without a clip yet and offline, and draws the muscle maps.
 
 ## Decided
 
-- **The membership price:** €15 a month (`BILLING` in `js/programs.js`).
-- **The words:** Frank approved his bio (only what his certificate covers: fitness
-  trainer, NHA level 3, with sports nutrition and biomechanics) and the app's texts:
+- **The membership price:** $4 a month at most (Frank, 24 October 2026); the price screen says "Up to $4" until the exact price and currency are set (`BILLING` in `js/programs.js`).
+- **The words:** Frank approved the app's first texts in October (the bio is new again: only what his course covers: NHA Fitness Trainer level 3, with sports
+  nutrition and biomechanics; the diploma comes in January 2027, so until then "in training") and the app's texts:
   the exercise texts (`js/exercises.js`), the daily lessons and the method lines
   (`js/programs.js`, `js/app.js`). New or changed text goes to him before it ships:
   `docs/TEXT-FOR-FRANK.md` holds the lines waiting for his yes.

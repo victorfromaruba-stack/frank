@@ -2169,6 +2169,7 @@
   SCREENS.frank = {
     title: function () { return 'Frank'; },
     html: function (p) {
+      var se = FR.session, risk = atRisk();
       var wa = FR.whatsapp ? 'https://wa.me/' + FR.whatsapp.replace(/\D/g, '') + '?text=' + encodeURIComponent('Hi Frank, I train with your app and I would like a session with you.') : '';
       var method = [
         ['ESSENTiALS', 'Scapula and hips first. Get these two moving well and the rest has a base to build on.'],
@@ -2177,13 +2178,25 @@
         ['NOT ONLY A TRAINER, BUT PURPOSELY AN EDUCATOR', 'Every exercise comes with its why, so you understand what you train.']
       ];
       return '<div class="screen"><div class="frank-hero"><img src="' + img('img/wellness-4.jpg') + '" alt="Frank\'s graphic: Not only a trainer, but purposely an educator"></div>' +
-        '<div class="stack tight"><h1 class="display xl sky">Frank</h1><p class="note s">' + esc(FR.bio) + '</p></div>' + slot('frank.top', p) +
-        '<section class="card"><p class="label">Train with Frank in person</p><p class="lead">The app teaches the method. In ' + esc(FR.city) + ', Frank starts with an assessment of how you move, then trains you at your level and fixes one thing at a time. He coaches at several gyms, so you train at the one you go to.</p>' +
-        '<a class="btn block" href="' + FR.dm + '" target="_blank" rel="noopener">' + ic('msg') + 'Message on Instagram</a>' +
+        '<div class="stack tight"><h1 class="frank-w"><img src="' + img('img/brand/w-by-frank-dark.svg') + '" alt="W by Frank"></h1><p class="note s">' + esc(FR.bio) + '</p></div>' +
+        '<ul class="creds" aria-label="Training and interests">' + FR.creds.map(function (c) { return '<li><b>' + esc(c.title) + '</b><span>' + esc(c.note) + '</span></li>'; }).join('') + '</ul>' + slot('frank.top', p) +
+        '<section class="card"><p class="label">Train with Frank in person</p>' +
+        '<div class="offer-price"><b>' + esc(se.price) + '</b><span>Launch price<br><span class="sr">Regular price </span><s>' + esc(se.regular) + '</s></span></div>' +
+        '<ol class="offer-steps"><li><b>' + esc(se.assess) + '</b><span>Frank checks how you move.</span></li><li><b>The rest of the ' + se.hours + ' hours</b><span>You train at your level. He fixes one thing at a time.</span></li></ol>' +
+        '<p class="small">' + (se.gym ? esc(se.gym) + ', ' + esc(FR.city) + '.' : esc(FR.city) + '. The gym is still being chosen.') + '</p>' +
+        '<a class="btn block" href="' + FR.dm + '" target="_blank" rel="noopener">' + ic('msg') + 'Ask for a session</a>' +
+        '<p class="meta">Opens a chat with Frank on Instagram.</p>' +
         (wa ? '<a class="btn two block" href="' + wa + '" target="_blank" rel="noopener">WhatsApp</a>' : '') +
         '<div class="between"><span class="handle">@' + esc(FR.handle) + '</span><button class="link" data-act="copy" data-v="@' + esc(FR.handle) + '">' + ic('copy') + 'Copy</button></div></section>' +
         (S.inbox.length ? '<section class="card"><p class="label">Sessions from Frank</p><p class="lead">' + plural(S.inbox.length, 'session') + ' on this phone.</p><button class="btn two block" data-act="inbox">See them</button></section>'
                         : '<section class="card"><p class="label">Already train with Frank?</p><p class="lead">Open the link he sends you, or paste it here, and his sessions land on your plan.</p><button class="btn two block" data-act="join">I\'m one of Frank\'s clients</button></section>') +
+        '<section class="card quiet"><p class="label">Coming to the app</p><ul class="soon">' +
+        // food rows only for someone not at risk (no profile counts as maybe under 18): .claude/skills/frank-safety/
+        (risk ? [['Guides', 'The why behind how you train.']]
+              : [['Meal plans', 'Simple plans to eat for your training.'], ['Guides', 'The why behind training, food and rest.'], ['Cooking videos', 'Frank shows you how to make it.']]).map(function (c) {
+          return '<li><b>' + c[0] + '</b><span>' + c[1] + '</span></li>';
+        }).join('') + '</ul><p class="meta">' + (risk ? 'Meal plans and cooking videos will be for healthy adults. For food, talk to a dietitian or your doctor first.'
+          : 'Meal plans will be for healthy adults. Pregnant, under 18 or a medical condition? Talk to a dietitian or your doctor first.') + '</p></section>' +
         '<section class="stack"><p class="label">The method</p><div class="list">' + method.map(function (m) {
           return '<div class="method"><p class="display s sky">' + m[0] + '</p><p class="small">' + m[1] + '</p></div>';
         }).join('') + '</div></section>' +

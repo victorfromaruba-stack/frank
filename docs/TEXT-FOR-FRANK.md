@@ -88,6 +88,7 @@ supervised activity, or the matching switch on the Today screen's food card.
 | For a member, in place of a button: the line from Me. Members and clients only see this screen through Frank's Coach tools (See what members see) | You're a member. Thank you. | Start my 7-day free trial, as for someone new |
 | For one of Frank's clients, in place of a button: the line from Me | You train with Frank. His sessions show up on your plan, and the whole app is open to you. | Start my 7-day free trial, as for someone new |
 | For one of Frank's clients, the white button | (no button) | I'm one of Frank's clients |
+| The monthly plan's price, everywhere the price screen shows it (your answer of 24 October: the app costs $4 a month at most; the exact price and euro or dollar are still open) | Up to $4 a month / Under $1 a week | €15 a month / €3.46 a week |
 | Right after the questions, for someone new | Not shown. Your first week goes straight to Day 1 or the Plan. The price screen still shows from Me's Membership card, and when the free trial has ended (from Your first week's See membership, over the Plan) | Shown after Get my plan on Your plan is ready |
 
 ## Plan
@@ -184,6 +185,16 @@ supervised activity, or the matching switch on the Today screen's food card.
 
 | Where | New text | Old text |
 |---|---|---|
+| The top of the tab, under your graphic: the big W mark in place of the word FRANK. A screen reader says | W by Frank | Frank |
+| The line under the W | Fitness trainer in training. Based in The Hague. | Fitness trainer (NHA level 3), trained in sports nutrition and biomechanics. Based in The Hague. Neuroscience is his side passion. |
+| A list under that line, three rows (a screen reader calls the list Training and interests). Once your diploma is in, "in training" comes out and the first two rows change | NHA Fitness Trainer, level 3 / In training. Diploma expected January 2027. — Studying sports nutrition and biomechanics / Part of his NHA course. — Neuroscience / His own research interest. | New |
+| Train with Frank in person: the price, big, with the regular price struck through next to it (a screen reader says "Regular price" before €65) | €39.99 / Launch price / €65 | New |
+| The same card, two numbered steps | 35 to 45 minutes / Frank checks how you move. — The rest of the 2 hours / You train at your level. He fixes one thing at a time. | The app teaches the method. In The Hague, Frank starts with an assessment of how you move, then trains you at your level and fixes one thing at a time. He coaches at several gyms, so you train at the one you go to. |
+| The same card, where. Once you pick a gym it says the gym's name and The Hague | The Hague. The gym is still being chosen. | (part of the line above) |
+| The same card, the button and the line under it. The button opens your Instagram chat | Ask for a session / Opens a chat with Frank on Instagram. | Message on Instagram |
+| A new card under Already train with Frank?, for an adult with no health yes | Coming to the app / Meal plans: Simple plans to eat for your training. / Guides: The why behind training, food and rest. / Cooking videos: Frank shows you how to make it. | New |
+| The last line of that card, for an adult with no health yes | Meal plans will be for healthy adults. Pregnant, under 18 or a medical condition? Talk to a dietitian or your doctor first. | New |
+| The same card for someone at risk, and for someone with no plan yet (age unknown): no food rows | Coming to the app / Guides: The why behind how you train. / Meal plans and cooking videos will be for healthy adults. For food, talk to a dietitian or your doctor first. | New |
 | A small link at the bottom, on every phone where Frank's coach code wasn't typed | Frank? Open coach tools | New. Until now everyone saw the For Frank card with its Coach tools button |
 | The For Frank card: now only on a phone where Frank's coach code was typed | For Frank / Write sessions for your clients and send them as a link. / Coach tools | The same card, on every phone |
 

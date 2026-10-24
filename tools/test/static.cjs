@@ -225,8 +225,10 @@ module.exports = {
       for (const c of FR.coachCodes || []) t.check(/^[0-9a-f]{64}$/.test(c), 'FRANK.coachCodes holds "' + String(c).slice(0, 6) + '…", not a SHA-256 hash: use node tools/client-code.mjs --coach <code>');
       if (FR.whatsapp) t.note('FRANK.whatsapp is set (' + FR.whatsapp.replace(/\d(?=\d{3})/g, '•') + '): only with Frank\'s yes');
       if (B.paymentLink) t.note('BILLING.paymentLink is set: payments are live for members');
+      // a checkout needs a real price, not the ceiling "Up to $4"
+      if (B.paymentLink) t.check((B.plans || []).every((pl) => !pl.approved || /^[$€]\d/.test(pl.price)), 'BILLING.paymentLink is set while an approved price is not an exact one: ' + (B.plans || []).map((pl) => pl.price).join(', '));
       const month = (B.plans || []).find((p) => p.id === 'month');
-      t.check(month && month.price === '€15', 'the monthly price is no longer €15 (decided with Frank): ' + (month && month.price));
+      t.check(month && month.price === 'Up to $4', 'the monthly price is no longer "Up to $4" (Frank, 24 October 2026: $4 a month at most): ' + (month && month.price));
       // the price screen shows only plans with approved: true (Frank's yes)
       t.check(month && month.approved === true, 'the monthly plan has no approved: true, so the price screen hides it');
     });

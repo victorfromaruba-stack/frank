@@ -5,7 +5,7 @@
 - **Members**: a free trial (`BILLING.trialDays`, 7) that starts on the price
   screen after onboarding (or with the first workout), then the membership. The
   price screen shows only the plans Frank said yes to (`approved` in
-  `BILLING.plans`: €15 a month) and links to a checkout page once
+  `BILLING.plans`: up to $4 a month) and links to a checkout page once
   `BILLING.paymentLink` is set. Until then it offers "Tell me when it opens": a
   message for Frank, pasted in his Instagram chat.
 - **Frank's clients**: Frank writes a session in Coach tools (open only on a
@@ -70,7 +70,7 @@ doesn't change when you pick one. Prices are in euro.
 
 1. The yearly price and the trial length (now €119.99 a year and 7 days free:
    placeholders in `BILLING.plans`; the price screen shows the yearly plan only
-   once it has `approved: true`). The monthly price is decided: €15.
+   once it has `approved: true`). The monthly price: $4 at most (Frank, 24 October 2026), exact price and currency open.
 2. Payment provider (Mollie or Stripe through Frank's Dutch business, or Paddle).
 3. Web app first, or straight into the stores.
 4. Whether Frank's clients also get the generated plans (now: yes).

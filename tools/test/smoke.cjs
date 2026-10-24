@@ -38,6 +38,12 @@ module.exports = {
         await t.look(p, tab);
         t.check((await p.locator('.tab[aria-current="page"]').getAttribute('data-tab')) === tab, tab + ': the tab bar does not mark ' + tab);
       }
+      // the Frank tab: his training stated as it is (diploma due January 2027), the in-person offer, what's coming
+      const fr = await app.text(p);
+      for (const want of ['In training. Diploma expected January 2027.', 'His own research interest.', '€39.99', 'Launch price', 'Ask for a session', 'Coming to the app', 'Meal plans'])
+        t.has(fr, want, 'frank tab');
+      t.lacks(fr, /neuroscientist|several gyms/i, 'frank tab');
+      t.check(await p.waitForFunction(() => { const i = document.querySelector('.frank-w img'); return i && i.complete && i.naturalWidth > 0; }, null, { timeout: 5000 }).then(() => true, () => false), 'frank tab: the W by Frank mark does not load');
       // Workouts: body part, search, library
       await app.tap(p, '.tab[data-tab="workouts"]');
       await app.tap(p, '[data-act="body"][data-v="legs"]');

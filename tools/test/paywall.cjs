@@ -21,7 +21,7 @@ async function fastStart(p) {
 
 module.exports = {
   name: 'paywall',
-  about: 'trial starts with the first workout, days left, the price screen: the trial offered only before it starts, only prices Frank approved (€15 a month), "Tell me when it opens" while payments are off, the checkout once they are on; after the trial, the fast start ends on the price screen over the Plan; members, and the price screen for a member or a client (their line, no way to join); Frank\'s sessions stay open',
+  about: 'trial starts with the first workout, days left, the price screen: the trial offered only before it starts, only prices Frank approved (up to $4 a month), "Tell me when it opens" while payments are off, the checkout once they are on; after the trial, the fast start ends on the price screen over the Plan; members, and the price screen for a member or a client (their line, no way to join); Frank\'s sessions stay open',
   async run(t) {
     await t.flow('new: the first workout starts the trial', async () => {
       const p = await t.page({ state: L.state({ profile: L.profile() }) });
@@ -41,7 +41,7 @@ module.exports = {
       await app.waitTitle(p, 'Membership');
       const txt = await app.text(p);
       t.has(txt, 'Get your personal plan', 'heading');
-      for (const want of ['7-day free trial, then monthly', '€15 a month', 'Start my 7-day free trial', 'No payment needed for the trial']) t.has(txt, want, 'price screen before the trial');
+      for (const want of ['7-day free trial, then monthly', 'Up to $4 a month', 'Start my 7-day free trial', 'No payment needed for the trial']) t.has(txt, want, 'price screen before the trial');
       // only prices Frank approved (the yearly one is a placeholder), and nothing that reads like a test version
       for (const bad of ['Yearly', '€119.99', 'Best value', 'placeholder', 'preview']) t.lacks(txt, bad, 'price screen before the trial');
       await t.look(p, 'paywall before the trial');
@@ -79,7 +79,7 @@ module.exports = {
       await app.waitTitle(p, 'Membership');
       const txt = await app.text(p);
       t.has(txt, 'Keep training', 'heading');
-      for (const want of ['Monthly', '€15 a month', '€3.46']) t.has(txt, want, 'prices');
+      for (const want of ['Monthly', 'Up to $4 a month', 'Under $1']) t.has(txt, want, 'prices');
       // only prices Frank approved: the yearly one is a placeholder
       for (const bad of ['Yearly', '€119.99', '€2.31', 'Best value', '14.99']) t.lacks(txt, bad, 'prices');
       t.lacks(txt, 'free trial, then', 'plans after the trial');
