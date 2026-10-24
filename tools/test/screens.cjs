@@ -203,6 +203,18 @@ module.exports = {
       await snap(p, 'coach tools lock question', { full: false });
     });
 
+    await t.flow('a yes that needs a doctor first', async () => {
+      // chest pain, dizziness or fainting, or supervised only: the Plan, Today and Start show See your doctor first
+      const p = await t.page({ state: L.member({ health: { chest: true } }) });
+      await snap(p, 'plan waiting for a doctor');
+      await tab(p, 'today');
+      await snap(p, 'today waiting for a doctor');
+      await go(p, 'hold', {});
+      await snap(p, 'before you train');
+      await app.tap(p, '[data-act="hold-cleared"]');
+      await snap(p, 'a doctor cleared me question', { full: false });
+    });
+
     await t.flow('player', async () => {
       const st = L.member({ kit: ['chair', 'table', 'db'] });
       st.inbox = [L.spec({ i: 'pl', t: 'Player states', x: [['goblet-squat', 10], ['side-plank', 20]], r: 1, rs: 30 })];

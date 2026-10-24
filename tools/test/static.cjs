@@ -45,6 +45,21 @@ module.exports = {
       }
     });
 
+    await t.flow('claims Frank can back', async () => {
+      // the training audit of 24 October 2026: his NHA level 3 diploma comes in January 2027, he hasn't chosen a gym, and
+      // the app can't promise an outcome. Any string in js/ (comments left out) that says otherwise fails
+      for (const f of list('js', /\.js$/)) {
+        const src = stripComments(read(f));
+        for (const re of [/trained in sports nutrition/i, /coaches at several gyms/i, /\bno pain\b/i]) if (re.test(src)) t.fail(f + ' says "' + re.exec(src)[0] + '"');
+      }
+      const ctx = { document: { addEventListener() {}, hidden: false } };
+      ctx.window = ctx;
+      vm.createContext(ctx);
+      for (const f of ['js/figure.js', 'js/exercises.js', 'js/programs.js']) vm.runInContext(read(f), ctx, { filename: f });
+      const bio = ctx.WBF.FRANK.bio;
+      t.check(!/NHA/.test(bio) || /in training/i.test(bio), 'FRANK.bio names NHA level 3 as if the diploma were in: "' + bio + '"');
+    });
+
     await t.flow('offline files (sw.js)', async () => {
       const sw = swInfo(read('sw.js'));
       if (!t.check(sw.shell && sw.version, 'sw.js: could not read SHELL and VERSION')) return;
