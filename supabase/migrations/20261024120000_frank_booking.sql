@@ -21,6 +21,11 @@
 --
 -- The PIN is never in this file: frank_settings.pin_hash starts empty (frank_login says so) and is set apart, with
 --   update public.frank_settings set pin_hash = extensions.crypt('<6 digits>', extensions.gen_salt('bf', 8));
+-- Anyone can lock Frank's screen with 5 wrong PINs (one shared PIN on a public endpoint always can; visitors can
+-- still book). To lift a lock at once, in the SQL editor:
+--   update public.frank_settings set pin_failures = 0, pin_locked_until = null;
+-- Known limit: with no accounts, a script on several networks can hold open times with fake requests (20 an hour at
+-- most); Frank declines them. Contact verification would be the fix, if it ever happens.
 
 create table if not exists public.frank_settings (
   id boolean primary key default true check (id),           -- one row
@@ -143,10 +148,17 @@ begin
     return jsonb_build_object('ok', false, 'error', 'goal');
   end if;
 
-  -- spam: 5 requests an hour from one address, 20 an hour from everyone together
-  perform pg_advisory_xact_lock(hashtext('frank-request'));
-  v_ip := coalesce(nullif(v_headers ->> 'cf-connecting-ip', ''), btrim(split_part(coalesce(v_headers ->> 'x-forwarded-for', ''), ',', 1)));
+  -- spam: 5 requests an hour from one address, 20 an hour from everyone together. The address is Cloudflare's
+  -- cf-connecting-ip (Cloudflare overwrites what a client sends); an IPv6 address counts as its /64, so one host
+  -- can't rotate through its own block. No x-forwarded-for fallback: its first entry is the client's to write
+  v_ip := coalesce(nullif(v_headers ->> 'cf-connecting-ip', ''), 'unknown');
+  if v_ip like '%:%' and v_ip ~ '^[0-9a-fA-F:.]+$' then v_ip := host(network(set_masklen(v_ip::inet, 64))); end if;
   select encode(extensions.digest(s.salt || '|' || v_ip, 'sha256'), 'hex') into v_hash from public.frank_settings s;
+  -- a flood from one address is turned away before it queues for the lock (the project is shared with the Circle and Pidi)
+  if (select count(*) from public.frank_hits where ip_hash = v_hash and at > now() - interval '1 hour') >= 5 then
+    return jsonb_build_object('ok', false, 'error', 'busy');
+  end if;
+  perform pg_advisory_xact_lock(hashtext('frank-request'));
   if (select count(*) from public.frank_hits where ip_hash = v_hash and at > now() - interval '1 hour') >= 5
      or (select count(*) from public.frank_bookings where created_at > now() - interval '1 hour') >= 20 then
     return jsonb_build_object('ok', false, 'error', 'busy');

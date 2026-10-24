@@ -231,7 +231,7 @@
       var text = b.status === 'confirmed' ? 'Hi ' + b.first_name + ', this is Frank. Your session on ' + at + ' is confirmed.'
         : b.status === 'declined' ? 'Hi ' + b.first_name + ', this is Frank. Sorry, I can\'t do ' + at + '.'
           : 'Hi ' + b.first_name + ', this is Frank, about your session request for ' + at + '.';
-      if (c.indexOf('@') > 0) return 'mailto:' + encodeURI(c) + '?subject=' + encodeURIComponent('Your session with Frank') + '&body=' + encodeURIComponent(text);
+      if (c.indexOf('@') > 0) return 'mailto:' + encodeURIComponent(c).replace(/%40/g, '@') + '?subject=' + encodeURIComponent('Your session with Frank') + '&body=' + encodeURIComponent(text);
       var d = c.replace(/\D/g, '');
       // ponytail: a number without its country code is taken as Dutch only in the 06 mobile form; others get a call link
       var intl = /^\s*(\+|00)/.test(c) ? d.replace(/^00/, '') : /^06\d{8}$/.test(d) ? '31' + d.slice(1) : '';

@@ -213,12 +213,14 @@ module.exports = {
     });
 
     await t.flow('secrets and plain client codes', async () => {
-      const tracked = (git(['ls-files']) || '').split('\n').filter((f) => f && /\.(js|cjs|mjs|json|html|css|md|txt|webmanifest|sh|py|ya?ml|env)$/i.test(f));
+      const tracked = (git(['ls-files']) || '').split('\n').filter((f) => f && /\.(js|cjs|mjs|json|html|css|md|txt|webmanifest|sh|py|ya?ml|env|sql)$/i.test(f));
+      // Supabase: a Management API token, a JWT (the legacy service_role key is one), a database URL with its password
+      const SECRET2 = /\bsbp_[a-f0-9]{40}\b|\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}|postgres(?:ql)?:\/\/[^\s:@\/]+:[^\s@]+@/;
       const SECRET = /\b(sk-(?:ant-|proj-)?[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{30,}|xox[abprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{35}|sb_secret_[A-Za-z0-9_-]{10,}|\d{8,10}:AA[A-Za-z0-9_-]{30,})\b|-----BEGIN [A-Z ]*PRIVATE KEY-----/;
       for (const f of tracked) {
         if (!exists(f)) continue;
         const lines = read(f).split('\n');
-        lines.forEach((l, i) => { if (SECRET.test(l)) t.fail(f + ':' + (i + 1) + ' looks like a secret (key or token): remove it and tell the owner'); });
+        lines.forEach((l, i) => { if (SECRET.test(l) || SECRET2.test(l)) t.fail(f + ':' + (i + 1) + ' looks like a secret (key or token): remove it and tell the owner'); });
       }
       if (exists('.env')) t.fail('a .env file is in the repo folder');
       // FRANK.codes must hold SHA-256 hashes only, so codes can't be read in the public repo
