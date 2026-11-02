@@ -1,8 +1,8 @@
 # Frank
 
-Frank is a workout app designed to help people track workouts, routines, and progress in one place.
+Frank is a 4-week home workout plan built on Frank's method, with guided sessions led by a moving coach and the why behind every exercise.
 
-This repository gives the project context and source code for the app, so people can quickly understand what it is and where to explore it.
+This repository gives the project context and links for the app, so people can quickly understand what it is and where to explore it.
 
 ## Links
 
@@ -12,4 +12,4 @@ This repository gives the project context and source code for the app, so people
 
 ## Project context
 
-Frank is intended to be a simple, focused fitness companion for planning and reviewing training activity without extra clutter.
+Frank walks you through each session of the 4-week plan on your phone. Your progress is stored on your phone. The exercise videos are made with AI.
