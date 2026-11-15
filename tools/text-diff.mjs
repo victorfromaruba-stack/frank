@@ -434,7 +434,7 @@ function alike(a, b) {
 }
 // is this line in the doc? Each part between the gaps must be there, in order (case and line breaks don't count)
 function inDoc(text, doc) {
-  const parts = text.split(SHOW).map((p) => p.replace(/^[\s.,:;·!?()"'/-]+|[\s.,:;·!?()"'/-]+$/g, '')).filter((p) => letters(p) >= 1);
+  const parts = text.split(SHOW).map((p) => p.replace(/^[\s.,:;·!?()"'/-]+|[\s.,:;·!?()"'/-]+$/g, '')).filter((p) => letters(p) >= 1 || /\d/.test(p));   // a price (€39.99) has no letters, but is text
   if (!parts.length) return false;
   const esc = (p) => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
   const edge = (p, at) => (/\w/.test(at ? p[p.length - 1] : p[0]) ? '\\b' : '');

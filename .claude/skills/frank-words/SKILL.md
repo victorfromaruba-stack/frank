@@ -57,16 +57,18 @@ Before and after, from batch 1 (all in `docs/TEXT-FOR-FRANK.md`):
 
 ## What his bio allows
 
-`FRANK.bio` in `js/programs.js`, approved: "Fitness trainer (NHA level 3), trained in
-sports nutrition and biomechanics. Based in The Hague. Neuroscience is his side passion."
+`FRANK.bio` and `FRANK.creds` in `js/programs.js` (24 October 2026, waiting for his yes): "Fitness trainer in
+training. Based in The Hague.", then NHA Fitness Trainer, level 3 ("In training. Diploma January 2027."),
+studying sports nutrition and biomechanics ("Part of his NHA course."), neuroscience ("His own research interest.").
+The diploma is expected in January 2027. Until then he is "in training", never just "NHA level 3".
 
 | You may say | Don't say |
 |---|---|
-| fitness trainer, NHA level 3 | expert, specialist, or any title or certificate beyond NHA level 3 |
-| trained in sports nutrition | sports nutritionist, dietitian, nutrition coach, meal plans from Frank |
+| fitness trainer in training, NHA level 3, diploma January 2027 (after it: fitness trainer, NHA level 3) | a finished diploma before January 2027; expert, specialist, or any title or certificate beyond NHA level 3 |
+| trained in sports nutrition (part of the NHA course); meal plans "coming to the app", for healthy adults only (24 October 2026) | sports nutritionist, dietitian, nutrition coach, a meal plan for anyone `atRisk()` |
 | trained in biomechanics | physio, therapist, rehab, "treats injuries" |
 | based in The Hague; trains you in person at the gym you go to | online coaching (it's not in his bio: `docs/TEXT-FOR-FRANK.md` asks him), other cities |
-| neuroscience is his side passion | neuroscientist, brain claims |
+| neuroscience is his own research interest | neuroscientist, researcher as a title, brain claims |
 | his method: scapula and hips first, then strength, balance and load | a method he didn't write |
 
 ## Never write
@@ -77,7 +79,7 @@ sports nutrition and biomechanics. Based in The Hague. Neuroscience is his side 
 | A calorie number without "est." | MET estimates (`kcal()` in `js/programs.js`), not measurements | "… kcal est." The suites fail a kcal without it |
 | Food, drink, calorie, BMI or weight-loss advice to anyone `atRisk()` | they need a dietitian or doctor (`.claude/skills/frank-safety/`) | "For a diet or a medical question, talk to a dietitian or your doctor first." |
 | Made-up social proof: reviews, ratings, user counts, "joined today", "#1" | nobody measured it | nothing. A real review only with Frank's yes and the reviewer's |
-| A price, or a new one, without Frank's yes | `BILLING` in `js/programs.js`: €15 a month is decided; the yearly price and the 7-day trial are placeholders. The price screen shows only plans with `approved: true` | the decided price only |
+| A price, or a new one, without Frank's yes | `BILLING` in `js/programs.js`: up to €4 a month is decided (in euros; exact price open); the yearly price and the 7-day trial are placeholders. The price screen shows only plans with `approved: true` | the decided price only |
 | Frank's WhatsApp number | `FRANK.whatsapp` stays empty until he gives it and says yes | his Instagram DM (`FRANK.dm`) |
 | Words in Frank's mouth: quotes, "Frank recommends…" | he didn't say them | the app's own voice |
 | Business terms: fees, what Frank charges, client numbers | the repo is public | nothing |
@@ -182,7 +184,7 @@ What it can't see, so look yourself:
 
 - `node tools/test/run.cjs` (`.claude/skills/frank-qa/`): every screen a test looks at
   fails on a "kcal" without "est."; the `safety` suite checks the food card's referral
-  and has a "no made-up social proof" flow; `static` checks the €15 monthly price and its
+  and has a "no made-up social proof" flow; `static` checks the "Up to €4" monthly price, that no price is in dollars, and its
   `approved: true`, and that `FRANK.codes` and `FRANK.coachCodes` hold only hashes; the
   `paywall` suite fails on "Yearly", "€119.99", "placeholder" or "preview" on the price
   screen.

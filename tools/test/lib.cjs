@@ -629,6 +629,8 @@ class Test {
     page.on('console', (m) => {
       if (m.type() !== 'error') return;
       if (/^Failed to load resource: net::/.test(m.text()) && /\/media\/[^/]+$/.test((m.location() || {}).url || '')) return;
+      // the booking screens with no connection (the booking suite cuts it on purpose): the app says so on screen
+      if (/^Failed to load resource: net::/.test(m.text()) && /^https:\/\/cdkopyphjvfxjqhasrae\.supabase\.co\/rest\/v1\/rpc\//.test((m.location() || {}).url || '')) return;
       this.fail('console error: ' + m.text().slice(0, 200));
     });
     page.on('dialog', (d) => d.accept().catch(() => null));

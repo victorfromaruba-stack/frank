@@ -90,14 +90,22 @@ Two kinds of users:
   Me's "Put it on your home screen"); the browser is asked to keep the data; and once
   `FRANK.home` is set, the old address shows "Frank's app has moved" on every tab, with
   a button that brings each person's progress along.
-- **Membership**: a 7-day free trial that starts with the first workout, then €15
-  a month. The price screen shows only prices Frank said yes to. Until payments
+- **Membership**: a 7-day free trial that starts with the first workout, then up to
+  €4 a month (Frank, 24 October 2026; in euros; the exact price is open). The price screen shows only prices Frank said yes to. Until payments
   are connected, "Tell me when it opens" copies a message for Frank and opens his
   Instagram chat.
 - **The science** screen: every rule the plans follow, with 36 sources.
+- **Book a session** (`js/booking.js`): anyone books Frank's 2-hour in-person session for
+  free, no account: a time from his weekly hours (The Hague's time), first name, phone or
+  email, an optional goal, a privacy notice to tick, Send. Frank sees the requests on his
+  own screen (Coach tools > Booking requests, behind a PIN), confirms or declines, and sets
+  his weekly hours there. A pending or confirmed request holds its time. The data lives in
+  our Supabase project, in `frank_*` tables nobody reads directly
+  (`supabase/migrations/20261024120000_frank_booking.sql`); requests are deleted 30 days
+  after the session date. `#book.session` opens it, for his Instagram bio.
 
-Everything a person enters stays in their own browser (localStorage). Nothing is
-sent anywhere. A backup file or a move link carries it to another browser only when
+Everything a person enters stays in their own browser (localStorage). The one thing
+sent anywhere is a booking request (below), and only when the person sends it. A backup file or a move link carries it to another browser only when
 the person saves or shares it themselves: the link holds the data after the `#`,
 which browsers never send to a server, and the app says who can see it.
 
@@ -120,9 +128,9 @@ moves without a clip yet and offline, and draws the muscle maps.
 
 ## Decided
 
-- **The membership price:** €15 a month (`BILLING` in `js/programs.js`).
-- **The words:** Frank approved his bio (only what his certificate covers: fitness
-  trainer, NHA level 3, with sports nutrition and biomechanics) and the app's texts:
+- **The membership price:** €4 a month at most (Frank, 24 October 2026), in euros like the session (Victor, 24 October); the price screen says "Up to €4" until the exact price is set (`BILLING` in `js/programs.js`).
+- **The words:** Frank approved the app's first texts in October (the bio is new again: only what his course covers: NHA Fitness Trainer level 3, with sports
+  nutrition and biomechanics; the diploma comes in January 2027, so until then "in training") and the app's texts:
   the exercise texts (`js/exercises.js`), the daily lessons and the method lines
   (`js/programs.js`, `js/app.js`). New or changed text goes to him before it ships:
   `docs/TEXT-FOR-FRANK.md` holds the lines waiting for his yes.
@@ -199,6 +207,8 @@ phones pick up the update. The `static` suite fails until you do.
 | `js/science.js` | the science screen and its sources |
 | `js/app.js` | screens, onboarding, the player, access (trial, member, client), coach tools, Today, Me, and the seam modules plug into (`WBF.ext`) |
 | `js/links.js` | links to one move or one workout: a module, a feature in its own file (`.claude/skills/frank-module`) |
+| `js/booking.js` | book a session (free, no account) and Frank's requests screen behind his PIN; the only file that talks to a server (Supabase, `frank_*` functions only) (a module) |
+| `supabase/migrations/` | the booking's tables and functions, as run on the project: who may call what is at the top |
 | `js/keep.js` | keep my progress: the backup file, the move link (`#move.`), the Instagram warning, the Home Screen sheet, storage the browser keeps, the moved banner (a module) |
 | `js/onboard-flow.js` | the fast start: the eight questions before the plan, Your first week, Make it yours after Day 1, Me's Your answers (a module) |
 | `js/sound.js` | beeps, voice, vibration, keeping the screen on |
