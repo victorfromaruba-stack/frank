@@ -1196,8 +1196,9 @@
   };
   Object.keys(STRESS).forEach(function (j) { STRESS[j].forEach(function (id) { (EX[id].stress = EX[id].stress || []).push(j); }); });
 
+  // supine: lying on the back, also under a table (table row): pregnancy mode leaves these out
   var POS = { supine: ['brace-breathe', 'dead-bug', 'hollow-hold', 'reverse-crunch', 'glute-bridge', 'single-leg-bridge',
-                       'crunch', 'leg-raise', 'bicycle-crunch', 'flutter-kicks', 'v-up', 'knee-to-chest'],
+                       'crunch', 'leg-raise', 'bicycle-crunch', 'flutter-kicks', 'v-up', 'knee-to-chest', 'table-row'],
               prone: ['superman', 'prone-y-raise', 'cobra'] };
   var JUMP = ['jump-squat', 'burpee', 'jumping-jacks', 'high-knees', 'butt-kicks', 'skipping'];
   Object.keys(POS).forEach(function (k) { POS[k].forEach(function (id) { EX[id].pos = k; }); });

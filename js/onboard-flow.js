@@ -158,6 +158,14 @@
     // Day 1's first move, what keeps them safe (the summary's rows, in its words), the week and the level, then Frank's line.
     // The line about the free trial sits with the buttons, so it's on screen when Start Day 1 is tapped
     function reveal(d) {
+      // a yes that needs a doctor first: no week and no Start Day 1, the answers saved with See my plan (it says the same)
+      if (u.held(d)) {
+        return '<div class="ob reveal"><div class="ob-top"><button class="icon-btn" data-act="ob-back" aria-label="Back">' + u.ic('back') + '</button>' +
+          '<div class="ob-prog one" aria-hidden="true"><i><b style="width:100%"></b></i></div><span style="width:44px"></span></div>' +
+          '<div class="stack tight"><p class="label" style="color:var(--sky-ink)">' + esc(u.planName(d)) + '</p><h1 class="ob-q">See your <em>doctor</em> first</h1></div>' +
+          '<div class="summary">' + u.safeRows(d) + '</div><p class="warnbox">' + esc(u.holdLine) + '</p>' +
+          '<div class="ob-cta"><button class="btn dark block" data-act="ob-finish" data-then="plan">See my plan</button></div></div>';
+      }
       var week = WBF.plan.days(d).filter(function (x) { return x.train && x.week === 1; });
       var ses = week.map(function (x) { return { day: x, s: app.session(x.workoutId, x, null, d) }; });
       var first = firstMove(ses[0].s), av = WBF.plan.avoidFor(d), st = app.status(), shown = {};

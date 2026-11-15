@@ -35,6 +35,34 @@ async function planAudit(p) {
   });
 }
 
+// every session the app can build for each profile, as it builds them: week 1 of every goal x days x level (with focus
+// blocks that reach the back, legs and abs workouts), for four kits, and every catalogue workout and program.
+// profiles: [[label, profile fields]]. Returns { label: [{ key (its last word: the workout), ex: [every move], pull: a main move with pattern pull }] }
+async function everySession(p, profiles) {
+  return p.evaluate((profiles) => {
+    const kits = [['chair', 'table'], ['chair', 'table', 'db', 'rings', 'pad', 'wedge'], ['table'], []], out = {};
+    const one = (key, s) => ({ key, ex: [...new Set(s.steps.map((st) => st.ex))], pull: s.steps.some((st) => st.block === 'main' && WBF.EX[st.ex].pattern === 'pull') });
+    for (const [label, over] of profiles) {
+      const list = out[label] = [];
+      for (const kit of kits) {
+        const base = Object.assign({ sex: 'f', birthYear: 1990, active: 1, health: {}, injuries: [], minutes: 20, focus: ['legs', 'back', 'abs'] }, over, { kit });
+        const av = WBF.plan.avoidFor(base);
+        for (const goal of Object.keys(WBF.GOALS)) for (const days of [2, 3, 4, 5, 6]) for (const level of ['b', 'i', 'a']) {
+          const pr = Object.assign({}, base, { goal, days, level });
+          WBF.plan.days(pr).filter((d) => d.train && d.week === 1).forEach((d) => list.push(one([goal, days, level, kit.join('+') || 'no kit', 'day' + d.day, d.workoutId].join(' '),
+            WBF.plan.build(d.workoutId, { level: WBF.plan.levelFor(pr), kit, swaps: {}, goal, avoid: av, older: av.older, mult: 1, minutes: 20, focus: pr.focus, day: d.day }))));
+        }
+        WBF.WORKOUTS.forEach((w) => list.push(one([kit.join('+') || 'no kit', w.id].join(' '), WBF.plan.build(w.id, { kit, swaps: {}, avoid: av, older: av.older, mult: 1 }))));
+      }
+    }
+    return out;
+  }, profiles);
+}
+// what the tests need to know about every move: how it starts (setup), its effort (MET) and its pattern
+const moveInfo = (p) => p.evaluate(() => Object.fromEntries(Object.entries(WBF.EX).map(([id, e]) => [id, { setup: e.setup || '', met: e.met, pattern: e.pattern }])));
+// the warning signs during exercise (ACSM 2015), as the workout screen and the player say them
+const STOP = /Stop and get help if you feel chest, jaw or arm pain, faintness, unusual breathlessness or a racing or irregular heartbeat/i;
+
 // the food card on Today: true when it only refers to a dietitian or doctor
 async function foodRefers(p) {
   await app.tap(p, '.tab[data-tab="today"]');
@@ -113,6 +141,8 @@ function fresh(pOver, over) {
 
 module.exports = {
   name: 'safety',
+  // every plan and workout for pregnancy, 45 and over and the hold, on top of the older flows: more than the default 600 s
+  timeout: 900,
   about: 'no diet advice, food or drink lesson, water goal or weight target when pregnant, maybe under 18 or with a medical condition (onboarding, Edit, Me, Today, Plan, older saved data); every health question answered on purpose, in Edit too; pregnancy, PAR-Q, 60+ and sore-spot rules in every plan and in the sheet\'s other options; no fake social proof',
   async run(t) {
     await t.flow('food card', async () => {
@@ -499,6 +529,152 @@ module.exports = {
         if (spot === 'other') t.equal(a.jumps, [], 'jumps with an "Other" sore spot');
         await p.context().close();
       }
+    });
+
+    await t.flow('hold: chest pain, fainting or supervised only gets no plan until a doctor clears it', async () => {
+      // the training audit's fix 1 (ACSM 2015 screening, PAR-Q+ 2025): these three yeses need a doctor's OK before any
+      // training. No plan and no workout (Start on any workout opens Before you train), only the library and the science
+      for (const k of ['chest', 'dizzy', 'supervised']) {
+        const p = await t.page({ state: L.member({ goal: 'fat', days: 4, health: { [k]: true } }), threeD: false });
+        let txt = await app.text(p);
+        t.has(txt, 'See your doctor first', k + ' yes: the Plan');
+        t.lacks(txt, /Start day \d|Your 28 days|Short sessions|Quick start/i, k + ' yes: the Plan offers a workout');
+        t.has(txt, STOP, k + ' yes: the Plan\'s warning signs');
+        t.equal(await p.locator('[data-hold] [data-act="moves"], [data-hold] [data-act="science"]').count(), 2, k + ' yes: the library and the science');
+        await app.tap(p, '.tab[data-tab="today"]');
+        txt = await app.text(p);
+        t.has(txt, 'See your doctor first', k + ' yes: Today');
+        t.lacks(txt, 'Next in your plan', k + ' yes: Today');
+        // a catalogue workout, a short session, one of Frank's programs, a plan day: Start opens Before you train
+        for (const go of k === 'chest' ? [{ id: 'full-b' }, { id: 'mobility' }, { id: 'essentials' }, { day: 1 }] : [{ day: 1 }]) {
+          await p.evaluate((g) => WBF.app.go('workout', g), go);
+          await app.tap(p, '.dock [data-act="start"]');
+          await app.waitTitle(p, 'Before you train');
+        }
+        if (k === 'chest') await t.look(p, 'before you train, a chest pain yes');
+        t.equal((await app.stored(p)).sessions.length, 0, k + ' yes: workouts saved');
+        await p.context().close();
+      }
+      t.step('a doctor cleared it');
+      const p = await t.page({ state: L.member({ health: { dizzy: true } }), threeD: false });
+      await app.tap(p, '[data-hold] [data-act="hold-cleared"]');
+      t.has(await app.overlay(p), 'Has a doctor cleared you to train?', 'the question box');
+      await app.tap(p, '[data-act="modal-yes"]');
+      await app.waitTitle(p, 'Plan');
+      t.has(await app.text(p), /Start day 1/i, 'the Plan once a doctor cleared it');
+      t.equal((await app.stored(p)).profile.health.cleared, true, 'saved: cleared');
+      t.step("Frank's own sessions");
+      // Frank knows his client (.claude/skills/frank-safety/): his sessions still play
+      const f = await t.page({ state: L.member({ health: { chest: true } }, { inbox: [L.spec()] }), threeD: false });
+      await app.tap(f, '[data-act="start-coach"]');
+      await app.waitTitle(f, 'Workout');
+      // control: a heart yes keeps the plan gentle, with workouts, so the checks above mean something
+      const c = await t.page({ state: L.member({ health: { heart: true } }), threeD: false });
+      const ct = await app.text(c);
+      t.has(ct, /Start day 1/i, 'control: a heart yes (gentle mode)');
+      t.lacks(ct, 'See your doctor first', 'control: a heart yes (gentle mode)');
+    });
+
+    await t.flow('hold: the fast start with a chest pain yes ends on See your doctor first, not Day 1', async () => {
+      const p = await t.page({ threeD: false });
+      await app.tap(p, '[data-act="ob-start"]');
+      // the eight questions (FIRST in js/onboard-flow.js), the coach last: then the plan is built
+      for (let i = 0; i < 10; i++) {
+        await p.waitForFunction(() => !!document.querySelector('.ob-q'), null, { timeout: 10000 });
+        const q = await question(p);
+        if (/main goal/i.test(q)) await app.tap(p, '[data-act="ob-pick"][data-k="goal"][data-v="fit"]');
+        else if (/demonstrate/i.test(q)) { await app.tap(p, '[data-act="ob-pick"][data-k="sex"][data-v="f"]'); break; }
+        else if (/Before you/i.test(q)) { await app.tap(p, '[data-act="ob-health-none"]'); await app.tap(p, '[data-act="ob-health"][data-k="chest"][data-v="1"]'); t.has(await app.text(p), 'See your doctor before you train', 'the health step after a chest pain yes'); await next(p); }
+        else if (/sore spots/i.test(q)) { await app.tap(p, '[data-act="ob-none"]'); await next(p); }
+        else await next(p);
+        await settled(p, q);
+      }
+      await p.waitForSelector('[data-act="ob-finish"][data-then="plan"]', { timeout: 15000 });
+      const txt = await app.text(p);
+      t.has(txt, 'See your doctor first', 'Your first week after a chest pain yes');
+      t.equal(await p.locator('[data-act="ob-finish"][data-then="day"]').count(), 0, 'Your first week after a chest pain yes: Start Day 1');
+      t.lacks(txt, /Week 1: Foundation/i, 'Your first week after a chest pain yes: the week');
+      await t.look(p, 'your first week, a chest pain yes');
+      await app.tap(p, '[data-act="ob-finish"][data-then="plan"]');
+      await app.waitTitle(p, 'Plan');
+      t.has(await app.text(p), 'See your doctor first', 'the Plan after the fast start');
+      t.equal((await app.stored(p)).profile.health.chest, true, 'saved: the chest pain yes');
+    });
+
+    await t.flow('pregnancy: nothing lying on the back or under a table, in any plan or workout', async () => {
+      // the training audit's fix 2: the table row (lying under a table) slipped through. Read from each move's own setup,
+      // not from the app's POS list, so a move missing from that list fails here too
+      const p = await t.page({ state: L.member({ sex: 'f', health: { pregnant: true } }), threeD: false });
+      const EXI = await moveInfo(p), lying = (id) => /^Lie (on your back|under|face down)/i.test(EXI[id].setup);
+      t.check(lying('table-row') && lying('glute-bridge') && !lying('side-plank'), 'the setups say how each move starts (table row: under a table)');
+      const r = await everySession(p, [['pregnant', { health: { pregnant: true } }], ['control', {}]]);
+      const hits = [...new Set(r.pregnant.flatMap((s) => s.ex.filter(lying).map((id) => s.key.split(' ').pop() + ':' + id)))];
+      t.equal(hits, [], 'pregnant, every goal, days, level, kit and workout (' + r.pregnant.length + ' sessions): moves lying on the back, front or under a table');
+      // a safe stand-in, where the workout had a table row: another pull move (the wall slide or the one-arm dumbbell row)
+      const tableWorkouts = (await p.evaluate(() => WBF.WORKOUTS.filter((w) => w.moves.some((m) => (Array.isArray(m) ? m[0] : m) === 'table-row')).map((w) => w.id)));
+      const noPull = r.pregnant.filter((s) => tableWorkouts.includes(s.key.split(' ').pop()) && !s.pull).map((s) => s.key);
+      t.equal(noPull, [], 'pregnant: a workout that has the table row, with no pull move in its place');
+      // control: without pregnancy those moves do show, so the empty list above means something
+      t.check(r.control.some((s) => s.ex.includes('table-row')) && r.control.some((s) => s.ex.some(lying)), 'control: without pregnancy, the table row and moves on the back should show');
+      t.equal((await planAudit(p)).supine, [], 'the saved pregnant member\'s plan and workouts: lying on the back or front');
+    });
+
+    await t.flow('45 and over, not training most days: nothing vigorous, in every plan and workout', async () => {
+      // the training audit's fix 4 (PAR-Q+ 2025: over 45 and not used to vigorous effort, check with a professional first):
+      // no move of MET 7 or more (jumping jacks, high knees, mountain climbers, burpees, jump squats, skipping) until the
+      // fitness check says "I train most days"; the moves' own low-impact alternatives take their place
+      const p = await t.page({ state: L.member({ birthYear: Y - 56, active: 1, goal: 'fat', days: 4, level: 'b' }), threeD: false });
+      const EXI = await moveInfo(p), vig = (id) => EXI[id].met >= 7;
+      const r = await everySession(p, [['56, walks a little', { birthYear: Y - 56, active: 1 }], ['45, not asked yet', { birthYear: Y - 45, active: undefined }],
+        ['50, on my feet a lot', { birthYear: Y - 50, active: 2 }], ['56, trains most days', { birthYear: Y - 56, active: 3 }], ['44, sits most of the day', { birthYear: Y - 44, active: 0 }]]);
+      const vigIn = (label) => [...new Set(r[label].flatMap((s) => s.ex.filter(vig)))];
+      for (const label of ['56, walks a little', '45, not asked yet', '50, on my feet a lot']) t.equal(vigIn(label), [], label + ': vigorous moves in any plan or workout');
+      t.check(vigIn('56, trains most days').length > 0, 'control: 56 and training most days should get vigorous moves');
+      t.check(vigIn('44, sits most of the day').length > 0, 'control: 44 should get vigorous moves');
+      const a = await planAudit(p);
+      t.equal(a.vigorous, [], 'the saved member\'s plan and workouts: vigorous moves');
+      const cardio = await p.evaluate(() => WBF.app.session('cardio-b').steps.filter((s) => s.block === 'main').map((s) => s.ex));
+      t.check(cardio.includes('march') && cardio.length >= 4, () => 'Cardio, beginner: low-impact moves in place of the vigorous ones (' + cardio.join(', ') + ')');
+    });
+
+    await t.flow('warning signs on the workout screen and in the player', async () => {
+      // the training audit's fix 3: the signs were only on the science screen
+      const p = await t.page({ state: L.member({}, { inbox: [L.spec()] }), threeD: false });
+      await app.tap(p, '.plan-card [data-act="open-day"]');
+      t.has(await app.text(p), STOP, 'a plan day\'s workout screen');
+      t.lacks(await app.text(p), 'Pregnant: also stop', 'the workout screen, not pregnant');
+      await app.tap(p, '.dock [data-act="start"]');
+      await app.waitTitle(p, 'Workout');
+      t.has(await app.text(p), STOP, 'the player, getting ready');
+      await t.look(p, 'player, ready, with the warning signs');
+      const f = await t.page({ state: L.member({}, { inbox: [L.spec()] }), threeD: false });
+      await f.evaluate(() => WBF.app.go('workout', { coach: 'qa1' }));
+      t.has(await app.text(f), STOP, 'a session from Frank');
+      const g = await t.page({ state: L.member({ sex: 'f', health: { pregnant: true } }), threeD: false });
+      await g.evaluate(() => WBF.app.go('workout', { id: 'legs-b' }));
+      const gt = await app.text(g);
+      t.has(gt, STOP, 'the workout screen, pregnant');
+      t.has(gt, /Pregnant: also stop and call your midwife or doctor for bleeding, fluid leaking/i, 'the workout screen, pregnant');
+      await t.look(g, 'workout screen, pregnant, with the warning signs');
+    });
+
+    await t.flow("under 18: the WHO's 60 minutes a day, not the adults' 150 a week", async () => {
+      // the training audit's fix 6: WHO 2020 gives children and teens 60 minutes a day
+      for (const [label, st] of [['under 18', L.member({ birthYear: Y - 15 })], ['born 18 years ago', L.member({ birthYear: Y - 18 })],
+        ["the food card's Under 18 switch", L.member({}, { flags: { manual: { child: true } } })], ['no profile', null]]) {
+        const p = await t.page(st ? { state: st, threeD: false } : { threeD: false });
+        if (!st) await app.tap(p, '[data-act="browse"]');
+        await app.tap(p, '.tab[data-tab="today"]');
+        const txt = await app.text(p);
+        t.has(txt, /Moving minutes today\s*0 of 60/i, label + ': the moving-minutes card');
+        t.has(txt, 'at least 60 minutes a day', label + ': the moving-minutes card');
+        t.lacks(txt, /of 150|150 to 300 minutes/i, label + ': the moving-minutes card');
+        if (label === 'under 18') await t.look(p, 'today, under 18');
+        await p.context().close();
+      }
+      const c = await t.page({ state: L.member(), threeD: false });
+      await app.tap(c, '.tab[data-tab="today"]');
+      t.has(await app.text(c), /Moving minutes this week\s*0 of 150/i, 'control: an adult');
     });
 
     await t.flow('keep my progress: a plan that comes brings its health answers to a phone with a plan of its own', async () => {
