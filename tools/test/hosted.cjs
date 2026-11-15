@@ -69,11 +69,13 @@ async function offline(p, srv) {
 }
 // Offline, no clip and no still in its place: the coach. The app doesn't ask for them when the phone says it's offline,
 // and shows the coach when one doesn't load (Chromium's offline mode doesn't always reach navigator.onLine after a
-// reload, so here both happen).
+// reload, so here both happen). A clip whose load hangs instead of failing hands over when the browser says it stalled
+// (about 3 s with no data), so the wait is 15 s: on a busy machine 5 s was not always enough for the error or the stall
+// to reach the page (15 Nov 2026, media/squat.mp4 on the Plan). The check itself is the same: no clip left offline.
 async function coachOffline(t, p, label) {
   const broken = () => p.evaluate(() => [...document.querySelectorAll('[data-fig] video')].map((v) => v.getAttribute('src'))
     .concat([...document.querySelectorAll('[data-thumb] img')].filter((i) => i.complete && !i.naturalWidth).map((i) => i.getAttribute('src'))));
-  await until(p, () => !document.querySelector('[data-fig] video') && ![...document.querySelectorAll('[data-thumb] img')].some((i) => i.complete && !i.naturalWidth), null, 5000);
+  await until(p, () => !document.querySelector('[data-fig] video') && ![...document.querySelectorAll('[data-thumb] img')].some((i) => i.complete && !i.naturalWidth), null, 15000);
   t.equal(await broken(), [], label + ': clips or stills offline (the coach goes in their place)');
 }
 // From Plan: Workouts, one of Frank's programs and Frank, the screens with his photos (img/wellness-*.jpg)

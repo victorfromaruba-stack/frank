@@ -33,6 +33,17 @@
   function img(p) { return (W.WBF_IMG && W.WBF_IMG[p]) || p; }
   function $(sel, root) { return (root || document).querySelector(sel); }
   function $$(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+  // A search's count, said by a screen reader once typing pauses (the list changes under the field without a word
+  // otherwise). One polite line outside #app, which every screen draws over
+  var liveT = 0;
+  function found(n) {
+    clearTimeout(liveT);
+    liveT = setTimeout(function () {
+      var el = document.getElementById('sr-live');
+      if (!el) { el = document.createElement('p'); el.id = 'sr-live'; el.className = 'sr'; el.setAttribute('aria-live', 'polite'); document.body.appendChild(el); }
+      el.textContent = n ? n + (n === 1 ? ' result' : ' results') : 'No results';
+    }, 700);
+  }
   function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 
   var I = {
@@ -467,6 +478,8 @@
     if (!ex) return;
     var f, flip = el.hasAttribute('data-flip'), mode = el.getAttribute('data-mode') || 'demo';
     var m = media(ex.id), still = el.getAttribute('data-still');
+    // a clip already playing here stays (the coach coming in mounts the figures again: upgrade3d)
+    if (el._fig && el._fig.video && el.firstChild === el._fig.video) return;
     // the clip; offline, or when it doesn't load (the phone never had it, the one-file builds): the coach, as before
     if (m && m.video && mode === 'demo' && el.getAttribute('data-video') !== '0' && navigator.onLine !== false && !el._noVideo) {
       // a decorative clip stands still on its first frame with reduced motion, as the coach does, and in screenshots
@@ -474,14 +487,21 @@
       el.classList.add('is3d');
       el.innerHTML = '<video src="' + esc(m.video) + '"' + (m.poster ? ' poster="' + esc(m.poster) + '"' : '') + (calm ? ' preload="metadata"' : ' autoplay') + ' muted loop playsinline' + (flip ? ' style="transform:scaleX(-1)"' : '') + '></video>';
       var v = el.firstChild;
-      v.addEventListener('error', function () {
+      // the coach in its place: when the clip fails, and when it has no picture yet and won't get one soon: the load
+      // stalled (no data for about 3 s: a bad connection, or offline where the browser doesn't say so) or the phone
+      // just went offline. A clip that is showing stays.
+      var noClip = function () {
         if (el.firstChild !== v || !el.isConnected) return;
         el._noVideo = true; el.classList.remove('is3d'); el.innerHTML = '';
         var sheet = el.closest('.xs'), note = sheet && sheet.querySelector('.ai-note');
         if (note) note.remove();
         mountFig(el);
         if (el.parentNode) turnButtons(el.parentNode);
-      });
+      };
+      var noPicture = function () { if (v.readyState < 2) noClip(); };      // 2: HAVE_CURRENT_DATA, a frame to show
+      v.addEventListener('error', noClip);
+      v.addEventListener('stalled', noPicture);
+      v._offline = noPicture;
       el._fig = { video: v, pause: function () { this.video.pause(); }, play: function () { if (!calm) this.video.play(); }, still: function () {} };
       if (+el.getAttribute('data-speed')) v.defaultPlaybackRate = v.playbackRate = +el.getAttribute('data-speed');
       return;
@@ -1549,7 +1569,7 @@
         }).join('') + '</div><div class="chips" role="group" aria-label="Length">' + [['any', 'Any length'], ['s', 'Up to 10 min'], ['m', '10 to 20 min'], ['l', 'Over 20 min']].map(function (x) {
           return '<button class="chip" data-act="wf" data-k="dur" data-v="' + x[0] + '" aria-pressed="' + (dur === x[0]) + '">' + x[1] + '</button>';
         }).join('') + '</div></div>' +
-        '<section class="stack"><h2 class="h2">' + esc(WBF.BODY_BY_ID[body].name) + '</h2>' + (ids.length ? ids.map(workoutCard).join('') : '<p class="empty">Nothing matches. Try another length or level.</p>') + '</section>' +
+        '<section class="stack"><h2 class="h2">' + esc(WBF.BODY_BY_ID[body].name) + '</h2>' + (ids.length ? ids.map(workoutCard).join('') : '<p class="empty">Nothing matches. Try another length or level.</p><button class="btn two block" data-act="wf-reset">Show every level and length</button>') + '</section>' +
         '<section class="stack"><h2 class="h2">Frank\'s programs</h2><div class="rail">' + progs + '</div></section>' +
         '<button class="wo-card" data-act="moves">' + thumbHtml('hip-hinge') + '<span class="grow"><b>Exercise library</b><span>' + Object.keys(EX).length + ' moves with how-to, muscles and the why</span></span>' + ic('chev', 'chev') + '</button>' +
         '</div></div>';
@@ -1566,8 +1586,9 @@
         res.innerHTML = '<div class="stack">' + (ws.length ? '<h2 class="h2">Workouts</h2>' + ws.map(function (w) { return workoutCard(w.id); }).join('') : '') +
           (ms.length ? '<h2 class="h2">Moves</h2><div class="list">' + ms.map(function (id) {
             return '<button class="item" data-act="ex" data-id="' + id + '">' + thumbHtml(id) + '<span class="grow"><b>' + esc(EX[id].name) + '</b><span class="meta">' + esc(EX[id].area.map(function (x) { return WBF.AREAS[x]; }).join(' · ')) + '</span></span>' + ic('chev', 'chev') + '</button>';
-          }).join('') + '</div>' : '') + (!ws.length && !ms.length ? '<p class="empty">No workouts or moves match "' + esc(input.value) + '".</p>' : '') + '</div>';
+          }).join('') + '</div>' : '') + (!ws.length && !ms.length ? '<p class="empty">No workouts or moves match "' + esc(input.value) + '".</p><button class="btn two block" data-act="q-clear" data-for="wq">Clear the search</button>' : '') + '</div>';
         res.hidden = false; main.hidden = true;
+        found(ws.length + ms.length);
         mountFigures(res);
       });
     }
@@ -1598,8 +1619,9 @@
           var e = EX[id];
           return '<button class="item" data-act="ex-list" data-i="' + i + '">' + thumbHtml(id) + '<span class="grow"><b>' + esc(e.name) + '</b><span class="meta">' +
             esc(((e.mus || {}).p || []).map(function (m) { return MUS_NAME[m] || m; }).join(' · ')) + '</span></span>' + ic('chev', 'chev') + '</button>';
-        }).join('') : '<p class="empty">No moves match "' + esc(q) + '".</p>';
+        }).join('') : '<p class="empty">No moves match "' + esc(q) + '".</p>' + (q ? '<button class="btn two block" data-act="q-clear" data-for="q">Clear the search</button>' : '');
         list._ids = ids;
+        if (q) found(ids.length);
         mountFigures(list);
       }
       input.addEventListener('input', fill);
@@ -2639,6 +2661,15 @@
     body: function (el) { cur().params.body = el.getAttribute('data-v'); render(false); },
     'body-go': function (el) { tab('workouts', { body: el.getAttribute('data-v') }); },
     wf: function (el) { cur().params[el.getAttribute('data-k')] = el.getAttribute('data-v'); render(false); },
+    // an empty list's one way out: every level and length again, or the search emptied (the focus back in the field)
+    'wf-reset': function () { cur().params.lvl = 'all'; cur().params.dur = 'any'; render(false); },
+    'q-clear': function (el) {
+      var input = document.getElementById(el.getAttribute('data-for'));
+      if (!input) return;
+      input.value = '';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      try { input.focus(); } catch (e) { /* ignore */ }
+    },
     'coach-new': function () { cdraft = newCoachDraft(); go('coach-edit', {}); },
     'coach-edit': function (el) {
       var sp = specById(el.getAttribute('data-id'));
@@ -2932,8 +2963,12 @@
   function upgrade3d() {
     if (!WBF.fig3d || !WBF.fig3d.init()) return;
     setCoachFigure();
+    // a clip stays as it is (mountFig leaves it): swapping it would start it again from its first frame and ask for it again
     var swap = function (root) {
-      $$('[data-fig]', root).forEach(function (el) { if (el._fig && el._fig.pause) el._fig.pause(); el.textContent = ''; });
+      $$('[data-fig]', root).forEach(function (el) {
+        if (el._fig && el._fig.video && el.firstChild === el._fig.video) return;
+        if (el._fig && el._fig.pause) el._fig.pause(); el.textContent = '';
+      });
       mountFigures(root);
     };
     if (cur().name === 'player') paintPlayer();
@@ -2945,6 +2980,10 @@
     if (!overlay.hidden) swap(overlay);
   }
   W.addEventListener('wbf-three', upgrade3d);
+  // the phone went offline: a clip with no picture yet won't get one, so the coach takes its place now
+  W.addEventListener('offline', function () {
+    $$('[data-fig] video').forEach(function (v) { if (v._offline) v._offline(); });
+  });
 
   // ---- modules: a feature in its own file ------------------------------------------------------------------------------
   // A module is a js/<feature>.js, listed in index.html before app.js and in SHELL in sw.js. It queues its start:

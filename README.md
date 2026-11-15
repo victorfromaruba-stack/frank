@@ -102,7 +102,10 @@ Two kinds of users:
   his weekly hours there. A pending or confirmed request holds its time. The data lives in
   our Supabase project, in `frank_*` tables nobody reads directly
   (`supabase/migrations/20261024120000_frank_booking.sql`); requests are deleted 30 days
-  after the session date. `#book.session` opens it, for his Instagram bio.
+  after the session date. `#book.session` opens it, for his Instagram bio. With no times to offer, the screen shows
+  no form: before Frank starts (`opens` in `FRANK.session`, 1 January 2027) it says booking opens then, after it that
+  there are no open times, each with his Instagram. Each check's message sits under its own field, and what someone
+  typed comes back after a reload (this tab only, never in the saved data) until the request is sent.
 
 Everything a person enters stays in their own browser (localStorage). The one thing
 sent anywhere is a booking request (below), and only when the person sends it. A backup file or a move link carries it to another browser only when

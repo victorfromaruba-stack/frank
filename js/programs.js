@@ -27,8 +27,10 @@
       { title: 'Studying sports nutrition and biomechanics', note: 'Part of his NHA course.' },
       { title: 'Neuroscience', note: 'His own research interest.' }
     ],
-    // the in-person session (Frank's answers of 24 October 2026). gym: '' until he picks one
-    session: { hours: 2, assess: '35 to 45 minutes', price: '€39.99', regular: '€65', gym: '' },
+    // the in-person session (Frank's answers of 24 October 2026). gym: '' until he picks one. opens: the first day he
+    // takes sessions (Victor, 24 October: Frank starts in January, when his diploma comes). Before it, an empty calendar
+    // says booking opens then (js/booking.js); a time he sets earlier is still offered. Move it if his start moves
+    session: { hours: 2, assess: '35 to 45 minutes', price: '€39.99', regular: '€65', gym: '', opens: '2027-01-01' },
     tagline: 'Not only a trainer, but purposely an educator.',
     // Client codes: typing one on "Frank's clients" opens the whole app without the membership.
     // Only hashes live here, so the codes can't be read in this public repo. Add one with

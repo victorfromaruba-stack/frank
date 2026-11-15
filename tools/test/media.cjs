@@ -35,6 +35,8 @@ async function open(t, o = {}) {
     if (u.includes('qa-ai-' + BROKEN + '.')) return r.fulfill({ contentType: still ? 'image/jpeg' : 'video/webm', body: 'not a picture' });
     return r.fulfill({ contentType: still ? 'image/jpeg' : 'video/webm', body: still ? STILL : CLIP });
   });
+  // o.hang: that move's clip never answers, as on a bad connection (no error, no data). Added last, so it goes first
+  if (o.hang) await p.route('**/media/qa-ai-' + o.hang + '.mp4', () => { /* never answered */ });
   await p.goto(p.srv.home + 'index.html' + (o.hash ? '#' + o.hash : ''));
   await L.settle(p);
   return p;
@@ -207,6 +209,31 @@ module.exports = {
       t.equal(await coach(), [false, true, 0, false], 'offline: the coach, no tag, no note [video, coach, tags, note]');
       t.equal(asked, [], 'offline: no clip or still asked for');
       await p.context().setOffline(false);
+    });
+
+    await t.flow('a clip that never answers (a bad connection)', async () => {
+      // no error ever comes: the coach takes its place once the browser says the load stalled (about 3 s with no data),
+      // or at once when the phone goes offline; nothing stays an empty box
+      const inSheet = (p) => p.evaluate(() => [!!document.querySelector('#overlay #xs-media video'), !!document.querySelector('#overlay #xs-media canvas'),
+        !!document.querySelector('#overlay .ai-note')]);
+      const p = await open(t, { state: L.member(), hash: 'ex.squat', hang: 'squat' });
+      await p.waitForSelector('#overlay .xs h2');
+      const gone = await p.waitForFunction(() => !document.querySelector('#overlay #xs-media video'), null, { timeout: 15000 }).then(() => true, () => false);
+      t.check(gone, 'a clip with no data for 15 s is still on screen (no coach in its place after it stalled)');
+      await L.settle(p);
+      t.equal(await inSheet(p), [false, true, false], 'a stalled clip: the coach in its place, no note [video, coach, note]');
+      t.step('the phone goes offline');
+      // a fresh sheet, so its clip is seconds old (open() waits for the coach, and by then the first one may have stalled)
+      const q = await open(t, { state: L.member(), hang: 'squat' });
+      await q.evaluate(() => WBF.app.sheet('squat'));
+      await q.waitForSelector('#overlay #xs-media video');
+      await q.context().setOffline(true);                // the page hears 'offline', well before a stall (3 s)
+      const swapped = await q.waitForFunction(() => !document.querySelector('#overlay #xs-media video'), null, { timeout: 2000 }).then(() => true, () => false);
+      t.check(swapped, 'the phone went offline and the clip with no picture stayed (the coach should take its place at once)');
+      await L.settle(q);
+      t.equal(await inSheet(q), [false, true, false], 'offline with a clip that had no picture: the coach, no note [video, coach, note]');
+      await t.look(q, 'sheet: a clip that never answered, offline');
+      await q.context().setOffline(false);
     });
 
     await t.flow('reduced motion', async () => {

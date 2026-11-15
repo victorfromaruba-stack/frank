@@ -21,6 +21,30 @@ async function recordPhases(p) {
 }
 const phases = (p) => p.evaluate(() => window.__phases || []);
 const speed = (p, n) => p.evaluate((k) => window.__qa.speed(k), n);
+// The timers n times faster until the player shows `what`, then back to real time in the page, the moment it shows.
+// Setting the speed back from here takes a round trip, and on a busy machine a workout at 50 times runs through
+// several moves in one (15 Nov 2026: "quit > end and save" saved 4 of 22 moves where the test meant 1). A
+// MutationObserver's callback runs before the app's next tick, so no tick runs fast after the screen changed.
+//   over: a rest or Switch sides after a timed move, or a reps move's Done      rest: a rest
+//   move: the move named arg on screen                                         done-or-seg: Done, or a move ticked off
+const fastUntil = (p, n, what, arg, timeout = 30000) => p.evaluate(([n, what, arg, ms]) => new Promise((resolve, reject) => {
+  const restIs = (re) => re.test((document.querySelector('.pl-rest .label') || {}).textContent || '');
+  const done = () => !!document.querySelector('[data-act="pl-done"]');
+  const hit = {
+    over: () => restIs(/Rest|Switch/) || done(),
+    rest: () => restIs(/Rest/),
+    move: () => (document.querySelector('.pl-name h1') || {}).textContent === arg,
+    'done-or-seg': () => done() || document.querySelectorAll('.pl-segs i.on').length > 0
+  }[what];
+  if (!hit) { reject(new Error('fastUntil: no condition ' + what)); return; }
+  let ob = null, to = 0;
+  const end = (ok) => { window.__qa.speed(1); if (ob) ob.disconnect(); clearTimeout(to); if (ok) resolve(true); else reject(new Error('the player never showed "' + what + (arg ? ' ' + arg : '') + '" at ' + n + ' times speed')); };
+  if (hit()) { end(true); return; }
+  ob = new MutationObserver(() => { if (hit()) end(true); });
+  ob.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true });
+  to = setTimeout(() => end(false), ms);
+  window.__qa.speed(n);
+}), [n, what, arg || null, timeout]);
 const count = (p) => p.evaluate(() => { const c = document.getElementById('pl-count'); return c ? c.textContent.trim() : ''; });
 const clock = (p) => p.evaluate(() => { const c = document.getElementById('pl-clock'); return c ? c.textContent.trim() : ''; });
 const restLabel = (p) => p.evaluate(() => { const c = document.querySelector('.pl-rest .label'); return c ? c.textContent.trim() : ''; });
@@ -183,10 +207,10 @@ module.exports = {
     });
 
     await t.flow('quit', async () => {
-      const p = await t.page({ state: L.member(), speed: 50 });
+      // real time from the start: at 50 times the get-ready and a timed first move could end before a round trip set it back
+      const p = await t.page({ state: L.member(), speed: 1 });
       await app.tap(p, '[data-act="start-day"][data-day="1"]');
       await app.waitTitle(p, 'Workout');
-      await speed(p, 1);
       t.step('nothing done yet');
       await app.tap(p, '[data-act="quit"]');
       t.has(await app.overlay(p), 'Nothing is saved yet', 'quit box');
@@ -198,11 +222,9 @@ module.exports = {
       await app.tap(p, '[data-act="start-day"][data-day="1"]');
       await app.waitTitle(p, 'Workout');
       await app.tap(p, '[data-act="pl-skip"]');
-      await speed(p, 50);
-      await p.waitForFunction(() => /Rest|Switch/.test((document.querySelector('.pl-rest .label') || {}).textContent || '') ||
-        document.querySelector('[data-act="pl-done"]'), null, { timeout: 30000 });
+      await fastUntil(p, 50, 'over');                          // one move over (or a reps move waiting), and real time again
       if (await p.locator('[data-act="pl-done"]').count()) await app.tap(p, '[data-act="pl-done"]');
-      await speed(p, 1);
+      t.equal(await movesDone(p), 1, 'moves done before the phone\'s Back');
       await p.evaluate(() => history.back());
       await p.waitForTimeout(300);
       t.has(await app.overlay(p), 'End this workout?', 'phone Back during a workout');
@@ -268,9 +290,7 @@ module.exports = {
       t.equal(await pauseSays(p), 'Pause', 'the first move after Start on a paused get-ready (Start starts it)');
 
       t.step('locked during a rest');
-      await speed(p, 20);
-      await p.waitForFunction(() => /Rest/.test((document.querySelector('.pl-rest .label') || {}).textContent || ''), null, { timeout: 20000 });
-      await speed(p, 1);
+      await fastUntil(p, 20, 'rest', null, 20000);
       t.equal([await restLabel(p), await movesDone(p)], ['Rest', 1], 'before locking [step, moves done]');
       await locked(p, true);
       const before = [await restLabel(p), await count(p), await movesDone(p), await clock(p)];     // from here on, nothing may change
@@ -282,17 +302,12 @@ module.exports = {
       t.equal([await restLabel(p), await pauseSays(p)], ['Rest', 'Resume'], 'after unlocking [step, pause button]');
       await t.look(p, 'player rest paused after the phone was locked');
       await app.tap(p, '.pl-rest [data-act="pl-pause"]');
-      await speed(p, 20);
-      await p.waitForFunction((n) => (document.querySelector('.pl-name h1') || {}).textContent === n, N.ws, { timeout: 20000 })
-        .catch(() => t.fail('the rest did not go on to ' + N.ws + ' after Resume'));
-      await speed(p, 1);
+      await fastUntil(p, 20, 'move', N.ws, 20000).catch(() => t.fail('the rest did not go on to ' + N.ws + ' after Resume'));
 
       t.step('locked during a reps move: it runs on, then Done');
       // a reps move waits for Done and has no Resume: locked, nothing moves on and the voice stays quiet, but the clock
       // counts the set, and it still runs after unlocking
-      await speed(p, 20);
-      await p.waitForFunction(() => /Rest/.test((document.querySelector('.pl-rest .label') || {}).textContent || ''), null, { timeout: 20000 });
-      await speed(p, 1);
+      await fastUntil(p, 20, 'rest', null, 20000);
       await app.tap(p, '[data-act="pl-skip"]');
       t.equal(await moveName(p), N.sq, 'the reps move');
       const said1 = (await heard(p)).length;
@@ -325,11 +340,9 @@ module.exports = {
       await app.tap(p, '[data-act="start"]');
       await app.waitTitle(p, 'Workout');
       // the countdowns run 50 times faster: a move with reps waits for Done, a timed one ends by itself
-      await speed(p, 50);
-      await p.waitForFunction(() => document.querySelector('[data-act="pl-done"]') || document.querySelectorAll('.pl-segs i.on').length > 0);
+      await fastUntil(p, 50, 'done-or-seg');
       if (await p.locator('[data-act="pl-done"]').count()) await app.tap(p, '[data-act="pl-done"]');
       await p.waitForFunction(() => document.querySelectorAll('.pl-segs i.on').length > 0);
-      await speed(p, 1);
       await app.tap(p, '[data-act="quit"]');
       await app.tap(p, '[data-act="modal-yes"]');
       await app.waitTitle(p, 'Workout complete');

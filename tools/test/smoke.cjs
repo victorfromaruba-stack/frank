@@ -52,7 +52,15 @@ module.exports = {
       await p.fill('#wq', 'plank');
       await p.waitForTimeout(200);
       t.has(await p.locator('#wq-results').innerText(), 'Plank', 'search "plank"');
-      await p.fill('#wq', '');
+      // nothing found: one line why and one way out, and a screen reader hears the count
+      await p.fill('#wq', 'qqzz');
+      t.has(await p.locator('#wq-results').innerText(), 'No workouts or moves match "qqzz".', 'search with no match');
+      await p.waitForFunction(() => (document.getElementById('sr-live') || {}).textContent === 'No results', null, { timeout: 3000 })
+        .catch(() => t.fail('search with no match: the screen reader line did not say No results'));
+      await t.look(p, 'workouts: a search with no match');
+      await app.tap(p, '[data-act="q-clear"]');
+      t.equal(await p.evaluate(() => [document.getElementById('wq').value, document.activeElement.id, document.getElementById('wq-main').hidden]), ['', 'wq', false],
+        'Clear the search [field, focus, the body parts back]');
       await app.tap(p, '[data-act="moves"]');
       await app.waitTitle(p, 'Exercise library');
       t.check((await p.locator('#move-list [data-act="ex-list"]').count()) >= 60, 'exercise library lists fewer than 60 moves');
@@ -81,11 +89,8 @@ module.exports = {
       await t.look(p, 'player ready');
       await app.tap(p, '[data-act="pl-skip"]');
       await t.look(p, 'player move');
-      const moving = await p.evaluate(async () => {
-        const c = document.querySelector('.pl-fig canvas'); if (!c) return false;
-        const a = c.toDataURL(); await new Promise((r) => setTimeout(r, 700)); return a !== c.toDataURL();
-      });
-      t.check(moving, 'player: the 3D coach is not moving');
+      const still = await app.demoMoving(p);
+      t.check(!still, () => 'player: the 3D coach is not moving: ' + still);
       // other screens reachable from the tabs
       await app.tap(p, '[data-act="quit"]');
       await app.tap(p, '[data-act="modal-yes"]');

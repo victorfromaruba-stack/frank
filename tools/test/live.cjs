@@ -138,11 +138,8 @@ module.exports = {
       await app.waitTitle(p, 'Workout');
       await app.tap(p, '[data-act="pl-skip"]');
       await t.look(p, 'player on the site');
-      const moving = await p.evaluate(async () => {
-        const c = document.querySelector('.pl-fig canvas'); if (!c) return false;
-        const a = c.toDataURL(); await new Promise((r) => setTimeout(r, 700)); return a !== c.toDataURL();
-      });
-      t.check(moving, 'player: the 3D coach is not moving');
+      const still = await app.demoMoving(p);
+      t.check(!still, () => 'player: the 3D coach is not moving: ' + still);
     });
 
     await t.flow('session link', async () => {

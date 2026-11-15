@@ -3,8 +3,10 @@
    (Coach tools > Booking requests), confirms or declines, and sets his weekly hours there. #book.session opens it.
    The data is in Supabase, in frank_* tables nobody can read directly: supabase/migrations/20261024120000_frank_booking.sql.
    The app talks to Supabase only on these two screens. Nothing about a booking goes into wbf.v1 (a backup or a move
-   link would carry it): what someone types stays in memory, so an error or no connection loses nothing until the tab
-   closes. A module (.claude/skills/frank-module). */
+   link would carry it): what someone types stays in memory and in this tab's sessionStorage (a reload brings it back),
+   so an error, no connection or a reload loses nothing until the tab closes or the request is sent. With no times to
+   ask for (before Frank starts in January 2027, or a full week) the screen says so and shows no form. Each check's
+   message sits under its own field. A module (.claude/skills/frank-module). */
 (function (W) {
   'use strict';
   var WBF = W.WBF = W.WBF || {};
@@ -18,7 +20,27 @@
   (WBF.ext = WBF.ext || []).push(function booking(app) {
     var u = app.util, esc = u.esc, FR = WBF.FRANK;
     // the visitor: the times, the answers, the request sent. Frank: his session token (never saved) and what he sees
-    var V = { slots: null, loading: false, err: '', pick: '', name: '', contact: '', goal: '', ok: false, sending: false, msg: '', sent: null };
+    // bad: the message under each field that needs a fix (pick, name, contact, goal, ok); msg: what the calendar answered
+    var V = { slots: null, loading: false, err: '', pick: '', name: '', contact: '', goal: '', ok: false, sending: false, msg: '', bad: {}, sent: null };
+    // What someone typed survives a reload in this tab (Instagram's browser and iPhones reload a page that was in the
+    // background): sessionStorage, which this tab alone reads and which goes when the tab closes. Never wbf.v1, so no
+    // backup or move link carries it; gone the moment the request is sent
+    var DRAFT = 'wbf.booking.draft';
+    function saveDraft() {
+      try {
+        if (V.name || V.contact || V.goal) W.sessionStorage.setItem(DRAFT, JSON.stringify({ name: V.name, contact: V.contact, goal: V.goal }));
+        else W.sessionStorage.removeItem(DRAFT);
+      } catch (e) { /* storage blocked: it stays in memory, as before */ }
+    }
+    function dropDraft() { try { W.sessionStorage.removeItem(DRAFT); } catch (e) { /* blocked */ } }
+    try {
+      var d0 = JSON.parse(W.sessionStorage.getItem(DRAFT) || 'null');
+      if (d0 && typeof d0 === 'object') ['name', 'contact', 'goal'].forEach(function (k) { if (typeof d0[k] === 'string') V[k] = d0[k].slice(0, k === 'goal' ? 500 : 120); });
+    } catch (e) { /* nothing kept, or blocked */ }
+    // Frank starts in January 2027 (his diploma): until then an empty calendar means booking hasn't opened, not that
+    // he's full. FRANK.session.opens: the first day he may take sessions ('' once that has passed or no longer matters)
+    function beforeStart() { var o = FR.session.opens; return !!o && Date.now() < new Date(o + 'T00:00:00').getTime(); }
+    function opensMonth() { return new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric', timeZone: TZ }).format(new Date(FR.session.opens + 'T12:00:00')); }
     var F = { token: '', data: null, err: '', busy: false };
 
     var SAY = {
@@ -69,7 +91,7 @@
     // in the in-person card, in place of the Instagram button: booking first, Instagram second
     app.html('frank.book', function () {
       return '<button class="btn block" data-act="booking-open">' + u.ic('plan') + 'Book a session</button>' +
-        '<p class="meta">Free to book. No account needed.</p>' + igButton('Ask on Instagram');
+        '<p class="meta">Free to book. No account needed.' + (beforeStart() ? ' Frank starts in ' + esc(opensMonth()) + '.' : '') + '</p>' + igButton('Ask on Instagram');
     });
     app.html('coach.top', function () {
       return '<section class="card"><p class="label">Booking requests</p><p class="small">See who asked for a session, confirm it, and set your weekly times.</p>' +
@@ -102,38 +124,53 @@
         show('booking');
       });
     }
+    // under a field: what to fix, read out with the field (aria-describedby), in the colour that reads on the dark screen
+    function errHtml(k) { return V.bad[k] ? '<p class="field-err" id="bk-' + k + '-err">' + esc(V.bad[k]) + '</p>' : ''; }
+    function invalid(k) { return V.bad[k] ? ' aria-invalid="true" aria-describedby="bk-' + k + '-err"' : ''; }
     function slotsHtml() {
       if (V.err) return '<p class="warnbox" role="alert">' + esc(V.err) + '</p><button class="btn two block" data-act="booking-retry">Try again</button>';
-      if (!V.slots) return '<p class="meta" role="status">Looking up Frank\'s times…</p>';
-      if (!V.slots.length) return '<p class="small">No open times right now. Frank adds his times each week.</p>' + igButton('Ask Frank on Instagram');
+      // loading: where the times will be, the size of a row of them, so nothing jumps when they come
+      if (!V.slots) return '<div class="bk-wait" role="status"><span class="bk-ghost" aria-hidden="true"></span><span class="bk-ghost" aria-hidden="true"></span><span class="meta">Looking up Frank\'s times…</span></div>';
       var days = [], by = {};
       V.slots.forEach(function (t) { var d = day(t); if (!by[d]) { by[d] = []; days.push(d); } by[d].push(t); });
-      return days.map(function (d) {
-        return '<div class="stack tight"><p class="label dim">' + esc(d) + '</p><div class="chips wrap" role="group" aria-label="' + esc(d) + '">' +
+      return errHtml('pick') + days.map(function (d) {
+        return '<div class="stack tight"><p class="label dim">' + esc(d) + '</p><div class="chips wrap" role="group" aria-label="' + esc(d) + '"' + (V.bad.pick ? ' aria-describedby="bk-pick-err"' : '') + '>' +
           by[d].map(function (t) {
             return '<button class="chip" data-act="booking-slot" data-v="' + esc(t) + '" aria-pressed="' + (V.pick === t) + '">' + esc(span(t)) + '</button>';
           }).join('') + '</div></div>';
       }).join('');
+    }
+    // No times to ask for: no form to fill in that could never be sent. Before Frank starts (January 2027) booking hasn't
+    // opened; after it, his weeks are full or not set yet
+    function closedHtml() {
+      var se = FR.session, soon = beforeStart();
+      return '<div class="stack tight"><h1 class="h1">Book a session</h1>' +
+        '<p class="lead">' + se.hours + ' hours with Frank in ' + esc(FR.city) + ': ' + esc(se.assess) + ' of assessment, then training at your level. ' + esc(se.price) + '.</p></div>' +
+        '<section class="card bk-closed" aria-labelledby="bk-closed-h"><p class="label" id="bk-closed-h">' + (soon ? 'Booking opens in ' + esc(opensMonth()) : 'No open times') + '</p>' +
+        '<p class="small">' + (soon ? 'Frank starts taking sessions in ' + esc(opensMonth()) + '. His times show here as soon as he sets them.'
+          : 'No open times right now. Frank adds his times each week.') + '</p>' +
+        igButton('Ask Frank on Instagram') + '</section>';
     }
     function privacyHtml() {
       return '<section class="card quiet bk-privacy" aria-labelledby="bk-priv"><p class="label" id="bk-priv">How your details are kept</p>' +
         '<p class="small">Frank (Wellness by Frank, The Hague) keeps your first name, your phone or email, the time you picked and your goal. He uses them only to answer your request and arrange the session.</p>' +
         '<p class="small">They\'re stored with Supabase, on servers in the United States, and deleted 30 days after the session date. To stop spam, a scrambled code made from your internet address is kept for one hour.</p>' +
         '<p class="small">To see, correct or delete your details, message Frank on Instagram (@' + esc(FR.handle) + '). You can also complain to the Dutch data protection authority, the Autoriteit Persoonsgegevens.</p>' +
-        '<label class="bk-check"><input type="checkbox" id="bk-ok"' + (V.ok ? ' checked' : '') + '><span>I\'ve read how my details are kept.</span></label></section>';
+        '<label class="bk-check"><input type="checkbox" id="bk-ok"' + (V.ok ? ' checked' : '') + invalid('ok') + '><span>I\'ve read how my details are kept.</span></label>' + errHtml('ok') + '</section>';
     }
     function formHtml() {
       var se = FR.session;
+      if (V.slots && !V.slots.length && !V.err) return closedHtml();
       return '<div class="stack tight"><h1 class="h1">Book a session</h1>' +
         '<p class="lead">' + se.hours + ' hours with Frank in ' + esc(FR.city) + ': ' + esc(se.assess) + ' of assessment, then training at your level. ' + esc(se.price) + '.</p>' +
         '<p class="small">Booking is free: no account and no payment in the app.</p></div>' +
         '<section class="stack"><div class="stack tight"><p class="label">Pick a time</p><p class="meta">Times in The Hague. Each session is ' + se.hours + ' hours.</p></div>' + slotsHtml() + '</section>' +
         '<section class="stack"><p class="label">Your details</p>' +
-        '<div class="field"><label for="bk-name">First name</label><input class="input" id="bk-name" maxlength="60" autocomplete="given-name" value="' + esc(V.name) + '"></div>' +
-        '<div class="field"><label for="bk-contact">Phone or email</label><input class="input" id="bk-contact" maxlength="120" autocomplete="on" autocapitalize="off" spellcheck="false" placeholder="+31 6 12345678 or you@mail.com" value="' + esc(V.contact) + '">' +
-        '<p class="meta">Frank uses it to confirm your time.</p></div>' +
-        '<div class="field"><label for="bk-goal">Your goal (optional)</label><textarea class="input bk-goal" id="bk-goal" rows="3" maxlength="500" placeholder="What do you want to work on?">' + esc(V.goal) + '</textarea>' +
-        '<p class="meta">No medical details here, please. Tell Frank in person.</p></div></section>' +
+        '<div class="field"><label for="bk-name">First name</label><input class="input" id="bk-name" maxlength="60" autocomplete="given-name" enterkeyhint="next" value="' + esc(V.name) + '"' + invalid('name') + '>' + errHtml('name') + '</div>' +
+        '<div class="field"><label for="bk-contact">Phone or email</label><input class="input" id="bk-contact" maxlength="120" autocomplete="on" autocapitalize="off" spellcheck="false" enterkeyhint="next" placeholder="+31 6 12345678 or you@mail.com" value="' + esc(V.contact) + '"' + invalid('contact') + '>' +
+        errHtml('contact') + '<p class="meta">Frank uses it to confirm your time.</p></div>' +
+        '<div class="field"><label for="bk-goal">Your goal (optional)</label><textarea class="input bk-goal" id="bk-goal" rows="3" maxlength="500" placeholder="What do you want to work on?"' + invalid('goal') + '>' + esc(V.goal) + '</textarea>' +
+        errHtml('goal') + '<p class="meta">No medical details here, please. Tell Frank in person.</p></div></section>' +
         privacyHtml() +
         (V.msg ? '<p class="warnbox" role="alert" id="bk-msg">' + esc(V.msg) + '</p>' : '') +
         '<button class="btn block" data-act="booking-send"' + (V.sending ? ' disabled' : '') + '>' + (V.sending ? 'Sending…' : 'Send my request') + '</button>' +
@@ -151,26 +188,67 @@
     // keeps what was typed when the screen is drawn again, or left and opened again
     function keep() {
       var g = function (id) { var el = document.getElementById(id); return el ? el.value : null; };
-      if (g('bk-name') != null) { V.name = g('bk-name'); V.contact = g('bk-contact'); V.goal = g('bk-goal'); }
+      if (g('bk-name') != null) { V.name = g('bk-name'); V.contact = g('bk-contact'); V.goal = g('bk-goal'); saveDraft(); }
       var ok = document.getElementById('bk-ok'); if (ok) V.ok = ok.checked;
     }
-    // typing or ticking after a message: the message has done its job
-    function edited() { keep(); var m = document.getElementById('bk-msg'); if (m && !V.sending) { V.msg = ''; m.parentNode.removeChild(m); } }
+    // typing or ticking after a message: the message has done its job. A field's own message goes as it is fixed,
+    // without drawing the screen again (the keyboard stays up, the cursor where it was)
+    var FIELD = { 'bk-name': 'name', 'bk-contact': 'contact', 'bk-goal': 'goal', 'bk-ok': 'ok' };
+    function edited(e) {
+      keep();
+      var m = document.getElementById('bk-msg'); if (m && !V.sending) { V.msg = ''; m.parentNode.removeChild(m); }
+      var k = e && e.target && FIELD[e.target.id];
+      if (k && V.bad[k]) {
+        delete V.bad[k];
+        var er = document.getElementById('bk-' + k + '-err'); if (er) er.parentNode.removeChild(er);
+        e.target.removeAttribute('aria-invalid'); e.target.removeAttribute('aria-describedby');
+      }
+    }
     app.screen('booking', {
       title: function () { return V.sent ? 'Request sent' : 'Book a session'; },
       html: function () { return '<div class="screen bare">' + u.backBar(V.sent ? 'Request sent' : 'Book a session') + (V.sent ? sentHtml() : formHtml()) + '</div>'; },
       mount: function () {
         ['bk-name', 'bk-contact', 'bk-goal', 'bk-ok'].forEach(function (id) { var el = document.getElementById(id); if (el) el.addEventListener(id === 'bk-ok' ? 'change' : 'input', edited); });
+        // Enter on the phone's keyboard goes on to the next field, as its "next" key says, and never sends half a form
+        ['bk-name', 'bk-contact'].forEach(function (id, i) {
+          var el = document.getElementById(id);
+          if (el) el.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); focusOn(['bk-contact', 'bk-goal'][i]); } });
+        });
+        // a phone or email that can't work says so as the person leaves the field, not only at Send (an empty one waits
+        // for Send: someone just passing through isn't told off)
+        var ct = document.getElementById('bk-contact');
+        if (ct) ct.addEventListener('blur', function () {
+          var v = ct.value.trim();
+          if (!v || contactOk(v) || V.bad.contact) return;
+          V.bad.contact = SAY.contact;
+          var p = document.createElement('p');
+          p.className = 'field-err'; p.id = 'bk-contact-err'; p.textContent = SAY.contact;
+          ct.parentNode.insertBefore(p, ct.nextSibling);
+          ct.setAttribute('aria-invalid', 'true'); ct.setAttribute('aria-describedby', p.id);
+        });
         if (!V.sent && !V.slots && !V.err && !V.loading) loadSlots();
       }
     });
     app.action('booking-retry', function () { keep(); V.err = ''; V.slots = null; app.refresh(); loadSlots(); });
-    app.action('booking-slot', function (el) { keep(); V.pick = el.getAttribute('data-v'); V.msg = ''; app.refresh(); });
+    app.action('booking-slot', function (el) { keep(); V.pick = el.getAttribute('data-v'); V.msg = ''; delete V.bad.pick; app.refresh(); });
     app.action('booking-send', function () {
       keep();
       var name = V.name.trim(), contact = V.contact.trim(), goal = V.goal.trim();
-      var miss = !V.pick ? ['pick', null] : !name ? ['name', 'bk-name'] : !contactOk(contact) ? ['contact', 'bk-contact'] : goal.length > 500 ? ['goal', 'bk-goal'] : !V.ok ? ['privacy', 'bk-ok'] : null;
-      if (miss) { V.msg = SAY[miss[0]]; app.refresh(); focusOn(miss[1]); return; }
+      // every check at once, each message under its own field, and the focus on the first one to fix
+      var bad = {};
+      if (!V.pick) bad.pick = SAY.pick;
+      if (!name) bad.name = SAY.name;
+      if (!contactOk(contact)) bad.contact = SAY.contact;
+      if (goal.length > 500) bad.goal = SAY.goal;
+      if (!V.ok) bad.ok = SAY.privacy;
+      V.bad = bad;
+      var first = ['pick', 'name', 'contact', 'goal', 'ok'].filter(function (k) { return bad[k]; })[0];
+      if (first) {
+        V.msg = ''; app.refresh();
+        if (first === 'pick') { var c = document.querySelector('[data-act="booking-slot"]'); if (c) c.focus(); var pe = document.getElementById('bk-pick-err'); if (pe && pe.scrollIntoView) pe.scrollIntoView({ block: 'center' }); }
+        else focusOn({ name: 'bk-name', contact: 'bk-contact', goal: 'bk-goal', ok: 'bk-ok' }[first]);
+        return;
+      }
       V.sending = true; V.msg = ''; app.refresh();
       var at = V.pick;
       call('frank_request', { p_start: at, p_name: name, p_contact: contact, p_goal: goal, p_privacy: true }).then(function (r) {
@@ -178,13 +256,16 @@
         if (r && r.ok) {
           V.sent = { at: at, contact: contact, tell: 'Hi Frank, I asked for a session in your app: ' + day(at) + ' at ' + time(at) + '. I\'m ' + name + '.' };
           // sent: nothing of it stays in the form
-          V.pick = ''; V.name = ''; V.contact = ''; V.goal = ''; V.ok = false; V.slots = null;
+          V.pick = ''; V.name = ''; V.contact = ''; V.goal = ''; V.ok = false; V.slots = null; V.bad = {};
+          dropDraft();
           if (app.cur().name === 'booking') { app.refresh(); W.scrollTo(0, 0); focusHeading(); }
           return;
         }
         var err = r && SAY[r.error] ? r.error : 'net';
+        // the calendar's own checks: the message under the field it is about; the rest above Send
+        var at2 = { slot: 'pick', name: 'name', contact: 'contact', goal: 'goal', privacy: 'ok' }[err];
         if (err === 'slot') { V.pick = ''; V.slots = null; loadSlots(); }
-        V.msg = SAY[err];
+        if (at2) { V.bad[at2] = SAY[err]; V.msg = ''; } else V.msg = SAY[err];
         show('booking');
       }).catch(function () {
         V.sending = false;
@@ -253,7 +334,9 @@
         (list.length ? '<div class="list">' + list.map(row).join('') + '</div>' : '<p class="empty">' + esc(none) + '</p>') + '</section>';
     }
     function hoursHtml(h) {
+      var none = !Object.keys(h || {}).some(function (k) { return Array.isArray(h[k]) && h[k][0] && h[k][1]; });
       return '<section class="card"><p class="label">Your weekly times</p>' +
+        (none ? '<p class="warnbox" id="bkf-closed">Booking is closed: no times are set. Visitors see that booking hasn\'t opened, and can only ask you on Instagram, until you save your times.</p>' : '') +
         '<p class="small">People can ask for any 2-hour slot inside these times, from 12 hours to 4 weeks ahead. 09:00 to 15:00 gives 09:00, 11:00 and 13:00. Leave a day empty when you\'re not free.</p>' +
         DAYS.map(function (n, i) {
           var w = Array.isArray(h[i + 1]) ? h[i + 1] : ['', ''];
@@ -284,8 +367,9 @@
     }
     function pinHtml() {
       return '<div class="stack tight"><h1 class="h1">Booking requests</h1><p class="lead">Type your PIN to see who asked for a session and to set your times.</p></div>' +
-        '<div class="stack"><label for="bkf-pin" class="sr">PIN</label><input class="input" id="bkf-pin" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="PIN">' +
-        (F.err ? '<p class="warnbox" role="alert">' + esc(F.err) + '</p>' : '') +
+        '<div class="stack"><label for="bkf-pin" class="sr">PIN</label><input class="input" id="bkf-pin" type="password" inputmode="numeric" maxlength="6" autocomplete="off" enterkeyhint="go" placeholder="PIN"' +
+        (F.err ? ' aria-invalid="true" aria-describedby="bkf-pin-err"' : '') + '>' +
+        (F.err ? '<p class="warnbox" role="alert" id="bkf-pin-err">' + esc(F.err) + '</p>' : '') +
         '<button class="btn block" data-act="booking-pin"' + (F.busy ? ' disabled' : '') + '>' + (F.busy ? 'Opening…' : 'Open') + '</button></div>';
     }
     app.screen('booking-frank', {
@@ -342,8 +426,23 @@
       var d = el.getAttribute('data-d');
       ['bkf-from-', 'bkf-to-'].forEach(function (k) { var inp = document.getElementById(k + d); if (inp) inp.value = ''; });
     });
+    // a day's times that don't work: the message under that day, its two fields marked, the focus on the first. Nothing
+    // is drawn again, so every time Frank typed stays as it is
+    function hoursErr(d, msg) {
+      $all('.bk-day .field-err').forEach(function (e) { e.parentNode.removeChild(e); });
+      $all('.bk-day .input[aria-invalid]').forEach(function (e) { e.removeAttribute('aria-invalid'); e.removeAttribute('aria-describedby'); });
+      if (!d) return;
+      var from = document.getElementById('bkf-from-' + d), to = document.getElementById('bkf-to-' + d);
+      if (!from || !to) { app.toast(msg); return; }
+      var p = document.createElement('p');
+      p.className = 'field-err'; p.id = 'bkf-err-' + d; p.setAttribute('role', 'alert'); p.textContent = msg;
+      from.parentNode.appendChild(p);
+      [from, to].forEach(function (e) { e.setAttribute('aria-invalid', 'true'); e.setAttribute('aria-describedby', p.id); });
+      focusOn(from.value && to.value ? 'bkf-to-' + d : !from.value ? 'bkf-from-' + d : 'bkf-to-' + d);
+    }
+    function $all(sel) { return Array.prototype.slice.call(document.querySelectorAll(sel)); }
     app.action('booking-hours', function () {
-      var hours = {}, bad = '';
+      var hours = {}, bad = '', badDay = 0;
       DAYS.forEach(function (n, i) {
         var a = (document.getElementById('bkf-from-' + (i + 1)) || {}).value || '', b = (document.getElementById('bkf-to-' + (i + 1)) || {}).value || '';
         a = a.slice(0, 5); b = b.slice(0, 5);
@@ -352,8 +451,10 @@
         else if (a >= b) bad = n + ': the end comes after the start.';
         else if ((+b.slice(0, 2) * 60 + +b.slice(3)) - (+a.slice(0, 2) * 60 + +a.slice(3)) < 120) bad = n + ': at least 2 hours, for one session.';
         else hours[i + 1] = [a, b];
+        if (bad) badDay = i + 1;
       });
-      if (bad) { app.toast(bad); return; }
+      hoursErr(badDay, bad);
+      if (bad) return;
       frankCall('frank_set_hours', { p_hours: hours }).then(function (r) {
         if (!r || !r.ok) { app.toast('Those times didn\'t save. Check them and try again.'); return; }
         F.data.hours = r.hours;

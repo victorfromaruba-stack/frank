@@ -670,6 +670,34 @@ const app = {
   // the muscle maps (Focus area, the onboarding's focus step) inside root: true for each one drawn and showing
   maps: (page, root = '#app') => page.evaluate((r) => [...document.querySelectorAll(r + ' img[data-map]')]
     .map((i) => !i.hidden && !!i.getAttribute('src') && i.getBoundingClientRect().width > 0), root),
+  // Whether the demo in `sel` moves: the 3D coach's pixels change, or a clip's time goes on. '' when it does, else what
+  // was there. It looks again every 400 ms for up to `timeout`: a clip the browser can't play (the test Chromium has no
+  // H.264) hands over to the coach only once it has failed, and a busy machine with software WebGL draws a frame every
+  // few hundred ms, so one look 700 ms after the tap (as before 15 Nov 2026) failed on a demo that was moving.
+  demoMoving: (page, sel = '.pl-fig', timeout = 15000) => page.evaluate(async ([s, ms]) => {
+    const wait = (n) => new Promise((r) => setTimeout(r, n));
+    const pixels = (c) => {
+      try {
+        const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+        let h = 0; for (let i = 0; i < d.length; i += 4 * 53) h = (h * 31 + d[i] + d[i + 1] * 3 + d[i + 2] * 7 + d[i + 3]) | 0;
+        return h;
+      } catch (e) { return null; }
+    };
+    let seen = 'nothing in ' + s;
+    for (const end = Date.now() + ms; Date.now() < end;) {
+      const host = document.querySelector(s), c = host && host.querySelector('canvas'), v = host && host.querySelector('video');
+      if (c) {
+        const a = pixels(c); await wait(400);
+        if (c.isConnected && pixels(c) !== a) return '';
+        seen = 'the 3D coach stood still';
+      } else if (v) {
+        const a = v.currentTime; await wait(400);
+        if (v.isConnected && !v.paused && v.currentTime !== a) return '';
+        seen = 'a clip that did not play (' + v.getAttribute('src') + ', readyState ' + v.readyState + ')';
+      } else await wait(400);
+    }
+    return seen + ' for ' + Math.round(ms / 1000) + ' s';
+  }, [sel, timeout]),
   // a slow phone: the 3D coach stays out until the returned function lets it in (and waits for it). Call it on a page
   // opened with go: false, before it goes anywhere; then the screens draw first without the coach
   async holdCoach(page) {

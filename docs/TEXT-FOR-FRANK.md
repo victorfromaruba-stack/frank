@@ -225,7 +225,9 @@ requests, below); the time zone is always The Hague's, whatever the phone's own.
 | The times: the label (shown in capitals) and the line under it | Pick a time / Times in The Hague. Each session is 2 hours. | New |
 | While the times load | Looking up Frank's times… | New |
 | Each day (shown in capitals), then a button for each time | Sat 31 Oct / 10:00 to 12:00 | New |
-| When there are no open times, with a button to your Instagram chat | No open times right now. Frank adds his times each week. / Button: Ask Frank on Instagram | New |
+| Until you start (1 January 2027), when there are no times: a card in place of the form (no fields to fill in that could never be sent), its label shown in capitals, with a button to your Instagram chat | Booking opens in January 2027 / Frank starts taking sessions in January 2027. His times show here as soon as he sets them. / Button: Ask Frank on Instagram | New (15 Nov) |
+| After you start, when there are no open times: the same card | No open times / No open times right now. Frank adds his times each week. / Button: Ask Frank on Instagram | No open times right now. Frank adds his times each week. (under the times, with the form below) |
+| The Frank tab, the line under Book a session, until you start | Free to book. No account needed. Frank starts in January 2027. | Free to book. No account needed. |
 | When the times can't load (no connection), with a button | Frank's times didn't load. Check your connection and try again. / Button: Try again | New |
 | The details: the label (shown in capitals) and the three fields' names (shown in capitals) | Your details / First name / Phone or email / Your goal (optional) | New |
 | The hints inside the fields | +31 6 12345678 or you@mail.com / What do you want to work on? | New |
@@ -238,8 +240,9 @@ requests, below); the time zone is always The Hague's, whatever the phone's own.
 | The tick box under the notice: no request goes out without it | I've read how my details are kept. | New |
 | The button, and while it sends | Send my request / Sending… | New |
 | The line under the button | Frank confirms by message. Until then, the time is held for you. | New |
-| A box above the button when something is missing, one at a time | Pick a time first. / Add your first name. / Add a phone number or an email address. / Your goal is too long. Keep it to 500 characters. / Tick that you've read how your details are kept. | New |
-| The same box when the request didn't go through. Everything typed stays | That time was just taken. Pick another one. / Too many requests from this connection. Try again in an hour, or ask Frank on Instagram. / You're offline. Your answers are still here. Send when you're back online. / Not sent: Frank's calendar didn't answer. Your answers are still here. Try again. | New |
+| Under each field that needs a fix, all at once (15 Nov: they were one at a time, in a box above the button). The same words | Pick a time first. (over the times) / Add your first name. / Add a phone number or an email address. / Your goal is too long. Keep it to 500 characters. / Tick that you've read how your details are kept. (under the tick box) | New |
+| Over the times when someone else took the time first | That time was just taken. Pick another one. | New (it was in the box above the button) |
+| A box above the button when the request didn't go through. Everything typed stays | Too many requests from this connection. Try again in an hour, or ask Frank on Instagram. / You're offline. Your answers are still here. Send when you're back online. / Not sent: Frank's calendar didn't answer. Your answers are still here. Try again. | New |
 
 ## Request sent (new: after Send my request)
 
@@ -293,7 +296,8 @@ Victor has your PIN. Five wrong tries lock the screen for 15 minutes. It signs y
 | Your weekly times: the label (shown in capitals) and the line under it | Your weekly times / People can ask for any 2-hour slot inside these times, from 12 hours to 4 weeks ahead. 09:00 to 15:00 gives 09:00, 11:00 and 13:00. Leave a day empty when you're not free. | New |
 | A row for each day: its name, from, to, and a button that empties both (a screen reader says the day, then "from", "to", "not free") | Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday / to / Clear / Monday, from / Monday, to / Monday: not free | New |
 | The button under the days, and its toasts | Save times / Times saved / Those times didn't save. Check them and try again. | New |
-| Toasts when a day's times don't work | Saturday needs a start and an end, or neither. / Saturday: the end comes after the start. / Saturday: at least 2 hours, for one session. | New |
+| Under the day whose times don't work (15 Nov: they were toasts that faded). The same words | Saturday needs a start and an end, or neither. / Saturday: the end comes after the start. / Saturday: at least 2 hours, for one session. | New |
+| A yellow box under Your weekly times while no day has times | Booking is closed: no times are set. Visitors see that booking hasn't opened, and can only ask you on Instagram, until you save your times. | New (15 Nov) |
 | A card to change the PIN: label (shown in capitals), the field's hint, the button, its toasts | Change PIN / New PIN, 6 digits / Change PIN / A PIN has 6 digits. / PIN changed. Other phones are signed out. / That PIN didn't save. | New |
 | A small link at the bottom | Lock this screen | New |
 
@@ -304,6 +308,9 @@ Victor has your PIN. Five wrong tries lock the screen for 15 minutes. It signs y
 | A toast, the first time in a visit that the phone can't save (storage full, or blocked in private browsing) | This phone isn't saving your progress. Storage is full or blocked. | New. Before, nothing was said and "Saved" still showed |
 | Plan, Today and Me: a bar at the top after a new version of the app has arrived in the background (never in a workout or the onboarding) | New version ready | New |
 | The same bar, its button: it reloads the app to show the new version (shown in capitals: UPDATE) | Update | New |
+| Workouts and the exercise library: a button under "No workouts or moves match …" / "No moves match …" (15 Nov) | Clear the search | New |
+| Workouts: a button under "Nothing matches. Try another length or level." (15 Nov) | Show every level and length | New |
+| Never on screen: what a screen reader says once someone stops typing in a search (15 Nov) | 3 results / 1 result / No results | New |
 | A question box after a move link is opened, a backup file is picked or a link is pasted, before anything changes | Bring your plan here? / Buttons: Cancel, Bring it here | New |
 | The same box, the line under the question: what came. The plan's name and the numbers come from it | 28-day fat burner · 14 workouts · last on 2 Oct (more when it has them: · 2 sessions from Frank · 1 saved session, on Frank's own phone; with none: No workouts yet) | New |
 | The same box, added when this phone has data of its own | It's added to what's on this phone, and this phone keeps its own plan. / It's added to what's on this phone. (when this phone has no plan) | New |

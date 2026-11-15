@@ -56,6 +56,7 @@ module.exports = {
       await app.tap(p, '.tab[data-tab="frank"]');
       const card = await p.locator('section.card', { hasText: 'Train with Frank in person' }).innerText();
       t.has(card, 'Free to book. No account needed.', 'the in-person card');
+      t.has(card, 'Frank starts in January 2027.', 'the in-person card before Frank starts');
       t.equal(await p.locator('[data-act="booking-open"]').count(), 1, 'Book a session in the in-person card');
       t.equal(db.calls.length, 0, 'calls to Supabase before Book a session');
       await t.look(p, 'frank tab with Book a session');
@@ -67,24 +68,36 @@ module.exports = {
         'Supabase, on servers in the United States', 'deleted 30 days after the session date', 'kept for one hour', 'Autoriteit Persoonsgegevens', '@wellnessbyfrank']) t.has(txt, want, 'the booking screen');
       t.equal(await offered(p), SLOTS, 'the times offered');
       // the checks, in order, before anything is sent
+      // each field's message under that field, read out with it (aria-describedby), all at once; the focus on the first
+      const errs = () => p.evaluate(() => ['pick', 'name', 'contact', 'ok'].map((k) => {
+        const e = document.getElementById('bk-' + k + '-err'), f = k === 'pick' ? document.querySelector('[data-act="booking-slot"]').closest('[role="group"]') : document.getElementById('bk-' + k);
+        return k + ': ' + (e ? e.textContent : '-') + (e && f && (f.getAttribute('aria-describedby') || '') === e.id ? ' (on the field)' : '');
+      }));
       await app.tap(p, '[data-act="booking-send"]');
-      t.has(await app.text(p), 'Pick a time first.', 'sent with nothing');
+      t.equal(await errs(p), ['pick: Pick a time first. (on the field)', 'name: Add your first name. (on the field)', 'contact: Add a phone number or an email address. (on the field)',
+        'ok: Tick that you\'ve read how your details are kept. (on the field)'], 'sent with nothing: a message under each field');
+      t.equal(await p.evaluate(() => document.activeElement.getAttribute('data-act')), 'booking-slot', 'the focus after sending with nothing (the first time)');
+      await t.look(p, 'booking: every field to fix', { shot: true, full: true });
       await app.tap(p, '[data-act="booking-slot"][data-v="' + SLOTS[1] + '"]');
       t.equal(await p.locator('[data-act="booking-slot"][data-v="' + SLOTS[1] + '"]').getAttribute('aria-pressed'), 'true', 'the picked time');
       t.lacks(await app.text(p), 'Pick a time first.', 'the message after a time is picked');
       await app.tap(p, '[data-act="booking-send"]');
       t.has(await app.text(p), 'Add your first name.', 'sent without a name');
+      t.equal(await p.evaluate(() => document.activeElement.id), 'bk-name', 'the focus after sending without a name');
       await p.fill('#bk-name', 'Sam');
+      t.equal([await p.locator('#bk-name-err').count(), await p.getAttribute('#bk-name', 'aria-invalid'), await p.evaluate(() => document.activeElement.id)], [0, null, 'bk-name'],
+        'typing a name [its message, aria-invalid, the focus still in the field]');
       await p.fill('#bk-contact', 'not a contact');
       await app.tap(p, '[data-act="booking-send"]');
       t.has(await app.text(p), 'Add a phone number or an email address.', 'sent with a wrong contact');
+      t.equal(await p.inputValue('#bk-contact'), 'not a contact', 'what was typed stays after a check');
       await p.fill('#bk-contact', 'sam@example.com');
       await p.fill('#bk-goal', 'Stronger back');
       await app.tap(p, '[data-act="booking-send"]');
       t.has(await app.text(p), 'Tick that you\'ve read how your details are kept.', 'sent without the privacy tick');
       t.equal(db.calls.filter((c) => c[0] === 'frank_request').length, 0, 'requests sent before every check passed');
       await p.check('#bk-ok');
-      t.equal(await p.locator('#bk-msg').count(), 0, 'the message after the tick');
+      t.equal([await p.locator('#bk-msg').count(), await p.locator('#bk-ok-err').count()], [0, 0], 'the messages after the tick');
       await t.look(p, 'booking form filled in', { shot: true, full: true });
       await app.tap(p, '[data-act="booking-send"]');
       await app.waitTitle(p, 'Request sent');
@@ -144,12 +157,58 @@ module.exports = {
     });
 
     await t.flow('booking: no times yet', async () => {
+      // before Frank starts (January 2027): booking hasn't opened, and there is no form that could never be sent
       const p = await t.page({ state: L.state(), allow: SB });
       await fake(p, { slots: [] });
       await p.evaluate(() => WBF.app.go('booking', {}));
-      await app.waitText(p, 'No open times right now. Frank adds his times each week.');
+      await app.waitText(p, 'Frank starts taking sessions in January 2027. His times show here as soon as he sets them.');
+      t.has(await app.text(p), /booking opens in january 2027/i, 'no times before Frank starts: the card\'s label');
+      t.lacks(await app.text(p), 'Frank adds his times each week', 'no times before Frank starts');
+      t.equal([await p.locator('#bk-name').count(), await p.locator('[data-act="booking-send"]').count(), await p.locator('#bk-ok').count()], [0, 0, 0],
+        'no times: no form [name, Send, privacy tick]');
       t.equal(await p.locator('.screen a[href="https://ig.me/m/wellnessbyfrank"]').count(), 1, 'Ask Frank on Instagram with no times');
-      await t.look(p, 'booking with no times');
+      await t.look(p, 'booking before Frank starts');
+      // after his start, an empty calendar is a full or unset week
+      const q = await t.page({ state: L.state(), allow: SB, now: Date.parse('2027-02-03T09:00:00+01:00') });
+      await fake(q, { slots: [] });
+      await q.evaluate(() => WBF.app.go('booking', {}));
+      await app.waitText(q, 'No open times right now. Frank adds his times each week.');
+      t.lacks(await app.text(q), /booking opens in/i, 'no times after Frank started');
+      t.equal(await q.locator('#bk-name').count(), 0, 'no times after Frank started: no form');
+      await t.look(q, 'booking with no times');
+      await q.evaluate(() => WBF.app.tab('frank'));
+      t.lacks(await q.locator('section.card', { hasText: 'Train with Frank in person' }).innerText(), 'Frank starts in', 'the in-person card after Frank started');
+    });
+
+    await t.flow('booking: what is typed survives a reload, and goes once sent', async () => {
+      // Instagram's browser and iPhones reload a page left in the background: the answers come back (this tab only,
+      // never in wbf.v1), and once the request is sent nothing of them stays
+      const p = await t.page({ state: L.state(), allow: SB });
+      const db = await fake(p);
+      await p.evaluate(() => WBF.app.go('booking', {}));
+      await p.waitForSelector('[data-act="booking-slot"]');
+      await p.fill('#bk-name', 'Noor');
+      await p.fill('#bk-contact', '+31 6 2222 3333');
+      await p.fill('#bk-goal', 'Less back pain at work');
+      await p.reload(); await L.settle(p);
+      await p.evaluate(() => WBF.app.go('booking', {}));
+      await p.waitForSelector('[data-act="booking-slot"]');
+      t.equal([await p.inputValue('#bk-name'), await p.inputValue('#bk-contact'), await p.inputValue('#bk-goal')], ['Noor', '+31 6 2222 3333', 'Less back pain at work'], 'after a reload [name, contact, goal]');
+      t.check(!/Noor|2222 3333/.test(JSON.stringify(await app.stored(p))), 'the answers went into wbf.v1 (a backup or move link would carry them)');
+      // Enter on the name goes on to the next field and sends nothing
+      await p.focus('#bk-name');
+      await p.keyboard.press('Enter');
+      t.equal(await p.evaluate(() => document.activeElement.id), 'bk-contact', 'Enter on the name');
+      await app.tap(p, '[data-act="booking-slot"]');
+      await p.check('#bk-ok');
+      await app.tap(p, '[data-act="booking-send"]');
+      await app.waitTitle(p, 'Request sent');
+      t.equal(db.calls.filter((c) => c[0] === 'frank_request').length, 1, 'requests sent');
+      t.equal(await p.evaluate(() => sessionStorage.getItem('wbf.booking.draft')), null, 'the answers kept for a reload, after sending');
+      await p.reload(); await L.settle(p);
+      await p.evaluate(() => WBF.app.go('booking', {}));
+      await p.waitForSelector('[data-act="booking-slot"]');
+      t.equal(await p.inputValue('#bk-name'), '', 'the name field after sending and a reload');
     });
 
     await t.flow("booking: Frank's screen behind his PIN", async () => {
@@ -186,16 +245,25 @@ module.exports = {
       await p.waitForFunction(() => !/Tom/.test(document.querySelector('#app').innerText));
       t.equal(db.bookings.map((x) => x.id), ['b1'], 'requests after Tom was declined and deleted');
       // his weekly times: Saturday 10:00 to 14:00; a day with one time only, or under 2 hours, is refused
+      // no times yet: his screen says booking is closed until he saves some
+      t.equal(await p.locator('#bkf-closed').count(), 1, 'Frank\'s screen with no weekly times: booking is closed');
+      // the message under the day that doesn't work, its fields marked, what he typed kept
+      const dayErr = () => p.evaluate(() => { const e = document.getElementById('bkf-err-6');
+        return [e ? e.textContent : '', document.getElementById('bkf-from-6').getAttribute('aria-invalid'), document.getElementById('bkf-from-6').value]; });
       await p.fill('#bkf-from-6', '10:00');
       await app.tap(p, '[data-act="booking-hours"]');
-      t.has(await app.toast(p), 'Saturday needs a start and an end, or neither.', 'one time only');
+      t.equal(await dayErr(), ['Saturday needs a start and an end, or neither.', 'true', '10:00'], 'one time only [message under Saturday, marked, kept]');
+      t.equal(await p.evaluate(() => document.activeElement.id), 'bkf-to-6', 'the focus on the empty time');
       await p.fill('#bkf-to-6', '11:00');
       await app.tap(p, '[data-act="booking-hours"]');
-      t.has(await app.toast(p), 'Saturday: at least 2 hours, for one session.', 'under 2 hours');
+      t.equal((await dayErr())[0], 'Saturday: at least 2 hours, for one session.', 'under 2 hours');
+      t.equal(await p.locator('.bk-day .field-err').count(), 1, 'messages under the days (one at a time)');
+      await t.look(p, 'booking requests: a day to fix');
       await p.fill('#bkf-to-6', '14:00');
       await app.tap(p, '[data-act="booking-hours"]');
       await app.waitText(p, 'Times saved');
       t.equal(db.hours, { 6: ['10:00', '14:00'] }, 'the weekly times saved');
+      t.equal([await p.locator('.bk-day .field-err').count(), await p.locator('#bkf-closed').count()], [0, 0], 'after saving [day messages, booking closed]');
       // a confirmed time is not offered to anyone else
       await app.tap(p, '[data-act="booking-lock"]');
       await p.waitForSelector('#bkf-pin');

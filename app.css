@@ -731,6 +731,18 @@ textarea.input { font: inherit; line-height: 1.45; }
 .bk-day > .btn { grid-column: 3; grid-row: 1; justify-self: end; }
 .bk-day .input { min-width: 0; padding: 0 10px; color-scheme: dark; }
 .bk-day > span[aria-hidden] { color: var(--ink-3); font-size: 14px; }
+.bk-day .field-err { grid-column: 1 / -1; }
+/* a field that needs a fix: its message right under it, in the warning yellow that reads on the dark green (the red
+   doesn't reach 4.5:1 there); the border says it too, so it isn't colour alone */
+.field-err { margin: 0; display: flex; gap: 6px; align-items: baseline; font: 700 14px/1.35 var(--f-body); color: var(--warn); }
+.field-err::before { content: '!'; content: '!' / ''; flex: none; display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--warn); color: #3A2C05; font: 900 12px/1 var(--f-body); transform: translateY(2px); }
+.input[aria-invalid="true"], .input[aria-invalid="true"]:focus { border-color: var(--warn); border-width: 2px; }
+.bk-check input[aria-invalid="true"] { outline: 2px solid var(--warn); outline-offset: 2px; }
+/* the times loading: two rows the size of the chips, so the form doesn't jump when they come */
+.bk-wait { display: flex; flex-direction: column; gap: 10px; }
+.bk-ghost { display: block; height: 44px; border-radius: 999px; background: var(--ground-2); width: 72%; animation: bk-pulse 1.4s ease-in-out infinite; }
+.bk-ghost + .bk-ghost { width: 48%; }
+@keyframes bk-pulse { 50% { opacity: 0.55; } }
 
 @media (min-width: 560px) { .screen { padding-top: calc(var(--safe-t) + 26px); } .wd-media { margin-top: -26px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
